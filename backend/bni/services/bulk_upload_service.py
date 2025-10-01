@@ -126,7 +126,7 @@ class BulkUploadService:
                             'chapter': chapter,
                             'first_name': first_name,
                             'last_name': last_name,
-                            'normalized_name': Member.normalize_name(first_name, last_name),
+                            'normalized_name': Member.normalize_name(f"{first_name} {last_name}"),
                         })
                     except Exception as e:
                         error_msg = f"Row {idx + 1}: {str(e)}"

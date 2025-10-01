@@ -29,7 +29,7 @@ PRODUCTION_FRONTEND_URL    - Production frontend URL for smoke tests
 
 ## GitHub Environments
 
-Create three environments in **Settings → Environments**:
+Create two environments in **Settings → Environments**:
 
 ### 1. Production Environment
 - **Protection rules:**
@@ -41,16 +41,9 @@ Create three environments in **Settings → Environments**:
   - `ALLOWED_HOSTS` - Production domain names
   - `CORS_ALLOWED_ORIGINS` - Production frontend URLs
 
-### 2. Staging Environment
-- **Protection rules:**
-  - Required reviewers: 1
-  - Deployment branches: `staging`, `main`
-- **Environment secrets:**
-  - `DATABASE_URL` - Staging database connection string
-  - `SECRET_KEY` - Django staging secret key
+### 2. Preview Environment
+- **No protection rules** (for PR previews from feature branches)
 
-### 3. Preview Environment
-- **No protection rules** (for PR previews)
 - **No secrets required** (uses Vercel preview defaults)
 
 ## Branch Protection Rules
@@ -73,17 +66,6 @@ Navigate to **Settings → Branches** and add rules for each branch:
 - ❌ Allow force pushes: **Disabled**
 - ❌ Allow deletions: **Disabled**
 
-### `staging` Branch
-- ✅ Require a pull request before merging
-  - Required approvals: 1
-- ✅ Require status checks to pass before merging
-  - Required checks:
-    - `Backend CI / test`
-    - `Frontend CI / test`
-- ✅ Require conversation resolution before merging
-- ❌ Allow force pushes: **Only admins**
-- ❌ Allow deletions: **Disabled**
-
 ### `main` Branch
 - ✅ Require a pull request before merging
   - Required approvals: 1
@@ -92,12 +74,7 @@ Navigate to **Settings → Branches** and add rules for each branch:
     - `Backend CI / test`
     - `Frontend CI / test`
 - ✅ Require conversation resolution before merging
-
-### `develop` Branch
-- ✅ Require status checks to pass before merging
-  - Required checks:
-    - `Backend CI / test`
-    - `Frontend CI / test`
+- ❌ Allow force pushes: **Disabled**
 
 ## Repository Settings
 

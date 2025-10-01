@@ -32,12 +32,13 @@ Thanks for contributing! Here's how to get started.
 ## Branching Strategy
 
 - `production` - Production environment (protected)
-- `staging` - Staging environment (protected)
-- `main` - Integration branch (protected)
-- `develop` - Active development
+- `main` - Development/integration branch (protected)
 - `feature/*` - New features
 - `bugfix/*` - Bug fixes
 - `hotfix/*` - Emergency production fixes
+- `chore/*` - Maintenance and cleanup tasks
+
+**Workflow:** Feature branches merge to `main`. When ready for production, merge `main` to `production`.
 
 ## Workflow
 
