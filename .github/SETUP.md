@@ -43,6 +43,7 @@ Create two environments in **Settings → Environments**:
 
 ### 2. Preview Environment
 - **No protection rules** (for PR previews from feature branches)
+
 - **No secrets required** (uses Vercel preview defaults)
 
 ## Branch Protection Rules
