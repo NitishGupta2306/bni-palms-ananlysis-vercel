@@ -38,17 +38,12 @@
     "xlsx": "^0.18.5"
   },
   "scripts": {
-    "start": "react-app-rewired start",
-    "build": "react-app-rewired build",
-    "test": "react-app-rewired test",
-    "test:coverage": "react-app-rewired test --coverage --testPathIgnorePatterns=src/test-utils",
-    "test:ci": "react-app-rewired test --coverage --ci --testPathIgnorePatterns=src/test-utils --watchAll=false",
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "test:coverage": "react-scripts test --coverage --testPathIgnorePatterns=src/test-utils",
+    "test:ci": "react-scripts test --coverage --ci --testPathIgnorePatterns=src/test-utils --watchAll=false",
     "eject": "react-scripts eject"
-  },
-  "lint-staged": {
-    "src/**/*.{js,jsx,ts,tsx}": [
-      "npm run test:ci"
-    ]
   },
   "eslintConfig": {
     "extends": [
@@ -69,7 +64,6 @@
     ]
   },
   "devDependencies": {
-    "@faker-js/faker": "^10.0.0",
     "@testing-library/jest-dom": "^6.8.0",
     "@testing-library/user-event": "^14.6.1",
     "@types/jest-axe": "^3.5.9",
@@ -78,13 +72,8 @@
     "@types/react-router-dom": "^5.3.3",
     "@types/xlsx": "^0.0.35",
     "autoprefixer": "^10.4.21",
-    "customize-cra": "^1.0.0",
-    "husky": "^9.1.7",
     "jest-axe": "^10.0.0",
-    "lint-staged": "^16.2.3",
-    "msw": "^2.11.2",
     "postcss": "^8.5.6",
-    "react-app-rewired": "^2.2.1",
     "tailwindcss": "^3.4.14",
     "whatwg-fetch": "^3.6.20"
   },
