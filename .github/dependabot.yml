@@ -1,0 +1,91 @@
+version: 2
+updates:
+  # Backend Python dependencies
+  - package-ecosystem: "pip"
+    directory: "/backend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "NitishGupta2306"
+    assignees:
+      - "NitishGupta2306"
+    labels:
+      - "dependencies"
+      - "backend"
+      - "python"
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    # Group minor and patch updates
+    groups:
+      django-dependencies:
+        patterns:
+          - "django*"
+      testing-dependencies:
+        patterns:
+          - "pytest*"
+          - "coverage"
+      security-updates:
+        patterns:
+          - "*"
+        update-types:
+          - "security"
+
+  # Frontend npm dependencies
+  - package-ecosystem: "npm"
+    directory: "/frontend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "NitishGupta2306"
+    assignees:
+      - "NitishGupta2306"
+    labels:
+      - "dependencies"
+      - "frontend"
+      - "javascript"
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    # Group minor and patch updates
+    groups:
+      react-dependencies:
+        patterns:
+          - "react*"
+          - "@types/react*"
+      radix-ui-dependencies:
+        patterns:
+          - "@radix-ui/*"
+      testing-dependencies:
+        patterns:
+          - "@testing-library/*"
+          - "jest*"
+          - "msw"
+      security-updates:
+        patterns:
+          - "*"
+        update-types:
+          - "security"
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "NitishGupta2306"
+    labels:
+      - "dependencies"
+      - "github-actions"
+    commit-message:
+      prefix: "ci"
+      include: "scope"
