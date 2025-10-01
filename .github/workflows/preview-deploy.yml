@@ -1,0 +1,61 @@
+name: Preview Deployment
+
+on:
+  pull_request:
+    branches: [staging, production]
+
+jobs:
+  deploy-preview:
+    name: Deploy Preview Environment
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy Backend Preview
+        id: deploy-backend
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID_BACKEND }}
+          working-directory: ./backend
+          scope: ${{ secrets.VERCEL_ORG_ID }}
+
+      - name: Deploy Frontend Preview
+        id: deploy-frontend
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID_FRONTEND }}
+          working-directory: ./frontend
+          scope: ${{ secrets.VERCEL_ORG_ID }}
+
+      - name: Comment preview URLs on PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const backendUrl = '${{ steps.deploy-backend.outputs.preview-url }}';
+            const frontendUrl = '${{ steps.deploy-frontend.outputs.preview-url }}';
+
+            const comment = `## 🚀 Preview Deployment
+
+            Your preview deployment is ready!
+
+            - **Frontend**: ${frontendUrl}
+            - **Backend**: ${backendUrl}
+
+            Preview deployments are automatically updated on new commits to this PR.
+            `;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });

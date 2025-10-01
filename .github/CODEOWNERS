@@ -1,0 +1,47 @@
+# CODEOWNERS file for BNI Analytics Application
+# This file defines who should be automatically requested for review
+# when someone opens a pull request that modifies code in this repository.
+
+# Default owners for everything in the repo
+* @NitishGupta2306
+
+# Backend code ownership
+/backend/ @NitishGupta2306
+/backend/bni/ @NitishGupta2306
+/backend/config/ @NitishGupta2306
+/backend/chapters/ @NitishGupta2306
+/backend/analytics/ @NitishGupta2306
+
+# Frontend code ownership
+/frontend/ @NitishGupta2306
+/frontend/src/ @NitishGupta2306
+/frontend/src/components/ @NitishGupta2306
+/frontend/src/shared/ @NitishGupta2306
+
+# CI/CD and DevOps
+/.github/ @NitishGupta2306
+/.github/workflows/ @NitishGupta2306
+/docker-compose.yml @NitishGupta2306
+.dockerignore @NitishGupta2306
+
+# Configuration files
+*.yml @NitishGupta2306
+*.yaml @NitishGupta2306
+*.json @NitishGupta2306
+.gitignore @NitishGupta2306
+
+# Documentation
+*.md @NitishGupta2306
+/CLAUDE.md @NitishGupta2306
+/DEPLOYMENT.md @NitishGupta2306
+/README.md @NitishGupta2306
+
+# Dependencies
+/backend/requirements.txt @NitishGupta2306
+/frontend/package.json @NitishGupta2306
+/frontend/package-lock.json @NitishGupta2306
+
+# Security-sensitive files - require extra review
+/.github/workflows/security.yml @NitishGupta2306
+/.github/dependabot.yml @NitishGupta2306
+/backend/config/settings.py @NitishGupta2306
