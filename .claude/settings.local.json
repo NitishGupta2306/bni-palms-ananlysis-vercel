@@ -1,0 +1,40 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3:*)",
+      "Bash(source:*)",
+      "Bash(mkdir:*)",
+      "Bash(pip install:*)",
+      "Bash(django-admin startproject:*)",
+      "Bash(python manage.py startapp:*)",
+      "Bash(python manage.py:*)",
+      "Bash(npm install:*)",
+      "Read(//Users/nat/dev/freelance/pankaj_gupta/BNI-Palms-Analysis/**)",
+      "Read(//Users/nat/dev/freelance/pankaj_gupta/BNI-Palms-Analysis/**)",
+      "Read(//Users/nat/dev/freelance/pankaj_gupta/BNI-Palms-Analysis/**)",
+      "Bash(python:*)",
+      "Bash(npx playwright:*)",
+      "Bash(node:*)",
+      "Bash(curl:*)",
+      "Read(//Users/nat/dev/freelance/pankaj_gupta/BNI-Palms-Analysis/**)",
+      "Bash(find:*)",
+      "Bash(npm audit:*)",
+      "WebFetch(domain:github.com)",
+      "Bash(npm run build:*)",
+      "Bash(npm test:*)",
+      "Bash(git add:*)",
+      "Bash(CI=true npm test -- --testPathPattern=integration)",
+      "Bash(CI=true npm test -- --testPathPattern=integration --verbose)",
+      "Bash(CI=true npm test -- --testPathIgnorePatterns=integration --verbose)",
+      "Bash(tree:*)",
+      "Bash(git checkout:*)",
+      "Bash(npx shadcn@latest add:*)",
+      "Read(//Users/nattletale/CodeHub/bni-freelance/**)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(gh pr create:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

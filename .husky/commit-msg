@@ -1,0 +1,14 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# Check if commit message contains certain words that should be avoided
+COMMIT_MSG_FILE=$1
+COMMIT_MSG=$(cat "$COMMIT_MSG_FILE")
+
+if echo "$COMMIT_MSG" | grep -qi "claude"; then
+  echo "❌ Error: Commit message contains references that should be avoided"
+  echo "Please rephrase your commit message without mentioning AI tools"
+  exit 1
+fi
+
+echo "✅ Commit message validated"

@@ -1,0 +1,3 @@
+"""
+BNI tests package.
+"""
