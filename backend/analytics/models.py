@@ -8,10 +8,10 @@ from members.models import Member
 
 class Referral(models.Model):
     """A referral given from one member to another."""
-    giver = models.ForeignKey(Member, on_delete=models.CASCADE, related_name='referrals_given')
-    receiver = models.ForeignKey(Member, on_delete=models.CASCADE, related_name='referrals_received')
-    date_given = models.DateField(auto_now_add=True)
-    week_of = models.DateField(null=True, blank=True)
+    giver = models.ForeignKey(Member, on_delete=models.CASCADE, related_name='referrals_given', db_index=True)
+    receiver = models.ForeignKey(Member, on_delete=models.CASCADE, related_name='referrals_received', db_index=True)
+    date_given = models.DateField(auto_now_add=True, db_index=True)
+    week_of = models.DateField(null=True, blank=True, db_index=True)
     notes = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -31,10 +31,10 @@ class Referral(models.Model):
 
 class OneToOne(models.Model):
     """A one-to-one meeting between two members."""
-    member1 = models.ForeignKey(Member, on_delete=models.CASCADE, related_name='one_to_ones_as_member1')
-    member2 = models.ForeignKey(Member, on_delete=models.CASCADE, related_name='one_to_ones_as_member2')
-    meeting_date = models.DateField(auto_now_add=True)
-    week_of = models.DateField(null=True, blank=True)
+    member1 = models.ForeignKey(Member, on_delete=models.CASCADE, related_name='one_to_ones_as_member1', db_index=True)
+    member2 = models.ForeignKey(Member, on_delete=models.CASCADE, related_name='one_to_ones_as_member2', db_index=True)
+    meeting_date = models.DateField(auto_now_add=True, db_index=True)
+    week_of = models.DateField(null=True, blank=True, db_index=True)
     location = models.CharField(max_length=200, blank=True)
     duration_minutes = models.PositiveIntegerField(null=True, blank=True)
     notes = models.TextField(blank=True)
@@ -63,13 +63,13 @@ class OneToOne(models.Model):
 
 class TYFCB(models.Model):
     """Thank You For Closed Business - tracks business value generated."""
-    receiver = models.ForeignKey(Member, on_delete=models.CASCADE, related_name='tyfcbs_received')
-    giver = models.ForeignKey(Member, on_delete=models.CASCADE, related_name='tyfcbs_given', null=True, blank=True)
+    receiver = models.ForeignKey(Member, on_delete=models.CASCADE, related_name='tyfcbs_received', db_index=True)
+    giver = models.ForeignKey(Member, on_delete=models.CASCADE, related_name='tyfcbs_given', null=True, blank=True, db_index=True)
     amount = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
     currency = models.CharField(max_length=3, default='AED')
-    within_chapter = models.BooleanField(default=True)
-    date_closed = models.DateField(auto_now_add=True)
-    week_of = models.DateField(null=True, blank=True)
+    within_chapter = models.BooleanField(default=True, db_index=True)
+    date_closed = models.DateField(auto_now_add=True, db_index=True)
+    week_of = models.DateField(null=True, blank=True, db_index=True)
     description = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
