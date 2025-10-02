@@ -222,12 +222,12 @@ class ExcelProcessorService:
         return df
     
     def _get_members_lookup(self) -> Dict[str, Member]:
-        """Create a lookup dictionary for chapter members by normalized name. OPTIMIZED with .only() to reduce data transfer."""
-        # Only fetch required fields to minimize network transfer from Supabase
+        """Create a lookup dictionary for chapter members by normalized name. OPTIMIZED with .only() and select_related."""
+        # Only fetch required fields and prefetch chapter to minimize queries
         members = Member.objects.filter(
             chapter=self.chapter,
             is_active=True
-        ).only('id', 'first_name', 'last_name', 'normalized_name', 'chapter_id')
+        ).select_related('chapter').only('id', 'first_name', 'last_name', 'normalized_name', 'chapter_id')
 
         lookup = {}
 
@@ -1051,11 +1051,23 @@ class ExcelProcessorService:
 
         from bni.services.matrix_generator import MatrixGenerator
 
-        # Get data
-        members = list(Member.objects.filter(chapter=self.chapter, is_active=True))
-        referrals = list(Referral.objects.filter(giver__chapter=self.chapter))
-        one_to_ones = list(OneToOne.objects.filter(member1__chapter=self.chapter))
-        tyfcbs = list(TYFCB.objects.filter(receiver__chapter=self.chapter))
+        # Get data - OPTIMIZED with select_related to prevent N+1 queries
+        members = list(Member.objects.filter(
+            chapter=self.chapter,
+            is_active=True
+        ).select_related('chapter'))
+
+        referrals = list(Referral.objects.filter(
+            giver__chapter=self.chapter
+        ).select_related('giver', 'receiver', 'giver__chapter', 'receiver__chapter'))
+
+        one_to_ones = list(OneToOne.objects.filter(
+            member1__chapter=self.chapter
+        ).select_related('member1', 'member2', 'member1__chapter', 'member2__chapter'))
+
+        tyfcbs = list(TYFCB.objects.filter(
+            receiver__chapter=self.chapter
+        ).select_related('receiver', 'giver', 'receiver__chapter'))
 
         generator = MatrixGenerator(members)
 
