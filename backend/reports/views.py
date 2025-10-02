@@ -450,7 +450,7 @@ class MonthlyReportViewSet(viewsets.ModelViewSet):
             # Create HTTP response
             filename = f"{chapter.name.replace(' ', '_')}_Matrices_{monthly_report.month_year}.xlsx"
             response = HttpResponse(
-                output.read(),
+                output.getvalue(),  # Use getvalue() instead of read() to avoid buffer position issues
                 content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
             )
             response['Content-Disposition'] = f'attachment; filename="{filename}"'
