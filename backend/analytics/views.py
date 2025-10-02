@@ -8,6 +8,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+from io import BytesIO
 
 from chapters.models import Chapter
 from reports.models import MonthlyReport
@@ -595,14 +596,17 @@ class ComparisonViewSet(viewsets.ViewSet):
             # Generate filename
             filename = f"{chapter.name.replace(' ', '_')}_comparison_{previous_report.month_year}_vs_{current_report.month_year}.xlsx"
 
+            # Save to BytesIO to ensure proper Excel file generation
+            output = BytesIO()
+            wb.save(output)
+            output.seek(0)
+
             # Create HTTP response
             response = HttpResponse(
+                output.getvalue(),
                 content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
             )
             response['Content-Disposition'] = f'attachment; filename="{filename}"'
-
-            # Save workbook to response
-            wb.save(response)
             return response
 
         except (Chapter.DoesNotExist, MonthlyReport.DoesNotExist):
