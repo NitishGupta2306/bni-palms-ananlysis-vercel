@@ -1,8 +1,6 @@
 import { read, utils } from 'xlsx';
 import { validateExcelFile, sanitizeSheetData, ExcelSecurityError } from '../../features/file-upload/utils/excelSecurity';
-
-// API Base URL from environment variable
-const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+import { API_BASE_URL } from '../../config/api';
 
 export interface ChapterInfo {
   id: string;
