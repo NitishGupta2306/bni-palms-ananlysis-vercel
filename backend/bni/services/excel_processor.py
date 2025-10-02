@@ -785,15 +785,16 @@ class ExcelProcessorService:
         import tempfile
         import os
 
-        # Read member names file
+        # Read member names file - OPTIMIZED file handling
         if hasattr(member_names_file, 'temporary_file_path'):
             member_names_path = member_names_file.temporary_file_path()
             member_df = self._parse_xml_excel(member_names_path)
         else:
+            # OPTIMIZED: Single flush after all writes
             with tempfile.NamedTemporaryFile(delete=False, suffix='.xls') as temp_file:
                 for chunk in member_names_file.chunks():
                     temp_file.write(chunk)
-                temp_file.flush()
+                temp_file.flush()  # Flush once after all writes
 
                 try:
                     member_df = self._parse_xml_excel(temp_file.name)
@@ -882,10 +883,11 @@ class ExcelProcessorService:
                 temp_file_path = slip_audit_file.temporary_file_path()
                 df = self._read_excel_file(Path(temp_file_path))
             else:
+                # OPTIMIZED: Single flush after all writes, not per chunk
                 with tempfile.NamedTemporaryFile(delete=False, suffix='.xls') as temp_file:
                     for chunk in slip_audit_file.chunks():
                         temp_file.write(chunk)
-                        temp_file.flush()
+                    temp_file.flush()  # Flush once after all writes
 
                     try:
                         df = self._read_excel_file(Path(temp_file.name))
