@@ -139,10 +139,11 @@ class ExcelProcessorService:
         """
         Parse XML-based Excel files (like BNI audit reports) and convert to DataFrame.
         Handles sparse cells (cells with Index attribute indicating position).
+        Uses lxml for faster parsing.
         """
-        import xml.etree.ElementTree as ET
+        from lxml import etree as ET
 
-        # Parse the XML
+        # Parse the XML (lxml is 3-5x faster than ElementTree)
         tree = ET.parse(xml_file_path)
         root = tree.getroot()
 
@@ -996,20 +997,27 @@ class ExcelProcessorService:
 
         generator = MatrixGenerator(members)
 
-        # Generate and cache matrices
+        # Generate matrices once and reuse
+        ref_matrix = generator.generate_referral_matrix(referrals)
+        oto_matrix = generator.generate_one_to_one_matrix(one_to_ones)
+
+        # Cache matrices
         monthly_report.referral_matrix_data = {
             'members': [m.full_name for m in members],
-            'matrix': generator.generate_referral_matrix(referrals).values.tolist(),
+            'matrix': ref_matrix.values.tolist(),
         }
 
         monthly_report.oto_matrix_data = {
             'members': [m.full_name for m in members],
-            'matrix': generator.generate_one_to_one_matrix(one_to_ones).values.tolist(),
+            'matrix': oto_matrix.values.tolist(),
         }
 
+        # Pass pre-generated matrices to avoid regeneration
         monthly_report.combination_matrix_data = {
             'members': [m.full_name for m in members],
-            'matrix': generator.generate_combination_matrix(referrals, one_to_ones).values.tolist(),
+            'matrix': generator.generate_combination_matrix(
+                referrals, one_to_ones, ref_matrix, oto_matrix
+            ).values.tolist(),
             'legend': {'0': 'Neither', '1': 'One-to-One Only', '2': 'Referral Only', '3': 'Both'}
         }
 
@@ -1143,10 +1151,11 @@ class BNIMonthlyDataImportService:
         """
         Parse XML-based Excel files (like BNI audit reports) and convert to DataFrame.
         Handles sparse cells (cells with Index attribute indicating position).
+        Uses lxml for faster parsing.
         """
-        import xml.etree.ElementTree as ET
+        from lxml import etree as ET
 
-        # Parse the XML
+        # Parse the XML (lxml is 3-5x faster than ElementTree)
         tree = ET.parse(xml_file_path)
         root = tree.getroot()
 
