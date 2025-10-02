@@ -1,5 +1,5 @@
 import React, { useState, useEffect, Suspense, lazy } from 'react';
-import { Routes, Route, useNavigate, useParams } from 'react-router-dom';
+import { Routes, Route, useNavigate, useParams, useLocation } from 'react-router-dom';
 import UnifiedDashboard from './unified-dashboard';
 import { ChapterMemberData } from '../../../shared/services/ChapterDataLoader';
 import { useChapterData } from '../../../shared/hooks/useChapterData';
@@ -32,6 +32,7 @@ interface ChapterRoutesProps {
 
 const ChapterRoutes: React.FC<ChapterRoutesProps> = ({ selectedChapterId, onChapterSelect, onChaptersLoad }) => {
   const navigate = useNavigate();
+  const location = useLocation();
 
   // Use React Query hook for cached data fetching
   const { data: chapterData = [], isLoading: isLoadingChapters, refetch } = useChapterData();
@@ -45,12 +46,23 @@ const ChapterRoutes: React.FC<ChapterRoutesProps> = ({ selectedChapterId, onChap
         chapterName: c.chapterName,
         memberCount: c.memberCount
       })));
-      // Auto-select first chapter if none selected
-      if (!selectedChapterId) {
+
+      // Extract chapter ID from URL if present (e.g., /chapter/:chapterId)
+      const urlMatch = location.pathname.match(/^\/chapter\/([^\/]+)/);
+      const urlChapterId = urlMatch ? urlMatch[1] : null;
+
+      // Priority: URL chapter ID > currently selected > first chapter
+      if (urlChapterId && chapterData.some(c => c.chapterId === urlChapterId)) {
+        // URL has a valid chapter ID - use it
+        if (selectedChapterId !== urlChapterId) {
+          onChapterSelect(urlChapterId);
+        }
+      } else if (!selectedChapterId) {
+        // No chapter selected and not on a chapter detail page - select first
         onChapterSelect(chapterData[0].chapterId);
       }
     }
-  }, [chapterData, selectedChapterId, onChapterSelect, onChaptersLoad]);
+  }, [chapterData, selectedChapterId, onChapterSelect, onChaptersLoad, location.pathname]);
 
   // Navigation handlers
   const handleMemberSelect = (chapterId: string, memberName: string) => {

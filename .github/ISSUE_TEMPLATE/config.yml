@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Documentation
+    url: https://github.com/NitishGupta2306/bni-palms-ananlysis-vercel/blob/main/README.md
+    about: Check our documentation for answers
+  - name: Security Vulnerability
+    url: https://github.com/NitishGupta2306/bni-palms-ananlysis-vercel/security/advisories/new
+    about: Report a security vulnerability privately

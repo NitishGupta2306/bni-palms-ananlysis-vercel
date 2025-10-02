@@ -1,83 +1,36 @@
+# ============================================
+# Environment & Secrets
+# ============================================
+.env
+.env.local
+.env.production
+.env.development.local
+.env.test.local
+.env.production.local
+
+# ============================================
 # Python
+# ============================================
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
-env/
-venv/
-ENV/
-.venv
 *.sqlite3
+*.db
 db.sqlite3
-
-# Django
-*.log
-local_settings.py
-media/
-staticfiles/
-.env
-.env.local
-.env.production
-*.sqlite3
-db.sqlite3
+db.sqlite3-journal
 bni_db
 
-# Node
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-lerna-debug.log*
-.pnpm-debug.log*
+# Virtual Environments
+venv/
+env/
+ENV/
+.venv
+env.bak/
+venv.bak/
 
-# React
-/frontend/build
-/frontend/.env.local
-/frontend/.env.development.local
-/frontend/.env.test.local
-/frontend/.env.production.local
-/frontend/.env.production
-
-# Sample/Test Data (not needed in repo)
-frontend/public/needed-data/
-testing/test-data/
-
-# Vercel
-.vercel/
-
-# Testing
-.coverage
-.pytest_cache/
-htmlcov/
-*.cover
-*.py,cover
-.hypothesis/
-.tox/
-nosetests.xml
-coverage.xml
-*.coveragerc
-
-# IDEs
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-.DS_Store
-Thumbs.db
-
-# Docker
-*.pid
-*.seed
-*.pid.lock
-
-# Celery
-celerybeat-schedule
-celerybeat.pid
-
-# Distribution / packaging
-.Python
+# Distribution / Packaging
 build/
 develop-eggs/
 dist/
@@ -96,31 +49,85 @@ share/python-wheels/
 *.egg
 MANIFEST
 
-# Jupyter Notebook
-.ipynb_checkpoints
-
-# pyenv
-.python-version
-
-# Environments
-.env
-.venv
-env/
-venv/
-ENV/
-env.bak/
-venv.bak/
-
-# mypy
+# Python Type Checking
 .mypy_cache/
 .dmypy.json
 dmyp.json
-
-# Pyre type checker
 .pyre/
-
-# pytype static type analyzer
 .pytype/
 
-# Cython debug symbols
+# Python Testing
+.coverage
+.pytest_cache/
+htmlcov/
+*.cover
+*.py,cover
+.hypothesis/
+.tox/
+nosetests.xml
+coverage.xml
+*.coveragerc
+
+# ============================================
+# Django
+# ============================================
+*.log
+local_settings.py
+media/
+staticfiles/
+
+# ============================================
+# Node / JavaScript
+# ============================================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+package-lock.json
+
+# React / Frontend Build
+frontend/build/
+frontend/.cache/
+
+# ============================================
+# Deployment
+# ============================================
+.vercel/
+
+# ============================================
+# IDEs & Editors
+# ============================================
+.vscode/
+.idea/
+.claude/
+*.swp
+*.swo
+*~
+
+# ============================================
+# OS Files
+# ============================================
+.DS_Store
+Thumbs.db
+
+# ============================================
+# Development & Testing
+# ============================================
+# Sample/Test Data
+frontend/public/needed-data/
+testing/test-data/
+*.test.db
+
+# Jupyter
+.ipynb_checkpoints
+
+# ============================================
+# Misc
+# ============================================
+*.pid
+*.seed
+*.pid.lock
+.python-version
 cython_debug/

@@ -45,11 +45,6 @@
     "test:ci": "react-app-rewired test --coverage --ci --testPathIgnorePatterns=src/test-utils --watchAll=false",
     "eject": "react-scripts eject"
   },
-  "lint-staged": {
-    "src/**/*.{js,jsx,ts,tsx}": [
-      "npm run test:ci"
-    ]
-  },
   "eslintConfig": {
     "extends": [
       "react-app",
@@ -69,7 +64,6 @@
     ]
   },
   "devDependencies": {
-    "@faker-js/faker": "^10.0.0",
     "@testing-library/jest-dom": "^6.8.0",
     "@testing-library/user-event": "^14.6.1",
     "@types/jest-axe": "^3.5.9",
@@ -79,10 +73,7 @@
     "@types/xlsx": "^0.0.35",
     "autoprefixer": "^10.4.21",
     "customize-cra": "^1.0.0",
-    "husky": "^9.1.7",
     "jest-axe": "^10.0.0",
-    "lint-staged": "^16.2.3",
-    "msw": "^2.11.2",
     "postcss": "^8.5.6",
     "react-app-rewired": "^2.2.1",
     "tailwindcss": "^3.4.14",

@@ -74,14 +74,18 @@ if DATABASE_URL:
     # Format: postgresql://user:password@host:port/database
     import dj_database_url
 
-    # Parse the connection string
+    # Parse the connection string with persistent connections
     db_config = dj_database_url.parse(DATABASE_URL, conn_max_age=600, ssl_require=True)
 
-    # Add additional options for Supabase
+    # Add connection pooling and performance options
     db_config['OPTIONS'] = {
         'sslmode': 'require',
         'connect_timeout': 10,
     }
+
+    # Enable connection pooling for better performance
+    db_config['CONN_MAX_AGE'] = 600  # Keep connections alive for 10 minutes
+    db_config['CONN_HEALTH_CHECKS'] = True  # Enable connection health checks
 
     DATABASES = {
         "default": db_config
