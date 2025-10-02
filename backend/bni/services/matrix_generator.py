@@ -15,77 +15,78 @@ class MatrixGenerator:
         self.member_lookup = {m.id: m.full_name for m in self.members}
     
     def generate_referral_matrix(self, referrals: List[Referral]) -> pd.DataFrame:
-        """Generate referral matrix showing who referred to whom."""
+        """Generate referral matrix showing who referred to whom. OPTIMIZED with vectorization."""
         # Create empty matrix
         matrix = pd.DataFrame(
-            0, 
-            index=self.member_names, 
+            0,
+            index=self.member_names,
             columns=self.member_names
         )
-        
-        # Fill matrix with referral counts
-        for referral in referrals:
-            giver_name = referral.giver.full_name
-            receiver_name = referral.receiver.full_name
-            if giver_name in matrix.index and receiver_name in matrix.columns:
-                matrix.loc[giver_name, receiver_name] += 1
-        
+
+        if not referrals:
+            return matrix
+
+        # Vectorized approach: create DataFrame from referrals and use groupby
+        referral_data = [(r.giver.full_name, r.receiver.full_name) for r in referrals]
+        if referral_data:
+            ref_df = pd.DataFrame(referral_data, columns=['giver', 'receiver'])
+            counts = ref_df.groupby(['giver', 'receiver']).size()
+
+            for (giver_name, receiver_name), count in counts.items():
+                if giver_name in matrix.index and receiver_name in matrix.columns:
+                    matrix.loc[giver_name, receiver_name] = count
+
         return matrix
     
     def generate_one_to_one_matrix(self, one_to_ones: List[OneToOne]) -> pd.DataFrame:
-        """Generate one-to-one meeting matrix."""
+        """Generate one-to-one meeting matrix. OPTIMIZED with vectorization."""
         # Create empty matrix
         matrix = pd.DataFrame(
             0,
             index=self.member_names,
             columns=self.member_names
         )
-        
-        # Fill matrix with meeting counts
+
+        if not one_to_ones:
+            return matrix
+
+        # Vectorized approach: create DataFrame and use groupby
+        meeting_data = []
         for meeting in one_to_ones:
-            member1_name = meeting.member1.full_name
-            member2_name = meeting.member2.full_name
-            
-            if (member1_name in matrix.index and member2_name in matrix.columns):
-                # One-to-one meetings are bidirectional
-                matrix.loc[member1_name, member2_name] += 1
-                matrix.loc[member2_name, member1_name] += 1
-        
+            meeting_data.append((meeting.member1.full_name, meeting.member2.full_name))
+            # Bidirectional
+            meeting_data.append((meeting.member2.full_name, meeting.member1.full_name))
+
+        if meeting_data:
+            oto_df = pd.DataFrame(meeting_data, columns=['member1', 'member2'])
+            counts = oto_df.groupby(['member1', 'member2']).size()
+
+            for (member1_name, member2_name), count in counts.items():
+                if member1_name in matrix.index and member2_name in matrix.columns:
+                    matrix.loc[member1_name, member2_name] = count
+
         return matrix
     
-    def generate_combination_matrix(self, referrals: List[Referral], 
-                                   one_to_ones: List[OneToOne]) -> pd.DataFrame:
-        """Generate combination matrix showing relationships between members."""
-        # Create empty matrix
-        matrix = pd.DataFrame(
-            0,
-            index=self.member_names,
-            columns=self.member_names
-        )
-        
-        # Get referral and one-to-one matrices
-        ref_matrix = self.generate_referral_matrix(referrals)
-        oto_matrix = self.generate_one_to_one_matrix(one_to_ones)
-        
-        # Fill combination matrix
+    def generate_combination_matrix(self, referrals: List[Referral],
+                                   one_to_ones: List[OneToOne],
+                                   ref_matrix: pd.DataFrame = None,
+                                   oto_matrix: pd.DataFrame = None) -> pd.DataFrame:
+        """Generate combination matrix showing relationships between members. OPTIMIZED with vectorization."""
+        # Accept pre-generated matrices to avoid regeneration
+        if ref_matrix is None:
+            ref_matrix = self.generate_referral_matrix(referrals)
+        if oto_matrix is None:
+            oto_matrix = self.generate_one_to_one_matrix(one_to_ones)
+
+        # Vectorized combination: use numpy operations
         # 0 = Neither, 1 = OTO only, 2 = Referral only, 3 = Both
-        for i, giver in enumerate(self.member_names):
-            for j, receiver in enumerate(self.member_names):
-                if i == j:  # Same person
-                    continue
-                
-                has_referral = ref_matrix.loc[giver, receiver] > 0
-                has_oto = oto_matrix.loc[giver, receiver] > 0
-                
-                if has_referral and has_oto:
-                    matrix.loc[giver, receiver] = 3  # Both
-                elif has_referral:
-                    matrix.loc[giver, receiver] = 2  # Referral only
-                elif has_oto:
-                    matrix.loc[giver, receiver] = 1  # OTO only
-                else:
-                    matrix.loc[giver, receiver] = 0  # Neither
-        
+        ref_array = (ref_matrix > 0).astype(int) * 2  # Referral = 2
+        oto_array = (oto_matrix > 0).astype(int) * 1  # OTO = 1
+        matrix = ref_array + oto_array  # Combine: 0, 1, 2, or 3
+
+        # Set diagonal to 0 (no self-relationships)
+        np.fill_diagonal(matrix.values, 0)
+
         return matrix
     
     def generate_tyfcb_summary(self, tyfcbs: List[TYFCB]) -> pd.DataFrame:
