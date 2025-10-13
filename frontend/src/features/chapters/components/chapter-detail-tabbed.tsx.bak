@@ -45,7 +45,7 @@ const ChapterDetailTabbed: React.FC<ChapterDetailTabbedProps> = ({
     | "preview"
     | null;
   const [activeTab, setActiveTab] = useState<
-    "info" | "upload" | "compare" | "preview" | "multimonth"
+    "info" | "upload" | "compare" | "preview"
   >(tabFromUrl || "info");
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -53,9 +53,7 @@ const ChapterDetailTabbed: React.FC<ChapterDetailTabbedProps> = ({
   useEffect(() => {
     if (
       tabFromUrl &&
-      ["info", "upload", "compare", "preview", "multimonth"].includes(
-        tabFromUrl,
-      )
+      ["info", "upload", "compare", "preview"].includes(tabFromUrl)
     ) {
       setActiveTab(tabFromUrl);
     }
@@ -78,13 +76,12 @@ const ChapterDetailTabbed: React.FC<ChapterDetailTabbedProps> = ({
       { id: "upload" as const, label: "Upload", icon: Upload },
       { id: "compare" as const, label: "Compare", icon: GitCompare },
       { id: "preview" as const, label: "Matrices", icon: Grid3X3 },
-      { id: "multimonth" as const, label: "Multi-Month", icon: Calendar },
     ],
     [],
   );
 
   const handleTabChange = useCallback(
-    (tabId: "info" | "upload" | "compare" | "preview" | "multimonth") => {
+    (tabId: "info" | "upload" | "compare" | "preview") => {
       setActiveTab(tabId);
       setSearchParams({ tab: tabId });
     },
@@ -173,12 +170,6 @@ const ChapterDetailTabbed: React.FC<ChapterDetailTabbedProps> = ({
             chapterData={chapterData}
             onMemberSelect={onMemberSelect}
             refreshKey={refreshKey}
-          />
-        )}
-        {activeTab === "multimonth" && (
-          <MultiMonthTab
-            chapterId={chapterData.chapterId}
-            chapterName={chapterData.chapterName}
           />
         )}
       </motion.div>

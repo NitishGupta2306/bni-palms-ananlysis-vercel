@@ -1,42 +1,56 @@
-import React from 'react';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { MatrixData, MatrixType } from '../types/matrix.types';
-import { MatrixLegend } from './matrix-legend';
+import React from "react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { MatrixData, MatrixType } from "../types/matrix.types";
+import { MatrixLegend } from "./matrix-legend";
 
 interface MatrixDisplayProps {
   matrixData: MatrixData | null;
-  title: string;
-  description: string;
+  title?: string;
+  description?: string;
   matrixType?: MatrixType;
+  partialDataMembers?: string[];
 }
 
 export const MatrixDisplay: React.FC<MatrixDisplayProps> = ({
   matrixData,
   title,
   description,
-  matrixType = 'referral',
+  matrixType = "referral",
+  partialDataMembers = [],
 }) => {
   if (!matrixData) {
     return (
       <Alert>
         <AlertDescription>
-          No data available for {title.toLowerCase()}
+          No data available for {title ? title.toLowerCase() : ""}
         </AlertDescription>
       </Alert>
     );
   }
 
   const { members, matrix, totals, summaries, legend } = matrixData;
-  const hasData = matrix.some(row => row.some(cell => cell > 0));
+  const hasData = matrix.some((row) => row.some((cell) => cell > 0));
 
   if (!hasData) {
     return (
       <Alert>
         <AlertDescription>
-          No {title.toLowerCase()} data available for this chapter yet.
-          Data will appear after importing PALMS reports.
+          No {title ? title.toLowerCase() : "matrix"} data available for this chapter yet. Data
+          will appear after importing PALMS reports.
         </AlertDescription>
       </Alert>
     );
@@ -45,9 +59,7 @@ export const MatrixDisplay: React.FC<MatrixDisplayProps> = ({
   return (
     <TooltipProvider>
       <div className="space-y-4">
-        <p className="text-sm text-muted-foreground">
-          {description}
-        </p>
+        <p className="text-sm text-muted-foreground">{description}</p>
 
         {legend && <MatrixLegend legend={legend} />}
 
@@ -64,12 +76,18 @@ export const MatrixDisplay: React.FC<MatrixDisplayProps> = ({
                     <TableHead
                       key={index}
                       className="font-bold min-w-[40px] max-w-[40px] text-xs p-2"
-                      style={{ writingMode: 'vertical-rl', textOrientation: 'mixed' }}
+                      style={{
+                        writingMode: "vertical-rl",
+                        textOrientation: "mixed",
+                      }}
                     >
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <span className="cursor-help">
-                            {member.split(' ').map(n => n[0]).join('')}
+                            {member
+                              .split(" ")
+                              .map((n) => n[0])
+                              .join("")}
                           </span>
                         </TooltipTrigger>
                         <TooltipContent>
@@ -79,20 +97,30 @@ export const MatrixDisplay: React.FC<MatrixDisplayProps> = ({
                     </TableHead>
                   ))}
                   {/* Summary columns based on matrix type */}
-                  {matrixType === 'combination' && summaries ? (
+                  {matrixType === "combination" && summaries ? (
                     <>
-                      <TableHead className="font-bold min-w-[80px] text-xs">Neither</TableHead>
-                      <TableHead className="font-bold min-w-[80px] text-xs">OTO Only</TableHead>
-                      <TableHead className="font-bold min-w-[80px] text-xs">Referral Only</TableHead>
-                      <TableHead className="font-bold min-w-[80px] text-xs">OTO & Referral</TableHead>
+                      <TableHead className="font-bold min-w-[80px] text-xs">
+                        Neither
+                      </TableHead>
+                      <TableHead className="font-bold min-w-[80px] text-xs">
+                        OTO Only
+                      </TableHead>
+                      <TableHead className="font-bold min-w-[80px] text-xs">
+                        Referral Only
+                      </TableHead>
+                      <TableHead className="font-bold min-w-[80px] text-xs">
+                        OTO & Referral
+                      </TableHead>
                     </>
                   ) : totals ? (
                     <>
                       <TableHead className="font-bold min-w-[80px] text-xs">
-                        {matrixType === 'oto' ? 'Total OTO' : 'Total Referrals'}
+                        {matrixType === "oto" ? "Total OTO" : "Total Referrals"}
                       </TableHead>
                       <TableHead className="font-bold min-w-[80px] text-xs">
-                        {matrixType === 'oto' ? 'Unique OTO' : 'Unique Referrals'}
+                        {matrixType === "oto"
+                          ? "Unique OTO"
+                          : "Unique Referrals"}
                       </TableHead>
                     </>
                   ) : null}
@@ -116,15 +144,15 @@ export const MatrixDisplay: React.FC<MatrixDisplayProps> = ({
                         key={j}
                         className={`text-center ${
                           matrix[i][j] > 0
-                            ? 'bg-primary/20 dark:bg-primary/30 font-bold text-primary'
-                            : ''
+                            ? "bg-primary/20 dark:bg-primary/30 font-bold text-primary"
+                            : ""
                         }`}
                       >
-                        {matrix[i][j] || '-'}
+                        {matrix[i][j] || "-"}
                       </TableCell>
                     ))}
                     {/* Summary values based on matrix type */}
-                    {matrixType === 'combination' && summaries ? (
+                    {matrixType === "combination" && summaries ? (
                       <>
                         <TableCell className="font-bold text-center">
                           {summaries.neither?.[giver] || 0}
@@ -154,7 +182,9 @@ export const MatrixDisplay: React.FC<MatrixDisplayProps> = ({
                 {/* Totals received row */}
                 {totals?.received && (
                   <TableRow>
-                    <TableCell className="font-bold sticky left-0 bg-background">Total Received</TableCell>
+                    <TableCell className="font-bold sticky left-0 bg-background">
+                      Total Received
+                    </TableCell>
                     {members.map((member, i) => (
                       <TableCell key={i} className="font-bold text-center">
                         {totals.received?.[member] || 0}
