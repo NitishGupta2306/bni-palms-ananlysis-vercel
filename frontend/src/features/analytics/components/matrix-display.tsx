@@ -256,7 +256,7 @@ export const MatrixDisplay: React.FC<MatrixDisplayProps> = ({
         {legend && <MatrixLegend legend={legend} />}
 
         {/* Matrix Table */}
-        <div className="rounded-md border">
+        <div className="rounded-md border" role="region" aria-label={`${title || "Matrix"} data table`}>
           <div className="max-h-96 overflow-auto">
             <Table>
               <TableHeader className="sticky top-0 bg-background">
@@ -275,6 +275,9 @@ export const MatrixDisplay: React.FC<MatrixDisplayProps> = ({
                         textOrientation: "mixed",
                       }}
                       onClick={() => handleColumnSort(index)}
+                      aria-label={`${member}, ${isPartialDataMember(member) ? "partial data, " : ""}click to sort by received count`}
+                      aria-sort={sortColumn === index ? (sortDirection === "desc" ? "descending" : "ascending") : "none"}
+                      role="columnheader"
                     >
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -335,6 +338,9 @@ export const MatrixDisplay: React.FC<MatrixDisplayProps> = ({
                           sortType === "total_given" ? "bg-primary/10" : ""
                         }`}
                         onClick={() => handleSummarySort("total_given")}
+                        aria-label={`Sort by ${matrixType === "oto" ? "total one-to-ones" : "total referrals"}`}
+                        aria-sort={sortType === "total_given" ? (sortDirection === "desc" ? "descending" : "ascending") : "none"}
+                        role="columnheader"
                       >
                         <div className="flex items-center gap-1 justify-center">
                           {matrixType === "oto"
@@ -356,6 +362,9 @@ export const MatrixDisplay: React.FC<MatrixDisplayProps> = ({
                           sortType === "unique_given" ? "bg-primary/10" : ""
                         }`}
                         onClick={() => handleSummarySort("unique_given")}
+                        aria-label={`Sort by ${matrixType === "oto" ? "unique one-to-ones" : "unique referrals"}`}
+                        aria-sort={sortType === "unique_given" ? (sortDirection === "desc" ? "descending" : "ascending") : "none"}
+                        role="columnheader"
                       >
                         <div className="flex items-center gap-1 justify-center">
                           {matrixType === "oto"
@@ -410,6 +419,7 @@ export const MatrixDisplay: React.FC<MatrixDisplayProps> = ({
                             ? "bg-primary/20 dark:bg-primary/30 font-bold text-primary"
                             : ""
                         }`}
+                        aria-label={`${giver} to ${receiver}: ${displayMatrix[i][j] || 0} ${matrixType === "oto" ? "one-to-ones" : matrixType === "combination" ? "connections" : "referrals"}`}
                       >
                         {displayMatrix[i][j] || "-"}
                       </TableCell>
