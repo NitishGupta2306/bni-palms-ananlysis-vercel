@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { motion } from "framer-motion";
 import {
   Grid3x3,
   TrendingUp,
@@ -12,7 +13,6 @@ import {
   Handshake,
 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Card,
   CardContent,
@@ -35,7 +35,9 @@ interface MatrixTabProps {
 }
 
 const MatrixTab: React.FC<MatrixTabProps> = ({ chapterData }) => {
-  const [tabValue, setTabValue] = useState("referral");
+  const [activeMatrixTab, setActiveMatrixTab] = useState<
+    "referral" | "oto" | "combination" | "tyfcb"
+  >("referral");
   const { toast } = useToast();
 
   const {
@@ -336,70 +338,114 @@ const MatrixTab: React.FC<MatrixTabProps> = ({ chapterData }) => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Tabs value={tabValue} onValueChange={setTabValue}>
-                <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4">
-                  <TabsTrigger
-                    value="referral"
-                    className="flex items-center gap-2"
-                  >
-                    <TrendingUp className="h-4 w-4" />
-                    <span className="hidden sm:inline">Referral Matrix</span>
-                    <span className="sm:hidden">Referral</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="oto" className="flex items-center gap-2">
-                    <Users className="h-4 w-4" />
-                    <span className="hidden sm:inline">One-to-One Matrix</span>
-                    <span className="sm:hidden">One-to-One</span>
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="combination"
-                    className="flex items-center gap-2"
-                  >
-                    <GitMerge className="h-4 w-4" />
-                    <span className="hidden sm:inline">Combination Matrix</span>
-                    <span className="sm:hidden">Combination</span>
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="tyfcb"
-                    className="flex items-center gap-2"
-                  >
-                    <DollarSign className="h-4 w-4" />
-                    <span className="hidden sm:inline">TYFCB Report</span>
-                    <span className="sm:hidden">TYFCB</span>
-                  </TabsTrigger>
-                </TabsList>
+              {/* Motion Tab Navigation */}
+              <div className="flex items-center gap-2 flex-wrap mb-6">
+                {[
+                  {
+                    id: "referral" as const,
+                    label: "Referral Matrix",
+                    icon: TrendingUp,
+                  },
+                  {
+                    id: "oto" as const,
+                    label: "One-to-One Matrix",
+                    icon: Users,
+                  },
+                  {
+                    id: "combination" as const,
+                    label: "Combination Matrix",
+                    icon: GitMerge,
+                  },
+                  {
+                    id: "tyfcb" as const,
+                    label: "TYFCB Report",
+                    icon: DollarSign,
+                  },
+                ].map((tab) => {
+                  const Icon = tab.icon;
+                  const isActive = activeMatrixTab === tab.id;
+                  return (
+                    <motion.button
+                      key={tab.id}
+                      onClick={() => setActiveMatrixTab(tab.id)}
+                      className={`relative px-4 py-2 rounded-lg font-semibold transition-colors ${
+                        isActive
+                          ? "text-foreground"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Icon className="h-4 w-4" />
+                        <span className="text-sm hidden sm:inline">
+                          {tab.label}
+                        </span>
+                        <span className="text-sm sm:hidden">
+                          {tab.id === "referral"
+                            ? "Referral"
+                            : tab.id === "oto"
+                              ? "One-to-One"
+                              : tab.id === "combination"
+                                ? "Combination"
+                                : "TYFCB"}
+                        </span>
+                      </div>
+                      {isActive && (
+                        <motion.div
+                          layoutId="matrixActiveTab"
+                          className="absolute inset-0 bg-secondary/20 rounded-lg -z-10"
+                          transition={{
+                            type: "spring",
+                            bounce: 0.2,
+                            duration: 0.6,
+                          }}
+                        />
+                      )}
+                    </motion.button>
+                  );
+                })}
+              </div>
 
-                <TabsContent value="referral" className="mt-6">
+              {/* Tab Content with Animation */}
+              <motion.div
+                key={activeMatrixTab}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.3 }}
+              >
+                {activeMatrixTab === "referral" && (
                   <MatrixDisplay
                     matrixData={referralMatrix}
                     title="Referral Matrix"
                     description="Shows who has given referrals to whom. Numbers represent the count of referrals given."
                     matrixType="referral"
                   />
-                </TabsContent>
+                )}
 
-                <TabsContent value="oto" className="mt-6">
+                {activeMatrixTab === "oto" && (
                   <MatrixDisplay
                     matrixData={oneToOneMatrix}
                     title="One-to-One Matrix"
                     description="Tracks one-to-one meetings between members. Numbers represent the count of meetings."
                     matrixType="oto"
                   />
-                </TabsContent>
+                )}
 
-                <TabsContent value="combination" className="mt-6">
+                {activeMatrixTab === "combination" && (
                   <MatrixDisplay
                     matrixData={combinationMatrix}
                     title="Combination Matrix"
                     description="Combined view showing both referrals and one-to-ones using coded values."
                     matrixType="combination"
                   />
-                </TabsContent>
+                )}
 
-                <TabsContent value="tyfcb" className="mt-6">
+                {activeMatrixTab === "tyfcb" && (
                   <TYFCBReport tyfcbData={tyfcbData} />
-                </TabsContent>
-              </Tabs>
+                )}
+              </motion.div>
             </CardContent>
           </Card>
         </div>

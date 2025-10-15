@@ -5,6 +5,7 @@ Chapter models for BNI Analytics.
 from django.db import models
 from django.utils import timezone
 from datetime import timedelta
+from .password_utils import hash_password, verify_password, is_hashed
 
 
 class Chapter(models.Model):
@@ -18,7 +19,7 @@ class Chapter(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     # Authentication fields
-    password = models.CharField(max_length=100, default="chapter123")
+    password = models.CharField(max_length=255, default="chapter123")  # Increased for bcrypt hash (60 chars)
     failed_login_attempts = models.IntegerField(default=0)
     lockout_until = models.DateTimeField(null=True, blank=True)
 
@@ -48,11 +49,43 @@ class Chapter(models.Model):
         self.lockout_until = None
         self.save()
 
+    def set_password(self, raw_password: str):
+        """
+        Set the password for this chapter (hashed).
+
+        Args:
+            raw_password: Plain text password to hash and store
+        """
+        self.password = hash_password(raw_password)
+
+    def check_password(self, raw_password: str) -> bool:
+        """
+        Check if the provided password matches the stored password.
+
+        Args:
+            raw_password: Plain text password to verify
+
+        Returns:
+            True if password matches, False otherwise
+        """
+        # Handle legacy plain text passwords (for migration period)
+        if not is_hashed(self.password):
+            # Legacy plain text comparison
+            if raw_password == self.password:
+                # Automatically upgrade to hashed password
+                self.set_password(raw_password)
+                self.save()
+                return True
+            return False
+
+        # Modern hashed password comparison
+        return verify_password(raw_password, self.password)
+
 
 class AdminSettings(models.Model):
     """Singleton model for admin authentication settings."""
 
-    admin_password = models.CharField(max_length=100, default="admin123")
+    admin_password = models.CharField(max_length=255, default="admin123")  # Increased for bcrypt hash (60 chars)
     failed_admin_attempts = models.IntegerField(default=0)
     admin_lockout_until = models.DateTimeField(null=True, blank=True)
 
@@ -93,3 +126,35 @@ class AdminSettings(models.Model):
         self.failed_admin_attempts = 0
         self.admin_lockout_until = None
         self.save()
+
+    def set_password(self, raw_password: str):
+        """
+        Set the admin password (hashed).
+
+        Args:
+            raw_password: Plain text password to hash and store
+        """
+        self.admin_password = hash_password(raw_password)
+
+    def check_password(self, raw_password: str) -> bool:
+        """
+        Check if the provided password matches the stored admin password.
+
+        Args:
+            raw_password: Plain text password to verify
+
+        Returns:
+            True if password matches, False otherwise
+        """
+        # Handle legacy plain text passwords (for migration period)
+        if not is_hashed(self.admin_password):
+            # Legacy plain text comparison
+            if raw_password == self.admin_password:
+                # Automatically upgrade to hashed password
+                self.set_password(raw_password)
+                self.save()
+                return True
+            return False
+
+        # Modern hashed password comparison
+        return verify_password(raw_password, self.admin_password)

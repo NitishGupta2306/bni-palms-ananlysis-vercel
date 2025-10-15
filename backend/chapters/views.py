@@ -358,9 +358,9 @@ class ChapterViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_429_TOO_MANY_REQUESTS,
             )
 
-        # Verify password
+        # Verify password using secure comparison
         password = serializer.validated_data["password"]
-        if password == chapter.password:
+        if chapter.check_password(password):
             # Success - generate token and reset attempts
             token = generate_chapter_token(chapter.id)
             chapter.reset_failed_attempts()
@@ -402,7 +402,7 @@ class ChapterViewSet(viewsets.ModelViewSet):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         new_password = serializer.validated_data["new_password"]
-        chapter.password = new_password
+        chapter.set_password(new_password)  # Use set_password for hashing
         chapter.reset_failed_attempts()
         chapter.save()
 
@@ -453,9 +453,9 @@ class AdminAuthViewSet(viewsets.ViewSet):
                 status=status.HTTP_429_TOO_MANY_REQUESTS,
             )
 
-        # Verify password
+        # Verify password using secure comparison
         password = serializer.validated_data["password"]
-        if password == admin_settings.admin_password:
+        if admin_settings.check_password(password):
             # Success - generate token and reset attempts
             token = generate_admin_token()
             admin_settings.reset_failed_attempts()
@@ -491,7 +491,7 @@ class AdminAuthViewSet(viewsets.ViewSet):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         new_password = serializer.validated_data["new_password"]
-        admin_settings.admin_password = new_password
+        admin_settings.set_password(new_password)  # Use set_password for hashing
         admin_settings.reset_failed_attempts()
         admin_settings.save()
 
