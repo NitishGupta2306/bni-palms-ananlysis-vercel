@@ -136,15 +136,18 @@ MEDIA_ROOT = BASE_DIR / "media"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# REST Framework settings - no auth
+# REST Framework settings - JWT authentication enabled
 REST_FRAMEWORK = {
-    "DEFAULT_PERMISSION_CLASSES": [
-        "rest_framework.permissions.AllowAny",
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "chapters.authentication.JWTAuthentication",
     ],
-    "DEFAULT_AUTHENTICATION_CLASSES": [],  # No authentication
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.IsAuthenticated",  # Require authentication by default
+    ],
     "UNAUTHENTICATED_USER": None,  # Don't use Django User model
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 100,
+    "EXCEPTION_HANDLER": "rest_framework.views.exception_handler",
 }
 
 # CORS settings
