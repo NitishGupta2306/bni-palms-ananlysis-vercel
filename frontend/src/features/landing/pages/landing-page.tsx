@@ -93,10 +93,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       <main className="container mx-auto p-4 sm:p-6 lg:p-8 py-12">
         {/* Welcome Section */}
         <div className="text-center mb-12">
-          <h2 className="text-4xl font-bold mb-4">
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-4">
             Welcome to BNI PALMS Analytics
           </h2>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+          <p className="text-base sm:text-lg text-muted-foreground max-w-2xl mx-auto">
             Access your chapter's performance data, reports, and analytics.
             Select your chapter below to get started.
           </p>
@@ -131,7 +131,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
         {/* Chapters Grid */}
         <div className="mb-8">
-          <h3 className="text-2xl font-semibold mb-6 text-center">
+          <h3 className="text-xl sm:text-2xl font-semibold mb-6 text-center">
             Select Your Chapter
           </h3>
           {isLoading ? (

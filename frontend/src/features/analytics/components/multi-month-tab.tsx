@@ -159,8 +159,10 @@ const MultiMonthTab: React.FC<MultiMonthTabProps> = ({
   return (
     <div className="space-y-6 p-4 sm:p-6">
       <div>
-        <h2 className="text-2xl font-bold mb-2">Multi-Month Analysis</h2>
-        <p className="text-muted-foreground">
+        <h2 className="text-xl sm:text-2xl font-bold mb-2">
+          Multi-Month Analysis
+        </h2>
+        <p className="text-sm sm:text-base text-muted-foreground">
           Select one or more monthly reports to generate aggregated analysis
         </p>
       </div>

@@ -129,8 +129,10 @@ const MatrixTab: React.FC<MatrixTabProps> = ({ chapterData }) => {
     <div className="space-y-6 p-4 sm:p-6">
       {/* Header */}
       <div>
-        <h2 className="text-2xl font-bold mb-2">Single-Month Analysis</h2>
-        <p className="text-muted-foreground">
+        <h2 className="text-xl sm:text-2xl font-bold mb-2">
+          Single-Month Analysis
+        </h2>
+        <p className="text-sm sm:text-base text-muted-foreground">
           View detailed matrices and reports for {chapterData.chapterName}
         </p>
       </div>
