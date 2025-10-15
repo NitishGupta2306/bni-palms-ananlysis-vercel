@@ -1,5 +1,10 @@
 """
 Analytics ViewSet - RESTful API for Matrix data and Comparisons
+
+Authentication:
+- All endpoints require authentication (IsChapterOrAdmin)
+- Chapters can only access their own analytics data
+- Admins can access all analytics data
 """
 from django.http import HttpResponse
 from rest_framework import viewsets, status
@@ -11,6 +16,7 @@ from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from io import BytesIO
 
 from chapters.models import Chapter
+from chapters.permissions import IsChapterOrAdmin
 from reports.models import MonthlyReport
 from members.models import Member
 from analytics.models import Referral
@@ -25,8 +31,12 @@ class MatrixViewSet(viewsets.ViewSet):
     - Referral matrix with totals
     - One-to-one matrix with totals
     - Combination matrix with summaries
+
+    Permissions:
+    - Chapters can access their own matrix data
+    - Admins can access all matrix data
     """
-    permission_classes = [AllowAny]  # TODO: Add proper authentication
+    permission_classes = [IsChapterOrAdmin]
 
     @action(detail=False, methods=['get'], url_path='referral')
     def referral_matrix(self, request, chapter_id=None, report_id=None):
@@ -273,8 +283,12 @@ class ComparisonViewSet(viewsets.ViewSet):
     - One-to-one matrix comparison
     - Combination matrix comparison
     - Comprehensive report comparison
+
+    Permissions:
+    - Chapters can compare their own reports
+    - Admins can compare all reports
     """
-    permission_classes = [AllowAny]  # TODO: Add proper authentication
+    permission_classes = [IsChapterOrAdmin]
 
     @action(detail=False, methods=['get'], url_path='referral')
     def compare_referral(self, request, chapter_id=None, report_id=None, previous_report_id=None):

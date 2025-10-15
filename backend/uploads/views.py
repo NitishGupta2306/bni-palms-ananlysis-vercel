@@ -1,5 +1,10 @@
 """
 File Upload ViewSet - RESTful API for Excel file uploads
+
+Authentication:
+- Excel upload: IsChapterOrAdmin (chapters upload their own data)
+- Bulk upload: IsAdmin (admin-only operation)
+- Reset all: IsAdmin (admin-only operation)
 """
 
 import logging
@@ -12,6 +17,7 @@ from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
 
 from chapters.models import Chapter
+from chapters.permissions import IsChapterOrAdmin, IsAdmin
 from bni.services.excel_processor import ExcelProcessorService
 from bni.services.bulk_upload_service import BulkUploadService
 
@@ -54,12 +60,23 @@ class FileUploadViewSet(viewsets.ViewSet):
     ViewSet for file upload operations.
 
     Provides endpoints for:
-    - Excel file upload: Process slip audit and member names files
-    - Bulk upload: Process Regional PALMS Summary reports
+    - Excel file upload: Process slip audit and member names files (IsChapterOrAdmin)
+    - Bulk upload: Process Regional PALMS Summary reports (IsAdmin)
+    - Reset all: Delete all data (IsAdmin)
+
+    Permissions:
+    - Chapters can upload their own data
+    - Admins have full access to all operations
     """
 
     parser_classes = (MultiPartParser, FormParser)
-    permission_classes = [AllowAny]  # TODO: Add proper authentication
+    permission_classes = [IsChapterOrAdmin]
+
+    def get_permissions(self):
+        """Override permissions based on action."""
+        if self.action in ['bulk_upload', 'reset_all_data']:
+            return [IsAdmin()]  # Admin-only operations
+        return [IsChapterOrAdmin()]  # Regular uploads
 
     def _extract_date_from_filename(self, filename):
         """

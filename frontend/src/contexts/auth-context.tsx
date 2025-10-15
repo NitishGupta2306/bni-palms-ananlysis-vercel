@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { API_BASE_URL } from '@/config/api';
+import { apiClient } from '@/lib/apiClient';
 
 interface ChapterAuth {
   chapterId: string;
@@ -93,12 +94,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const authenticateChapter = async (chapterId: string, password: string) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/chapters/${chapterId}/authenticate/`, {
+      // Use apiClient with skipAuth since this is the login endpoint
+      const response = await apiClient.fetch(`${API_BASE_URL}/api/chapters/${chapterId}/authenticate/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ password }),
+        skipAuth: true, // Don't send token for login
       });
 
       const data = await response.json();
@@ -140,12 +143,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const authenticateAdmin = async (password: string) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/admin/authenticate/`, {
+      // Use apiClient with skipAuth since this is the login endpoint
+      const response = await apiClient.fetch(`${API_BASE_URL}/api/admin/authenticate/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ password }),
+        skipAuth: true, // Don't send token for login
       });
 
       const data = await response.json();

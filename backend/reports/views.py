@@ -13,6 +13,7 @@ from openpyxl.styles import Font, Alignment, PatternFill
 from io import BytesIO
 
 from chapters.models import Chapter
+from chapters.permissions import IsChapterOrAdmin, IsAdmin
 from members.models import Member
 from reports.models import MonthlyReport, MemberMonthlyStats
 from analytics.models import TYFCB
@@ -23,15 +24,28 @@ class MonthlyReportViewSet(viewsets.ModelViewSet):
     """
     ViewSet for MonthlyReport operations.
 
+    All endpoints require authentication. Chapters can only access their own reports, admins can access all.
+
     Provides:
-    - list: Get all monthly reports for a chapter
-    - destroy: Delete a monthly report
-    - member_detail: Get detailed member information with missing interaction lists
-    - tyfcb_data: Get TYFCB data for a specific report
+    - list: Get all monthly reports for a chapter (IsChapterOrAdmin)
+    - destroy: Delete a monthly report (IsAdmin)
+    - member_detail: Get detailed member information (IsChapterOrAdmin)
+    - tyfcb_data: Get TYFCB data for a specific report (IsChapterOrAdmin)
+    - download_matrices: Download matrices as Excel (IsChapterOrAdmin)
+    - download_palms: Download original PALMS sheets (IsChapterOrAdmin)
+    - aggregate_reports: Aggregate multiple reports (IsChapterOrAdmin)
+    - download_aggregated: Download aggregated analysis (IsChapterOrAdmin)
     """
 
     queryset = MonthlyReport.objects.all()
-    permission_classes = [AllowAny]  # TODO: Add proper authentication
+    permission_classes = [IsChapterOrAdmin]  # Chapters see their own, admins see all
+
+    def get_permissions(self):
+        """Override permissions based on action."""
+        if self.action == 'destroy':
+            # Only admins can delete reports
+            return [IsAdmin()]
+        return [IsChapterOrAdmin()]
 
     def list(self, request, chapter_id=None):
         """
