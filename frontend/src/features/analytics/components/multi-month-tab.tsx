@@ -7,6 +7,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { API_BASE_URL } from "@/config/api";
@@ -190,9 +191,12 @@ const MultiMonthTab: React.FC<MultiMonthTabProps> = ({
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
           ) : reports.length === 0 ? (
-            <p className="text-center text-muted-foreground py-8">
-              No monthly reports found. Upload some data first.
-            </p>
+            <Alert>
+              <AlertDescription>
+                No monthly reports found. Upload some data first using the
+                Upload tab.
+              </AlertDescription>
+            </Alert>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
               {reports.map((report) => (
