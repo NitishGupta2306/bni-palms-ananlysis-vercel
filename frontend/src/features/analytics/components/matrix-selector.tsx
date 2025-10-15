@@ -73,6 +73,7 @@ export const MatrixSelector: React.FC<MatrixSelectorProps> = ({
         title: "Download Complete",
         description: `PALMS sheets downloaded successfully`,
         variant: "success",
+        duration: 3000,
       });
     } catch (error) {
       console.error("Failed to download PALMS files:", error);
@@ -80,6 +81,7 @@ export const MatrixSelector: React.FC<MatrixSelectorProps> = ({
         title: "Download Failed",
         description: "Failed to download PALMS files. Please try again.",
         variant: "destructive",
+        duration: 5000,
       });
     }
   };
@@ -102,20 +104,7 @@ export const MatrixSelector: React.FC<MatrixSelectorProps> = ({
             <SelectContent>
               {monthlyReports.map((report) => (
                 <SelectItem key={report.id} value={report.id.toString()}>
-                  <div className="flex justify-between items-center w-full">
-                    <span>{report.month_year}</span>
-                    <div className="flex gap-1 ml-4">
-                      {report.has_referral_matrix && (
-                        <Badge variant="secondary">Ref</Badge>
-                      )}
-                      {report.has_oto_matrix && (
-                        <Badge variant="secondary">OTO</Badge>
-                      )}
-                      {report.has_combination_matrix && (
-                        <Badge variant="secondary">Combo</Badge>
-                      )}
-                    </div>
-                  </div>
+                  {report.month_year}
                 </SelectItem>
               ))}
             </SelectContent>

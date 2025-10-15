@@ -172,10 +172,23 @@ export interface ComparisonData {
   };
 }
 
+export interface MemberData {
+  id: number;
+  name: string;
+  first_name?: string;
+  last_name?: string;
+  business_name?: string;
+  classification?: string;
+  email?: string;
+  phone?: string;
+  is_active?: boolean;
+  joined_date?: string;
+}
+
 export interface ChapterMemberData {
   chapterName: string;
   chapterId: string;
-  members: string[];
+  members: MemberData[]; // Changed from string[] to MemberData[]
   memberCount: number;
   memberFile: string;
   loadedAt: Date;
@@ -503,7 +516,7 @@ export const deleteMonthlyReport = async (
 };
 
 export const generateMockPerformanceMetrics = (
-  members: string[],
+  members: MemberData[],
 ): ChapterMemberData["performanceMetrics"] => {
   if (members.length === 0) {
     return {
@@ -518,7 +531,7 @@ export const generateMockPerformanceMetrics = (
     avgReferralsPerMember: Math.floor(Math.random() * 10) + 5,
     avgOTOsPerMember: Math.floor(Math.random() * 8) + 3,
     totalTYFCB: Math.floor(Math.random() * 500000) + 100000,
-    topPerformer: members[Math.floor(Math.random() * members.length)],
+    topPerformer: members[Math.floor(Math.random() * members.length)].name,
   };
 };
 

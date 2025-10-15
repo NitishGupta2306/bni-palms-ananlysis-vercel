@@ -1,23 +1,26 @@
 import { useState, useMemo, useCallback } from 'react';
 import { AdminMember, MemberFilters } from '../types/admin.types';
-import { ChapterMemberData } from '../../../shared/services/ChapterDataLoader';
+import { ChapterMemberData, MemberData } from '../../../shared/services/ChapterDataLoader';
+import { useToast } from '@/hooks/use-toast';
+import { API_BASE_URL } from '@/config/api';
 
-export const useMemberManagement = (chapterData: ChapterMemberData[]) => {
+export const useMemberManagement = (chapterData: ChapterMemberData[], onDataRefresh?: () => void) => {
+  const { toast } = useToast();
   const [filters, setFilters] = useState<MemberFilters>({
     searchTerm: '',
     chapterFilter: 'all',
   });
-  const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
+  const [selectedMembers, setSelectedMembers] = useState<number[]>([]); // Changed to number[] for real IDs
+  const [deletingMemberId, setDeletingMemberId] = useState<number | null>(null);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
 
   // Flatten all members from all chapters with chapter info
   const members = useMemo((): AdminMember[] => {
     return chapterData.flatMap(chapter =>
-      chapter.members.map((member, index) => ({
-        ...(typeof member === 'string' ? { name: member } : member),
+      chapter.members.map((member: MemberData) => ({
+        ...member,
         chapterName: chapter.chapterName,
         chapterId: chapter.chapterId,
-        memberId: `${chapter.chapterId}-${index}`,
-        memberIndex: index
       }))
     );
   }, [chapterData]);
@@ -42,7 +45,7 @@ export const useMemberManagement = (chapterData: ChapterMemberData[]) => {
     return filtered;
   }, [members, filters]);
 
-  const handleMemberSelect = useCallback((memberId: string, checked: boolean) => {
+  const handleMemberSelect = useCallback((memberId: number, checked: boolean) => {
     setSelectedMembers(prev =>
       checked
         ? [...prev, memberId]
@@ -52,7 +55,7 @@ export const useMemberManagement = (chapterData: ChapterMemberData[]) => {
 
   const handleSelectAll = useCallback((checked: boolean) => {
     if (checked) {
-      setSelectedMembers(filteredMembers.map((member, index) => `${member.chapterName}-${index}`));
+      setSelectedMembers(filteredMembers.map(member => member.id));
     } else {
       setSelectedMembers([]);
     }
@@ -61,10 +64,58 @@ export const useMemberManagement = (chapterData: ChapterMemberData[]) => {
   const handleBulkDelete = useCallback(async () => {
     if (selectedMembers.length === 0) return;
 
-    // TODO: Implementation would call DELETE API for each selected member
-    // Reset selections
-    setSelectedMembers([]);
-  }, [selectedMembers]);
+    if (!window.confirm(
+      `Are you sure you want to delete ${selectedMembers.length} member(s)? This cannot be undone.`
+    )) return;
+
+    setIsBulkDeleting(true);
+    const errors: string[] = [];
+    let successCount = 0;
+
+    try {
+      // Delete in sequence to avoid overwhelming the server
+      for (const memberId of selectedMembers) {
+        const member = members.find(m => m.id === memberId);
+        if (!member) continue;
+
+        try {
+          const response = await fetch(
+            `${API_BASE_URL}/api/chapters/${member.chapterId}/members/${member.id}/`,
+            { method: 'DELETE' }
+          );
+
+          if (response.ok) {
+            successCount++;
+          } else {
+            errors.push(member.name || 'Unknown');
+          }
+        } catch (error) {
+          errors.push(member.name || 'Unknown');
+        }
+      }
+
+      if (errors.length === 0) {
+        toast({
+          title: "Success",
+          description: `Deleted ${successCount} member(s) successfully`,
+          variant: "default"
+        });
+      } else {
+        toast({
+          title: errors.length < selectedMembers.length ? "Partial Success" : "Error",
+          description: `Deleted ${successCount} of ${selectedMembers.length}. Failed: ${errors.join(', ')}`,
+          variant: errors.length < selectedMembers.length ? "default" : "destructive"
+        });
+      }
+
+      setSelectedMembers([]);
+      if (onDataRefresh) {
+        onDataRefresh();
+      }
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  }, [selectedMembers, members, toast, onDataRefresh]);
 
   const handleEdit = useCallback((member: AdminMember) => {
     // TODO: Implementation would open edit dialog or navigate to edit page
@@ -73,11 +124,49 @@ export const useMemberManagement = (chapterData: ChapterMemberData[]) => {
   }, []);
 
   const handleDelete = useCallback(async (member: AdminMember) => {
-    if (!window.confirm(`Are you sure you want to delete ${member.name}?`)) return;
+    if (!window.confirm(`Are you sure you want to delete ${member.name}? This cannot be undone.`)) return;
 
-    // TODO: Implementation would call DELETE API for the member
-    console.log('Delete member:', member);
-  }, []);
+    setDeletingMemberId(member.id);
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/api/chapters/${member.chapterId}/members/${member.id}/`,
+        {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        }
+      );
+
+      if (response.ok) {
+        toast({
+          title: "Success",
+          description: `${member.name} has been deleted`,
+          variant: "default"
+        });
+
+        if (onDataRefresh) {
+          onDataRefresh();
+        }
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        toast({
+          title: "Error",
+          description: errorData.error || 'Failed to delete member',
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: 'Network error. Please try again.',
+        variant: "destructive"
+      });
+    } finally {
+      setDeletingMemberId(null);
+    }
+  }, [toast, onDataRefresh]);
 
   const exportMemberData = useCallback(() => {
     const csvContent = "data:text/csv;charset=utf-8,"
@@ -104,6 +193,8 @@ export const useMemberManagement = (chapterData: ChapterMemberData[]) => {
     filters,
     setFilters,
     selectedMembers,
+    deletingMemberId,
+    isBulkDeleting,
     handleMemberSelect,
     handleSelectAll,
     handleBulkDelete,

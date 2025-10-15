@@ -55,6 +55,7 @@ const MultiMonthTab: React.FC<MultiMonthTabProps> = ({
           title: "Error",
           description: "Failed to load monthly reports",
           variant: "destructive",
+          duration: 5000,
         });
       } finally {
         setIsLoading(false);
@@ -88,6 +89,7 @@ const MultiMonthTab: React.FC<MultiMonthTabProps> = ({
         title: "No reports selected",
         description: "Please select at least one monthly report",
         variant: "destructive",
+        duration: 4000,
       });
       return;
     }
@@ -137,6 +139,7 @@ const MultiMonthTab: React.FC<MultiMonthTabProps> = ({
         title: "Success",
         description: "Report generated and downloaded successfully",
         variant: "success",
+        duration: 3000,
       });
     } catch (error) {
       console.error("Error generating report:", error);
@@ -144,6 +147,7 @@ const MultiMonthTab: React.FC<MultiMonthTabProps> = ({
         title: "Error",
         description: "Failed to generate and download report",
         variant: "destructive",
+        duration: 5000,
       });
     } finally {
       setIsGenerating(false);

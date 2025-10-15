@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Building2, Lock, Users, Shield } from "lucide-react";
+import { Building2, Lock, Users } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -20,13 +20,26 @@ interface Chapter {
   member_count: number;
 }
 
-export const LandingPage: React.FC = () => {
+interface LandingPageProps {
+  showAdminLogin?: boolean;
+  onAdminLoginClose?: () => void;
+}
+
+export const LandingPage: React.FC<LandingPageProps> = ({
+  showAdminLogin: externalShowAdminLogin,
+  onAdminLoginClose,
+}) => {
   const navigate = useNavigate();
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedChapter, setSelectedChapter] = useState<Chapter | null>(null);
   const [showChapterLogin, setShowChapterLogin] = useState(false);
-  const [showAdminLogin, setShowAdminLogin] = useState(false);
+  const [internalShowAdminLogin, setInternalShowAdminLogin] = useState(false);
+
+  // Use external control if provided, otherwise use internal state
+  const showAdminLogin = externalShowAdminLogin ?? internalShowAdminLogin;
+  const handleAdminLoginClose =
+    onAdminLoginClose ?? (() => setInternalShowAdminLogin(false));
 
   useEffect(() => {
     const fetchChapters = async () => {
@@ -64,7 +77,7 @@ export const LandingPage: React.FC = () => {
   };
 
   const handleAdminLoginSuccess = () => {
-    setShowAdminLogin(false);
+    handleAdminLoginClose();
     navigate("/admin");
   };
 
@@ -76,26 +89,6 @@ export const LandingPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-muted">
-      {/* Header */}
-      <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Building2 className="h-8 w-8 text-primary" />
-              <h1 className="text-2xl font-bold">BNI PALMS Analytics</h1>
-            </div>
-            <Button
-              onClick={() => setShowAdminLogin(true)}
-              variant="outline"
-              className="gap-2"
-            >
-              <Shield className="h-4 w-4" />
-              Admin Dashboard
-            </Button>
-          </div>
-        </div>
-      </header>
-
       {/* Main Content */}
       <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Welcome Section */}
@@ -203,7 +196,7 @@ export const LandingPage: React.FC = () => {
 
       <AdminLoginModal
         isOpen={showAdminLogin}
-        onClose={() => setShowAdminLogin(false)}
+        onClose={handleAdminLoginClose}
         onSuccess={handleAdminLoginSuccess}
       />
     </div>
