@@ -338,7 +338,9 @@ const UnifiedDashboard: React.FC<UnifiedDashboardProps> = ({
                       const memberName =
                         typeof member === "string"
                           ? member
-                          : (member as any).name || "Unknown";
+                          : (typeof member === "object" && member !== null && "name" in member)
+                          ? member.name
+                          : "Unknown";
                       return (
                         <motion.tr
                           key={index}
