@@ -247,7 +247,7 @@ const MatrixTab: React.FC<MatrixTabProps> = ({ chapterData }) => {
 
           {/* Key Metrics */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card>
+            <Card className="transition-all duration-300 hover:shadow-lg hover:scale-105">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
@@ -266,7 +266,7 @@ const MatrixTab: React.FC<MatrixTabProps> = ({ chapterData }) => {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="transition-all duration-300 hover:shadow-lg hover:scale-105">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
@@ -287,7 +287,7 @@ const MatrixTab: React.FC<MatrixTabProps> = ({ chapterData }) => {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="transition-all duration-300 hover:shadow-lg hover:scale-105">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>

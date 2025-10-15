@@ -104,7 +104,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
         {/* Stats Summary */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto mb-12">
-          <Card>
+          <Card className="transition-all duration-300 hover:shadow-lg hover:scale-105">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Building2 className="h-5 w-5 text-primary" />
@@ -116,7 +116,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="transition-all duration-300 hover:shadow-lg hover:scale-105">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Users className="h-5 w-5 text-primary" />
