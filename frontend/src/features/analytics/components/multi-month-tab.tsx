@@ -156,7 +156,7 @@ const MultiMonthTab: React.FC<MultiMonthTabProps> = ({
   };
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6 p-4 sm:p-6">
       <div>
         <h2 className="text-2xl font-bold mb-2">Multi-Month Analysis</h2>
         <p className="text-muted-foreground">
