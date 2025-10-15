@@ -28,6 +28,7 @@ import { MatrixDisplay } from "./matrix-display";
 import { TYFCBReport } from "./tyfcb-report";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import { formatMonthYearLong } from "@/lib/utils";
 
 interface MatrixTabProps {
   chapterData: ChapterMemberData;
@@ -102,20 +103,6 @@ const MatrixTab: React.FC<MatrixTabProps> = ({ chapterData }) => {
   };
 
   const stats = calculateStats();
-
-  // Format month_year for display
-  const formatMonthYear = (monthYear: string) => {
-    try {
-      const [year, month] = monthYear.split("-");
-      const date = new Date(parseInt(year), parseInt(month) - 1);
-      return date.toLocaleDateString("en-US", {
-        month: "long",
-        year: "numeric",
-      });
-    } catch {
-      return monthYear;
-    }
-  };
 
   if (isLoadingReports) {
     return (
@@ -234,7 +221,7 @@ const MatrixTab: React.FC<MatrixTabProps> = ({ chapterData }) => {
                   </div>
                   <div>
                     <h3 className="text-2xl font-bold">
-                      {formatMonthYear(selectedReport.month_year)}
+                      {formatMonthYearLong(selectedReport.month_year)}
                     </h3>
                     <p className="text-sm text-muted-foreground">
                       Report Period

@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { API_BASE_URL } from "@/config/api";
+import { formatMonthYearShort } from "@/lib/utils";
 
 interface MonthlyReportListItem {
   id: number;
@@ -154,20 +155,6 @@ const MultiMonthTab: React.FC<MultiMonthTabProps> = ({
     }
   };
 
-  // Format month_year for display (2025-01 -> Jan 2025)
-  const formatMonthYear = (monthYear: string) => {
-    try {
-      const [year, month] = monthYear.split("-");
-      const date = new Date(parseInt(year), parseInt(month) - 1);
-      return date.toLocaleDateString("en-US", {
-        month: "short",
-        year: "numeric",
-      });
-    } catch {
-      return monthYear;
-    }
-  };
-
   return (
     <div className="space-y-6 p-6">
       <div>
@@ -225,7 +212,7 @@ const MultiMonthTab: React.FC<MultiMonthTabProps> = ({
                   />
                   <div className="flex-1">
                     <div className="font-medium">
-                      {formatMonthYear(report.month_year)}
+                      {formatMonthYearShort(report.month_year)}
                     </div>
                     <div className="text-xs text-muted-foreground">
                       {report.has_referral_matrix && report.has_oto_matrix
