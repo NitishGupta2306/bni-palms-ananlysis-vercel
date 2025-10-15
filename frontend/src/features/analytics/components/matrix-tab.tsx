@@ -137,70 +137,61 @@ const MatrixTab: React.FC<MatrixTabProps> = ({ chapterData }) => {
         </p>
       </div>
 
-      {/* Report Selection Card */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Select Monthly Report</CardTitle>
-          <CardDescription>Choose which month to analyze</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {monthlyReports.length === 0 ? (
-            <Alert>
-              <AlertDescription>
-                No monthly reports have been uploaded yet for{" "}
-                {chapterData.chapterName}. Use the "Upload" tab to upload
-                chapter reports.
-              </AlertDescription>
-            </Alert>
-          ) : (
-            <MatrixSelector
-              monthlyReports={monthlyReports}
-              selectedReport={selectedReport}
-              onReportChange={handleReportChange}
-              onDownloadExcel={async () => {
-                if (!selectedReport) return;
+      {/* Report Selection - Compact */}
+      {monthlyReports.length === 0 ? (
+        <Alert>
+          <AlertDescription>
+            No monthly reports have been uploaded yet for{" "}
+            {chapterData.chapterName}. Use the "Upload" tab to upload chapter
+            reports.
+          </AlertDescription>
+        </Alert>
+      ) : (
+        <MatrixSelector
+          monthlyReports={monthlyReports}
+          selectedReport={selectedReport}
+          onReportChange={handleReportChange}
+          onDownloadExcel={async () => {
+            if (!selectedReport) return;
 
-                try {
-                  const response = await fetch(
-                    `/api/chapters/${chapterData.chapterId}/reports/${selectedReport.id}/download-matrices/`,
-                  );
+            try {
+              const response = await fetch(
+                `/api/chapters/${chapterData.chapterId}/reports/${selectedReport.id}/download-matrices/`,
+              );
 
-                  if (!response.ok) {
-                    throw new Error("Failed to download file");
-                  }
+              if (!response.ok) {
+                throw new Error("Failed to download file");
+              }
 
-                  const blob = await response.blob();
-                  const url = window.URL.createObjectURL(blob);
-                  const link = document.createElement("a");
-                  link.href = url;
-                  link.download = `${chapterData.chapterName.replace(/ /g, "_")}_Matrices_${selectedReport.month_year}.xlsx`;
-                  document.body.appendChild(link);
-                  link.click();
-                  document.body.removeChild(link);
-                  window.URL.revokeObjectURL(url);
+              const blob = await response.blob();
+              const url = window.URL.createObjectURL(blob);
+              const link = document.createElement("a");
+              link.href = url;
+              link.download = `${chapterData.chapterName.replace(/ /g, "_")}_Matrices_${selectedReport.month_year}.xlsx`;
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+              window.URL.revokeObjectURL(url);
 
-                  toast({
-                    title: "Download Complete",
-                    description: `Matrices for ${selectedReport.month_year} downloaded successfully`,
-                    variant: "success",
-                    duration: 3000,
-                  });
-                } catch (error) {
-                  console.error("Failed to download Excel file:", error);
-                  toast({
-                    title: "Download Failed",
-                    description:
-                      "Failed to download Excel file. Please try again.",
-                    variant: "destructive",
-                    duration: 5000,
-                  });
-                }
-              }}
-              chapterId={chapterData.chapterId}
-            />
-          )}
-        </CardContent>
-      </Card>
+              toast({
+                title: "Download Complete",
+                description: `Matrices for ${selectedReport.month_year} downloaded successfully`,
+                variant: "success",
+                duration: 3000,
+              });
+            } catch (error) {
+              console.error("Failed to download Excel file:", error);
+              toast({
+                title: "Download Failed",
+                description: "Failed to download Excel file. Please try again.",
+                variant: "destructive",
+                duration: 5000,
+              });
+            }
+          }}
+          chapterId={chapterData.chapterId}
+        />
+      )}
 
       {/* Loading State */}
       {isLoadingMatrices && (

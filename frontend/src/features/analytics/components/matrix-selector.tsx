@@ -91,80 +91,64 @@ export const MatrixSelector: React.FC<MatrixSelectorProps> = ({
   }
 
   return (
-    <div className="space-y-3">
-      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
-        <div className="w-full sm:w-80">
-          <Select
-            value={selectedReport?.id?.toString() || ""}
-            onValueChange={onReportChange}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select Monthly Report" />
-            </SelectTrigger>
-            <SelectContent>
-              {monthlyReports.map((report) => (
-                <SelectItem key={report.id} value={report.id.toString()}>
-                  {report.month_year}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        {selectedReport && (
-          <div className="flex gap-2 flex-wrap">
-            <Button
-              onClick={onDownloadExcel}
-              className="flex items-center gap-2"
-            >
-              <Download className="h-4 w-4" />
-              Download Matrices
-            </Button>
-            {selectedReport.require_palms_sheets && (
-              <Button
-                onClick={handleDownloadPalms}
-                variant="outline"
-                className="flex items-center gap-2"
-              >
-                <FileText className="h-4 w-4" />
-                Download PALMS Sheets
-              </Button>
-            )}
+    <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+      {/* Left: Select + Week Info */}
+      <div className="flex items-center gap-3 flex-1">
+        <Select
+          value={selectedReport?.id?.toString() || ""}
+          onValueChange={onReportChange}
+        >
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Select Report" />
+          </SelectTrigger>
+          <SelectContent>
+            {monthlyReports.map((report) => (
+              <SelectItem key={report.id} value={report.id.toString()}>
+                {report.month_year}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {selectedReport?.week_of_date && (
+          <div className="hidden lg:flex items-center gap-2 text-xs text-muted-foreground">
+            <Calendar className="h-3 w-3" />
+            <span>
+              {format(new Date(selectedReport.week_of_date), "MMM d")} -{" "}
+              {selectedReport.audit_period_end &&
+                format(
+                  new Date(selectedReport.audit_period_end),
+                  "MMM d, yyyy",
+                )}
+            </span>
           </div>
         )}
       </div>
 
-      {/* Week Information Banner */}
-      {selectedReport?.week_of_date && (
-        <div className="flex items-center gap-2 px-4 py-2 bg-muted/50 rounded-md border text-sm">
-          <Calendar className="h-4 w-4 text-muted-foreground" />
-          <span className="text-muted-foreground">Data from Week of:</span>
-          <span className="font-semibold">
-            {format(new Date(selectedReport.week_of_date), "MMM d")} -{" "}
-            {selectedReport.audit_period_end &&
-              format(new Date(selectedReport.audit_period_end), "MMM d, yyyy")}
-          </span>
+      {/* Right: Download Buttons */}
+      {selectedReport && (
+        <div className="flex gap-2">
+          <Button
+            onClick={onDownloadExcel}
+            size="sm"
+            className="flex items-center gap-2"
+          >
+            <Download className="h-3 w-3" />
+            <span className="hidden sm:inline">Matrices</span>
+          </Button>
           {selectedReport.require_palms_sheets && (
-            <Badge variant="default" className="ml-2">
-              PALMS Downloadable
-            </Badge>
+            <Button
+              onClick={handleDownloadPalms}
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-2"
+            >
+              <FileText className="h-3 w-3" />
+              <span className="hidden sm:inline">PALMS</span>
+            </Button>
           )}
         </div>
       )}
-
-      {/* Uploaded Files Info */}
-      {selectedReport?.uploaded_file_names &&
-        selectedReport.uploaded_file_names.length > 0 && (
-          <div className="px-4 py-2 bg-muted/30 rounded-md border text-xs">
-            <div className="text-muted-foreground mb-1">Source Files:</div>
-            <div className="flex flex-wrap gap-2">
-              {selectedReport.uploaded_file_names.map((file, idx) => (
-                <Badge key={idx} variant="outline" className="text-xs">
-                  {file.original_filename}
-                </Badge>
-              ))}
-            </div>
-          </div>
-        )}
     </div>
   );
 };

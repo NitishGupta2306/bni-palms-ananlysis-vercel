@@ -9,6 +9,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
 from chapters.models import Chapter
+from chapters.permissions import IsAdmin, IsChapterOrAdmin
 from members.models import Member
 from analytics.models import Referral, OneToOne, TYFCB
 from reports.models import MonthlyReport
@@ -21,15 +22,36 @@ class ChapterViewSet(viewsets.ModelViewSet):
     ViewSet for Chapter CRUD operations and dashboard.
 
     Provides:
-    - list: Dashboard with all chapters and statistics
-    - retrieve: Detailed chapter information with members
-    - create: Create new chapter
-    - destroy: Delete chapter and all members
+    - list: Dashboard with all chapters and statistics (Admin only)
+    - retrieve: Detailed chapter information with members (Chapter can see own, Admin sees all)
+    - create: Create new chapter (Admin only)
+    - destroy: Delete chapter and all members (Admin only)
     """
 
     queryset = Chapter.objects.all()
     serializer_class = ChapterSerializer
-    permission_classes = [AllowAny]  # TODO: Add proper authentication
+    permission_classes = [IsChapterOrAdmin]  # Default: authenticated users
+
+    def get_permissions(self):
+        """
+        Override permissions based on action.
+        """
+        if self.action == 'list':
+            # Only admins can list all chapters
+            return [IsAdmin()]
+        elif self.action in ['create', 'destroy', 'update', 'partial_update']:
+            # Only admins can create/delete/update chapters
+            return [IsAdmin()]
+        elif self.action in ['retrieve']:
+            # Chapters can see their own, admins see all
+            return [IsChapterOrAdmin()]
+        elif self.action == 'authenticate':
+            # Anyone can attempt to authenticate
+            return [AllowAny()]
+        elif self.action == 'update_password':
+            # Only admins can update passwords
+            return [IsAdmin()]
+        return super().get_permissions()
 
     def list(self, request):
         """
@@ -200,6 +222,7 @@ class ChapterViewSet(viewsets.ModelViewSet):
         Get detailed information for a specific chapter.
 
         Returns chapter details with all active members and their full information.
+        Chapters can only see their own data, admins can see all.
         """
         try:
             chapter = self.get_object()
@@ -207,6 +230,15 @@ class ChapterViewSet(viewsets.ModelViewSet):
             return Response(
                 {"error": "Chapter not found"}, status=status.HTTP_404_NOT_FOUND
             )
+
+        # Check if non-admin user is accessing their own chapter
+        if hasattr(request.user, 'is_admin') and not request.user.is_admin:
+            if hasattr(request.user, 'chapter_id'):
+                if str(request.user.chapter_id) != str(chapter.id):
+                    return Response(
+                        {"error": "You can only access your own chapter"},
+                        status=status.HTTP_403_FORBIDDEN
+                    )
 
         # Get all members (frontend will filter by status)
         members = Member.objects.filter(chapter=chapter)
@@ -393,7 +425,7 @@ class ChapterViewSet(viewsets.ModelViewSet):
         """
         from bni.serializers import UpdatePasswordSerializer
 
-        # TODO: Add admin auth check here once middleware is implemented
+        # Permission check handled by get_permissions() - IsAdmin only
 
         chapter = self.get_object()
         serializer = UpdatePasswordSerializer(data=request.data)
@@ -415,9 +447,24 @@ class ChapterViewSet(viewsets.ModelViewSet):
 
 
 class AdminAuthViewSet(viewsets.ViewSet):
-    """ViewSet for admin authentication."""
+    """
+    ViewSet for admin authentication.
 
-    permission_classes = [AllowAny]
+    Permissions:
+    - authenticate: AllowAny (must allow login)
+    - update_password: IsAdmin only
+    - get_settings: IsAdmin only
+    """
+
+    permission_classes = [AllowAny]  # Default for authenticate action
+
+    def get_permissions(self):
+        """Override permissions based on action."""
+        if self.action == 'authenticate':
+            return [AllowAny()]
+        elif self.action in ['update_password', 'get_settings']:
+            return [IsAdmin()]
+        return super().get_permissions()
 
     @action(detail=False, methods=["post"])
     def authenticate(self, request):
@@ -482,7 +529,7 @@ class AdminAuthViewSet(viewsets.ViewSet):
         from chapters.models import AdminSettings
         from bni.serializers import UpdatePasswordSerializer
 
-        # TODO: Add admin auth check here once middleware is implemented
+        # Permission check handled by get_permissions() - IsAdmin only
 
         admin_settings = AdminSettings.load()
         serializer = UpdatePasswordSerializer(data=request.data)
@@ -504,13 +551,15 @@ class AdminAuthViewSet(viewsets.ViewSet):
         """
         Get all security settings including admin password and all chapter passwords.
 
+        Admin only endpoint.
+
         Response includes:
-        - admin_password: Current admin password
-        - chapters: List of all chapters with their passwords
+        - admin_password: Current admin password (hashed)
+        - chapters: List of all chapters with their passwords (hashed)
         """
         from chapters.models import AdminSettings
 
-        # TODO: Add admin auth check here once middleware is implemented
+        # Permission check handled by get_permissions() - IsAdmin only
 
         admin_settings = AdminSettings.load()
         chapters = Chapter.objects.all()
