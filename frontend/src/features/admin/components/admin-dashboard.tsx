@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import {
   Settings,
   CloudUpload,
@@ -7,8 +8,18 @@ import {
   Users,
   Database,
   UserPlus,
+  Home,
+  Shield,
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 import { MemberManagementTab } from "./member-management-tab";
 import { ChapterManagementTab } from "./chapter-management-tab";
 import { BulkUploadTab } from "./bulk-upload-tab";
@@ -18,6 +29,7 @@ import { SecuritySettingsTab } from "./security-settings-tab";
 import { useAdminData } from "../hooks/useAdminData";
 
 const AdminDashboard: React.FC = () => {
+  const navigate = useNavigate();
   const {
     chapterData,
     selectedChapter,
@@ -71,6 +83,30 @@ const AdminDashboard: React.FC = () => {
       transition={{ duration: 0.3 }}
       className="space-y-6 sm:space-y-8 p-4 sm:p-6"
     >
+      {/* Breadcrumb Navigation */}
+      <div className="px-0 py-2">
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink
+                onClick={() => navigate("/")}
+                className="flex items-center gap-2 cursor-pointer"
+              >
+                <Home className="h-4 w-4" />
+                Home
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage className="flex items-center gap-2">
+                <Shield className="h-4 w-4" />
+                Admin Dashboard
+              </BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+      </div>
+
       {/* Admin Tabs */}
       <Tabs
         value={activeTab}
