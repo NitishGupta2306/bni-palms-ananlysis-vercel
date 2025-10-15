@@ -1,20 +1,34 @@
-import React from 'react';
-import { Info, Upload, GitCompare, Grid3X3, AlertCircle, Trash2, Loader2 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
-import { ChapterMemberData } from '../../../shared/services/ChapterDataLoader';
+import React from "react";
+import {
+  Info,
+  Upload,
+  GitCompare,
+  Grid3X3,
+  AlertCircle,
+  Trash2,
+  Loader2,
+} from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { ChapterMemberData } from "../../../shared/services/ChapterDataLoader";
 
 interface ChapterCardProps {
   chapterData: ChapterMemberData;
-  onTabSelect: (chapterId: string, tab: 'info' | 'upload' | 'compare' | 'preview') => void;
+  onTabSelect: (
+    chapterId: string,
+    tab: "info" | "upload" | "compare" | "preview",
+  ) => void;
   onDelete?: (chapterId: string) => void;
   isLoading?: boolean;
 }
 
-
-const ChapterCard: React.FC<ChapterCardProps> = ({ chapterData, onTabSelect, onDelete, isLoading = false }) => {
-
+const ChapterCard: React.FC<ChapterCardProps> = ({
+  chapterData,
+  onTabSelect,
+  onDelete,
+  isLoading = false,
+}) => {
   if (isLoading) {
     return (
       <Card className="h-[200px] flex items-center justify-center animate-pulse">
@@ -29,19 +43,19 @@ const ChapterCard: React.FC<ChapterCardProps> = ({ chapterData, onTabSelect, onD
   }
 
   const tabs = [
-    { id: 'info' as const, label: 'Chapter Info', icon: Info },
-    { id: 'upload' as const, label: 'Upload', icon: Upload },
-    { id: 'compare' as const, label: 'Compare', icon: GitCompare },
-    { id: 'preview' as const, label: 'Matrices', icon: Grid3X3 }
+    { id: "info" as const, label: "Chapter Info", icon: Info },
+    { id: "upload" as const, label: "Upload", icon: Upload },
+    { id: "compare" as const, label: "Compare", icon: GitCompare },
+    { id: "preview" as const, label: "Single-Month", icon: Grid3X3 },
   ];
 
   return (
     <Card
       className={cn(
-        "transition-all duration-300 hover:shadow-lg border-l-4 border-l-primary/30 cursor-pointer"
+        "transition-all duration-300 hover:shadow-lg border-l-4 border-l-primary/30 cursor-pointer",
       )}
       data-testid={`chapter-card-${chapterData.chapterId}`}
-      onClick={() => onTabSelect(chapterData.chapterId, 'info')}
+      onClick={() => onTabSelect(chapterData.chapterId, "info")}
     >
       <CardContent className="p-4">
         {chapterData.loadError ? (
@@ -50,7 +64,9 @@ const ChapterCard: React.FC<ChapterCardProps> = ({ chapterData, onTabSelect, onD
               <AlertCircle className="h-5 w-5 text-destructive" />
               <div>
                 <h3 className="text-lg font-bold">{chapterData.chapterName}</h3>
-                <p className="text-xs text-destructive">{chapterData.loadError}</p>
+                <p className="text-xs text-destructive">
+                  {chapterData.loadError}
+                </p>
               </div>
             </div>
             {onDelete && (
@@ -70,7 +86,10 @@ const ChapterCard: React.FC<ChapterCardProps> = ({ chapterData, onTabSelect, onD
         ) : (
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-4 min-w-0">
-              <h3 className="text-lg font-bold truncate" data-testid={`chapter-name-${chapterData.chapterId}`}>
+              <h3
+                className="text-lg font-bold truncate"
+                data-testid={`chapter-name-${chapterData.chapterId}`}
+              >
                 {chapterData.chapterName}
               </h3>
               {onDelete && (

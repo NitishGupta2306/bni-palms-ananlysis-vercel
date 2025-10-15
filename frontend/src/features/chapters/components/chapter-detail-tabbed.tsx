@@ -77,7 +77,7 @@ const ChapterDetailTabbed: React.FC<ChapterDetailTabbedProps> = ({
       { id: "info" as const, label: "Chapter Info", icon: Info },
       { id: "upload" as const, label: "Upload", icon: Upload },
       { id: "compare" as const, label: "Compare", icon: GitCompare },
-      { id: "preview" as const, label: "Matrices", icon: Grid3X3 },
+      { id: "preview" as const, label: "Single-Month", icon: Grid3X3 },
       { id: "multimonth" as const, label: "Multi-Month", icon: Calendar },
     ],
     [],

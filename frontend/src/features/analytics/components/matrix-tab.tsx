@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   Grid3x3,
   TrendingUp,
@@ -6,21 +6,23 @@ import {
   GitMerge,
   DollarSign,
   Loader2,
-} from 'lucide-react';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ChapterMemberData } from '../../../shared/services/ChapterDataLoader';
-import { useMatrixData } from '../hooks/useMatrixData';
-import { MatrixSelector } from './matrix-selector';
-import { MatrixDisplay } from './matrix-display';
-import { TYFCBReport } from './tyfcb-report';
+} from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ChapterMemberData } from "../../../shared/services/ChapterDataLoader";
+import { useMatrixData } from "../hooks/useMatrixData";
+import { MatrixSelector } from "./matrix-selector";
+import { MatrixDisplay } from "./matrix-display";
+import { TYFCBReport } from "./tyfcb-report";
+import { useToast } from "@/hooks/use-toast";
 
 interface MatrixTabProps {
   chapterData: ChapterMemberData;
 }
 
 const MatrixTab: React.FC<MatrixTabProps> = ({ chapterData }) => {
-  const [tabValue, setTabValue] = useState('referral');
+  const [tabValue, setTabValue] = useState("referral");
+  const { toast } = useToast();
 
   const {
     monthlyReports,
@@ -40,25 +42,35 @@ const MatrixTab: React.FC<MatrixTabProps> = ({ chapterData }) => {
 
     try {
       const response = await fetch(
-        `/api/chapters/${chapterData.chapterId}/reports/${selectedReport.id}/download-matrices/`
+        `/api/chapters/${chapterData.chapterId}/reports/${selectedReport.id}/download-matrices/`,
       );
 
       if (!response.ok) {
-        throw new Error('Failed to download file');
+        throw new Error("Failed to download file");
       }
 
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
+      const link = document.createElement("a");
       link.href = url;
-      link.download = `${chapterData.chapterName.replace(/ /g, '_')}_Matrices_${selectedReport.month_year}.xlsx`;
+      link.download = `${chapterData.chapterName.replace(/ /g, "_")}_Matrices_${selectedReport.month_year}.xlsx`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
+
+      toast({
+        title: "Download Complete",
+        description: `Matrices for ${selectedReport.month_year} downloaded successfully`,
+        variant: "success",
+      });
     } catch (error) {
-      console.error('Failed to download Excel file:', error);
-      alert('Failed to download Excel file. Please try again.');
+      console.error("Failed to download Excel file:", error);
+      toast({
+        title: "Download Failed",
+        description: "Failed to download Excel file. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -89,7 +101,8 @@ const MatrixTab: React.FC<MatrixTabProps> = ({ chapterData }) => {
           Matrices & Reports
         </h2>
         <p className="text-sm text-muted-foreground">
-          Interactive matrices and TYFCB reports showing relationships and business results for {chapterData.chapterName}
+          Interactive matrices and TYFCB reports showing relationships and
+          business results for {chapterData.chapterName}
         </p>
       </div>
 
@@ -99,14 +112,16 @@ const MatrixTab: React.FC<MatrixTabProps> = ({ chapterData }) => {
         selectedReport={selectedReport}
         onReportChange={handleReportChange}
         onDownloadExcel={handleDownloadExcel}
+        chapterId={chapterData.chapterId}
       />
 
       {/* No Reports State */}
       {monthlyReports.length === 0 && (
         <Alert>
           <AlertDescription>
-            No monthly reports have been uploaded yet for {chapterData.chapterName}.
-            Use the "Upload" tab to upload chapter reports.
+            No monthly reports have been uploaded yet for{" "}
+            {chapterData.chapterName}. Use the "Upload" tab to upload chapter
+            reports.
           </AlertDescription>
         </Alert>
       )}
@@ -135,7 +150,10 @@ const MatrixTab: React.FC<MatrixTabProps> = ({ chapterData }) => {
               <span className="hidden sm:inline">One-to-One Matrix</span>
               <span className="sm:hidden">One-to-One</span>
             </TabsTrigger>
-            <TabsTrigger value="combination" className="flex items-center gap-2">
+            <TabsTrigger
+              value="combination"
+              className="flex items-center gap-2"
+            >
               <GitMerge className="h-4 w-4" />
               <span className="hidden sm:inline">Combination Matrix</span>
               <span className="sm:hidden">Combination</span>

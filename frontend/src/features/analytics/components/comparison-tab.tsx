@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { TrendingUp, TrendingDown, Calendar, AlertCircle, Loader2, Download, FileSpreadsheet } from 'lucide-react';
+import { TrendingUp, TrendingDown, Calendar, AlertCircle, Loader2, Download, FileSpreadsheet, Zap, Clock, Upload } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,8 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { MonthlyReport, ComparisonData, loadComparisonData, loadMonthlyReports } from '../../../shared/services/ChapterDataLoader';
+import { LoadingSkeleton } from '@/components/ui/loading-skeleton';
+import { EmptyState } from '@/components/ui/empty-state';
 import { API_BASE_URL } from '@/config/api';
 
 interface ComparisonTabProps {
@@ -58,6 +60,25 @@ const ComparisonTab: React.FC<ComparisonTabProps> = ({ chapterId }) => {
     b.month_year.localeCompare(a.month_year)
   );
 
+  // Auto-select most recent 2 months when reports load
+  useEffect(() => {
+    if (sortedReports.length >= 2 && !currentReportId && !previousReportId) {
+      setCurrentReportId(sortedReports[0].id);
+      setPreviousReportId(sortedReports[1].id);
+    }
+  }, [sortedReports, currentReportId, previousReportId]);
+
+  // Quick compare helpers
+  const handleQuickCompare = (type: 'last2' | 'last3') => {
+    if (type === 'last2' && sortedReports.length >= 2) {
+      setCurrentReportId(sortedReports[0].id);
+      setPreviousReportId(sortedReports[1].id);
+    } else if (type === 'last3' && sortedReports.length >= 3) {
+      setCurrentReportId(sortedReports[0].id);
+      setPreviousReportId(sortedReports[2].id);
+    }
+  };
+
   const handleCompare = async () => {
     if (!currentReportId || !previousReportId) {
       return; // Error will be shown by validation below
@@ -80,12 +101,7 @@ const ComparisonTab: React.FC<ComparisonTabProps> = ({ chapterId }) => {
 
   // Show loading state while fetching reports
   if (loadingReports) {
-    return (
-      <div className="flex items-center justify-center p-12">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        <span className="ml-3 text-muted-foreground">Loading monthly reports...</span>
-      </div>
-    );
+    return <LoadingSkeleton message="Loading monthly reports..." variant="card" />;
   }
 
   return (
@@ -93,13 +109,41 @@ const ComparisonTab: React.FC<ComparisonTabProps> = ({ chapterId }) => {
       {/* Month Selection */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Calendar className="h-5 w-5" />
-            Select Months to Compare
-          </CardTitle>
-          <CardDescription>
-            Choose two months to compare member performance and identify trends
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Calendar className="h-5 w-5" />
+                Compare Months
+              </CardTitle>
+              <CardDescription>
+                Analyze performance trends between two reporting periods
+              </CardDescription>
+            </div>
+            {sortedReports.length >= 2 && (
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleQuickCompare('last2')}
+                  className="flex items-center gap-2"
+                >
+                  <Zap className="h-4 w-4" />
+                  Last 2 Months
+                </Button>
+                {sortedReports.length >= 3 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleQuickCompare('last3')}
+                    className="flex items-center gap-2"
+                  >
+                    <Clock className="h-4 w-4" />
+                    3 Months Apart
+                  </Button>
+                )}
+              </div>
+            )}
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           {sortedReports.length >= 2 ? (
@@ -178,14 +222,17 @@ const ComparisonTab: React.FC<ComparisonTabProps> = ({ chapterId }) => {
               )}
             </>
           ) : (
-            <Alert>
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                You need at least 2 monthly reports to compare performance.
-                {monthlyReports.length === 1 && ' You have 1 report uploaded. '}
-                Please upload more data to enable comparisons.
-              </AlertDescription>
-            </Alert>
+            <EmptyState
+              icon={FileSpreadsheet}
+              title="Not Enough Data Yet"
+              description={`You need at least 2 monthly reports to compare performance. ${monthlyReports.length === 1 ? 'You have 1 report uploaded.' : ''} Upload more monthly reports to unlock comparison features.`}
+              action={{
+                label: 'Upload Report',
+                onClick: () => window.location.href = '/chapters',
+                icon: Upload
+              }}
+              variant="default"
+            />
           )}
         </CardContent>
       </Card>

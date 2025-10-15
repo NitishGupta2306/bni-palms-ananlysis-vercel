@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Download } from 'lucide-react';
+import { Download, Loader2 } from 'lucide-react';
 import { API_BASE_URL } from '@/config/api';
+import { useToast } from '@/hooks/use-toast';
 
 interface MatrixExportButtonProps {
   chapterId: string;
@@ -16,7 +17,12 @@ export const MatrixExportButton: React.FC<MatrixExportButtonProps> = ({
   reportId,
   monthYear,
 }) => {
+  const [isDownloading, setIsDownloading] = useState(false);
+  const { toast } = useToast();
+
   const handleDownloadExcel = async () => {
+    setIsDownloading(true);
+
     try {
       // Fetch the Excel file from the API
       const response = await fetch(`${API_BASE_URL}/api/chapters/${chapterId}/reports/${reportId}/download-matrices/`);
@@ -41,16 +47,42 @@ export const MatrixExportButton: React.FC<MatrixExportButtonProps> = ({
       // Clean up
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
+
+      // Show success toast
+      toast({
+        title: 'Download Complete',
+        description: `${chapterName} matrices downloaded successfully`,
+        variant: 'success',
+      });
     } catch (error) {
       console.error('Failed to download Excel file:', error);
-      alert('Failed to download Excel file. Please try again.');
+      toast({
+        title: 'Download Failed',
+        description: 'Failed to download Excel file. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsDownloading(false);
     }
   };
 
   return (
-    <Button onClick={handleDownloadExcel} className="flex items-center gap-2">
-      <Download className="h-4 w-4" />
-      Download All Matrices
+    <Button
+      onClick={handleDownloadExcel}
+      className="flex items-center gap-2"
+      disabled={isDownloading}
+    >
+      {isDownloading ? (
+        <>
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Downloading...
+        </>
+      ) : (
+        <>
+          <Download className="h-4 w-4" />
+          Download All Matrices
+        </>
+      )}
     </Button>
   );
 };

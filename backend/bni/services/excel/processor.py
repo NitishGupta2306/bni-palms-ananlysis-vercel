@@ -34,19 +34,19 @@ class ExcelProcessorService:
     # Row 0: Headers (From, To, Slip Type, Inside/Outside, $ if TYFCB, Qty if CEU, Detail)
     # Row 1+: Data
     COLUMN_MAPPINGS = {
-        'giver_name': 0,       # Column A - From
-        'receiver_name': 1,     # Column B - To
-        'slip_type': 2,         # Column C - Slip Type
-        'inside_outside': 3,    # Column D - Inside/Outside
-        'tyfcb_amount': 4,      # Column E - $ if TYFCB
-        'qty_ceu': 5,           # Column F - Qty if CEU
-        'detail': 6,            # Column G - Detail
+        "giver_name": 0,  # Column A - From
+        "receiver_name": 1,  # Column B - To
+        "slip_type": 2,  # Column C - Slip Type
+        "inside_outside": 3,  # Column D - Inside/Outside
+        "tyfcb_amount": 4,  # Column E - $ if TYFCB
+        "qty_ceu": 5,  # Column F - Qty if CEU
+        "detail": 6,  # Column G - Detail
     }
 
     SLIP_TYPES = {
-        'referral': ['referral', 'ref'],
-        'one_to_one': ['one to one', 'oto', '1to1', '1-to-1', 'one-to-one'],
-        'tyfcb': ['tyfcb', 'thank you for closed business', 'closed business']
+        "referral": ["referral", "ref"],
+        "one_to_one": ["one to one", "oto", "1to1", "1-to-1", "one-to-one"],
+        "tyfcb": ["tyfcb", "thank you for closed business", "closed business"],
     }
 
     def __init__(self, chapter: Chapter):
@@ -54,8 +54,9 @@ class ExcelProcessorService:
         self.errors = []
         self.warnings = []
 
-    def process_excel_file(self, file_path: Union[str, Path],
-                          week_of_date: Optional[date] = None) -> Dict:
+    def process_excel_file(
+        self, file_path: Union[str, Path], week_of_date: Optional[date] = None
+    ) -> Dict:
         """
         Process a BNI Excel file and extract referrals, one-to-ones, and TYFCBs.
 
@@ -83,13 +84,13 @@ class ExcelProcessorService:
             results = self._process_dataframe(df, members_lookup, week_of_date)
 
             return {
-                'success': len(self.errors) == 0,
-                'referrals_created': results['referrals_created'],
-                'one_to_ones_created': results['one_to_ones_created'],
-                'tyfcbs_created': results['tyfcbs_created'],
-                'total_processed': results['total_processed'],
-                'errors': self.errors,
-                'warnings': self.warnings,
+                "success": len(self.errors) == 0,
+                "referrals_created": results["referrals_created"],
+                "one_to_ones_created": results["one_to_ones_created"],
+                "tyfcbs_created": results["tyfcbs_created"],
+                "total_processed": results["total_processed"],
+                "errors": self.errors,
+                "warnings": self.warnings,
             }
 
         except Exception as e:
@@ -101,26 +102,26 @@ class ExcelProcessorService:
         try:
             # Check if it's an XML-based .xls file by reading the first line
             try:
-                with open(file_path, 'r', encoding='utf-8') as f:
+                with open(file_path, "r", encoding="utf-8") as f:
                     first_line = f.readline().strip()
 
-                if first_line.startswith('<?xml'):
+                if first_line.startswith("<?xml"):
                     # Handle XML-based .xls files (BNI audit reports)
                     logger.info(f"Detected XML-based .xls file: {file_path}")
                     df = parse_bni_xml_excel(str(file_path))
                 else:
                     # Handle standard Excel files
-                    if file_path.suffix.lower() == '.xls':
+                    if file_path.suffix.lower() == ".xls":
                         # Try xlrd for binary .xls files
-                        df = pd.read_excel(file_path, engine='xlrd', dtype=str)
+                        df = pd.read_excel(file_path, engine="xlrd", dtype=str)
                     else:
                         # For .xlsx files, use default engine
                         df = pd.read_excel(file_path, dtype=str)
 
             except UnicodeDecodeError:
                 # If we can't read as text, it's probably binary Excel
-                if file_path.suffix.lower() == '.xls':
-                    df = pd.read_excel(file_path, engine='xlrd', dtype=str)
+                if file_path.suffix.lower() == ".xls":
+                    df = pd.read_excel(file_path, engine="xlrd", dtype=str)
                 else:
                     df = pd.read_excel(file_path, dtype=str)
 
@@ -143,10 +144,11 @@ class ExcelProcessorService:
     def _get_members_lookup(self) -> Dict[str, Member]:
         """Create a lookup dictionary for chapter members by normalized name. OPTIMIZED with .only() and select_related."""
         # Only fetch required fields and prefetch chapter to minimize queries
-        members = Member.objects.filter(
-            chapter=self.chapter,
-            is_active=True
-        ).select_related('chapter').only('id', 'first_name', 'last_name', 'normalized_name', 'chapter_id')
+        members = (
+            Member.objects.filter(chapter=self.chapter, is_active=True)
+            .select_related("chapter")
+            .only("id", "first_name", "last_name", "normalized_name", "chapter_id")
+        )
 
         lookup = {}
 
@@ -164,7 +166,9 @@ class ExcelProcessorService:
 
         return lookup
 
-    def _find_member_by_name(self, name: str, lookup: Dict[str, Member]) -> Optional[Member]:
+    def _find_member_by_name(
+        self, name: str, lookup: Dict[str, Member]
+    ) -> Optional[Member]:
         """Find a member by name using fuzzy matching."""
         if not name or pd.isna(name):
             return None
@@ -181,7 +185,7 @@ class ExcelProcessorService:
         # Try variations
         variations = [
             name.lower(),
-            ' '.join(name.lower().split()),
+            " ".join(name.lower().split()),
         ]
 
         for variation in variations:
@@ -205,14 +209,18 @@ class ExcelProcessorService:
 
         return None
 
-    def _process_dataframe(self, df: pd.DataFrame, members_lookup: Dict[str, Member],
-                          week_of_date: Optional[date]) -> Dict:
+    def _process_dataframe(
+        self,
+        df: pd.DataFrame,
+        members_lookup: Dict[str, Member],
+        week_of_date: Optional[date],
+    ) -> Dict:
         """Process DataFrame and create database records using bulk operations."""
         results = {
-            'referrals_created': 0,
-            'one_to_ones_created': 0,
-            'tyfcbs_created': 0,
-            'total_processed': 0,
+            "referrals_created": 0,
+            "one_to_ones_created": 0,
+            "tyfcbs_created": 0,
+            "total_processed": 0,
         }
 
         # Collect objects for bulk insert
@@ -222,37 +230,46 @@ class ExcelProcessorService:
 
         # Validate file format by checking column names
         # The parse_bni_xml_excel function already uses row 0 as headers
-        if len(df) > 0 and hasattr(df, 'columns'):
-            cols_str = ' '.join([str(c).lower() for c in df.columns])
+        if len(df) > 0 and hasattr(df, "columns"):
+            cols_str = " ".join([str(c).lower() for c in df.columns])
 
             # Reject old format (has title like "Slips Audit Report")
-            if 'slip' in df.columns[0].lower() or 'audit' in df.columns[0].lower():
+            if "slip" in df.columns[0].lower() or "audit" in df.columns[0].lower():
                 error_msg = "OLD format files are not supported. Please use files without metadata rows."
                 logger.error(error_msg)
                 self.errors.append(error_msg)
-                results['success'] = False
-                results['error'] = error_msg
+                results["success"] = False
+                results["error"] = error_msg
                 return results
 
             # Validate new format has expected columns
-            if 'from' not in cols_str or 'slip type' not in cols_str:
+            if "from" not in cols_str or "slip type" not in cols_str:
                 error_msg = f"Invalid file format. Expected columns 'From' and 'Slip Type', got: {list(df.columns)}"
                 logger.error(error_msg)
                 self.errors.append(error_msg)
-                results['success'] = False
-                results['error'] = error_msg
+                results["success"] = False
+                results["error"] = error_msg
                 return results
 
             logger.info(f"Validated NEW format with columns: {list(df.columns)}")
 
         # OPTIMIZED: Vectorized processing instead of iterrows() (10x faster)
         # Pre-extract all columns at once using vectorized operations
-        giver_names = df.iloc[:, self.COLUMN_MAPPINGS['giver_name']].astype(str).str.strip()
-        receiver_names = df.iloc[:, self.COLUMN_MAPPINGS['receiver_name']].astype(str).str.strip()
-        slip_types = df.iloc[:, self.COLUMN_MAPPINGS['slip_type']].astype(str).str.strip().str.lower()
+        giver_names = (
+            df.iloc[:, self.COLUMN_MAPPINGS["giver_name"]].astype(str).str.strip()
+        )
+        receiver_names = (
+            df.iloc[:, self.COLUMN_MAPPINGS["receiver_name"]].astype(str).str.strip()
+        )
+        slip_types = (
+            df.iloc[:, self.COLUMN_MAPPINGS["slip_type"]]
+            .astype(str)
+            .str.strip()
+            .str.lower()
+        )
 
         # Filter out empty slip types
-        valid_mask = (slip_types != '') & (slip_types != 'nan')
+        valid_mask = (slip_types != "") & (slip_types != "nan")
 
         # Process each row with vectorized data
         for idx in df[valid_mask].index:
@@ -264,30 +281,50 @@ class ExcelProcessorService:
                 # Normalize slip type
                 normalized_slip_type = self._normalize_slip_type(slip_type)
                 if not normalized_slip_type:
-                    self.warnings.append(f"Row {idx + 1}: Unknown slip type '{slip_type}'")
+                    self.warnings.append(
+                        f"Row {idx + 1}: Unknown slip type '{slip_type}'"
+                    )
                     continue
 
-                results['total_processed'] += 1
+                results["total_processed"] += 1
 
                 # Get the row only when needed for detailed processing
                 row = df.iloc[idx]
 
                 # Prepare objects based on slip type
-                if normalized_slip_type == 'referral':
-                    obj = self._prepare_referral(row, idx, giver_name, receiver_name,
-                                                members_lookup, week_of_date)
+                if normalized_slip_type == "referral":
+                    obj = self._prepare_referral(
+                        row,
+                        idx,
+                        giver_name,
+                        receiver_name,
+                        members_lookup,
+                        week_of_date,
+                    )
                     if obj:
                         referrals_to_create.append(obj)
 
-                elif normalized_slip_type == 'one_to_one':
-                    obj = self._prepare_one_to_one(row, idx, giver_name, receiver_name,
-                                                  members_lookup, week_of_date)
+                elif normalized_slip_type == "one_to_one":
+                    obj = self._prepare_one_to_one(
+                        row,
+                        idx,
+                        giver_name,
+                        receiver_name,
+                        members_lookup,
+                        week_of_date,
+                    )
                     if obj:
                         one_to_ones_to_create.append(obj)
 
-                elif normalized_slip_type == 'tyfcb':
-                    obj = self._prepare_tyfcb(row, idx, giver_name, receiver_name,
-                                             members_lookup, week_of_date)
+                elif normalized_slip_type == "tyfcb":
+                    obj = self._prepare_tyfcb(
+                        row,
+                        idx,
+                        giver_name,
+                        receiver_name,
+                        members_lookup,
+                        week_of_date,
+                    )
                     if obj:
                         tyfcbs_to_create.append(obj)
 
@@ -299,21 +336,25 @@ class ExcelProcessorService:
         with transaction.atomic():
             if referrals_to_create:
                 Referral.objects.bulk_create(referrals_to_create, ignore_conflicts=True)
-                results['referrals_created'] = len(referrals_to_create)
+                results["referrals_created"] = len(referrals_to_create)
 
             if one_to_ones_to_create:
-                OneToOne.objects.bulk_create(one_to_ones_to_create, ignore_conflicts=True)
-                results['one_to_ones_created'] = len(one_to_ones_to_create)
+                OneToOne.objects.bulk_create(
+                    one_to_ones_to_create, ignore_conflicts=True
+                )
+                results["one_to_ones_created"] = len(one_to_ones_to_create)
 
             if tyfcbs_to_create:
                 TYFCB.objects.bulk_create(tyfcbs_to_create, ignore_conflicts=True)
-                results['tyfcbs_created'] = len(tyfcbs_to_create)
+                results["tyfcbs_created"] = len(tyfcbs_to_create)
 
         # Add success flag and error message if any
-        results['success'] = len(self.errors) == 0
+        results["success"] = len(self.errors) == 0
         if self.errors:
-            results['error'] = f"{len(self.errors)} errors occurred: {'; '.join(self.errors[:3])}"  # Show first 3 errors
-        results['warnings'] = self.warnings
+            results["error"] = (
+                f"{len(self.errors)} errors occurred: {'; '.join(self.errors[:3])}"  # Show first 3 errors
+            )
+        results["warnings"] = self.warnings
         return results
 
     def _get_cell_value(self, row: pd.Series, column_index: int) -> Optional[str]:
@@ -325,23 +366,35 @@ class ExcelProcessorService:
         except (IndexError, AttributeError):
             return None
 
-    def _prepare_referral(self, row: pd.Series, row_idx: int, giver_name: str,
-                         receiver_name: str, members_lookup: Dict[str, Member],
-                         week_of_date: Optional[date]) -> Optional[Referral]:
+    def _prepare_referral(
+        self,
+        row: pd.Series,
+        row_idx: int,
+        giver_name: str,
+        receiver_name: str,
+        members_lookup: Dict[str, Member],
+        week_of_date: Optional[date],
+    ) -> Optional[Referral]:
         """Prepare a referral object for bulk insert."""
         if not all([giver_name, receiver_name]):
-            self.warnings.append(f"Row {row_idx + 1}: Referral missing giver or receiver name")
+            self.warnings.append(
+                f"Row {row_idx + 1}: Referral missing giver or receiver name"
+            )
             return None
 
         giver = self._find_member_by_name(giver_name, members_lookup)
         receiver = self._find_member_by_name(receiver_name, members_lookup)
 
         if not giver:
-            self.warnings.append(f"Row {row_idx + 1}: Could not find giver '{giver_name}'")
+            self.warnings.append(
+                f"Row {row_idx + 1}: Could not find giver '{giver_name}'"
+            )
             return None
 
         if not receiver:
-            self.warnings.append(f"Row {row_idx + 1}: Could not find receiver '{receiver_name}'")
+            self.warnings.append(
+                f"Row {row_idx + 1}: Could not find receiver '{receiver_name}'"
+            )
             return None
 
         if giver == receiver:
@@ -352,12 +405,18 @@ class ExcelProcessorService:
             giver=giver,
             receiver=receiver,
             date_given=week_of_date or timezone.now().date(),
-            week_of=week_of_date
+            week_of=week_of_date,
         )
 
-    def _prepare_one_to_one(self, row: pd.Series, row_idx: int, giver_name: str,
-                           receiver_name: str, members_lookup: Dict[str, Member],
-                           week_of_date: Optional[date]) -> Optional[OneToOne]:
+    def _prepare_one_to_one(
+        self,
+        row: pd.Series,
+        row_idx: int,
+        giver_name: str,
+        receiver_name: str,
+        members_lookup: Dict[str, Member],
+        week_of_date: Optional[date],
+    ) -> Optional[OneToOne]:
         """Prepare a one-to-one object for bulk insert."""
         if not all([giver_name, receiver_name]):
             self.warnings.append(f"Row {row_idx + 1}: One-to-one missing member names")
@@ -367,11 +426,15 @@ class ExcelProcessorService:
         member2 = self._find_member_by_name(receiver_name, members_lookup)
 
         if not member1:
-            self.warnings.append(f"Row {row_idx + 1}: Could not find member '{giver_name}'")
+            self.warnings.append(
+                f"Row {row_idx + 1}: Could not find member '{giver_name}'"
+            )
             return None
 
         if not member2:
-            self.warnings.append(f"Row {row_idx + 1}: Could not find member '{receiver_name}'")
+            self.warnings.append(
+                f"Row {row_idx + 1}: Could not find member '{receiver_name}'"
+            )
             return None
 
         if member1 == member2:
@@ -382,12 +445,18 @@ class ExcelProcessorService:
             member1=member1,
             member2=member2,
             meeting_date=week_of_date or timezone.now().date(),
-            week_of=week_of_date
+            week_of=week_of_date,
         )
 
-    def _prepare_tyfcb(self, row: pd.Series, row_idx: int, giver_name: str,
-                      receiver_name: str, members_lookup: Dict[str, Member],
-                      week_of_date: Optional[date]) -> Optional[TYFCB]:
+    def _prepare_tyfcb(
+        self,
+        row: pd.Series,
+        row_idx: int,
+        giver_name: str,
+        receiver_name: str,
+        members_lookup: Dict[str, Member],
+        week_of_date: Optional[date],
+    ) -> Optional[TYFCB]:
         """Prepare a TYFCB object for bulk insert."""
         if not receiver_name:
             self.warnings.append(f"Row {row_idx + 1}: TYFCB missing receiver name")
@@ -395,7 +464,9 @@ class ExcelProcessorService:
 
         receiver = self._find_member_by_name(receiver_name, members_lookup)
         if not receiver:
-            self.warnings.append(f"Row {row_idx + 1}: Could not find receiver '{receiver_name}'")
+            self.warnings.append(
+                f"Row {row_idx + 1}: Could not find receiver '{receiver_name}'"
+            )
             return None
 
         giver = None
@@ -403,15 +474,17 @@ class ExcelProcessorService:
             giver = self._find_member_by_name(giver_name, members_lookup)
 
         # Extract amount
-        amount_str = self._get_cell_value(row, self.COLUMN_MAPPINGS['tyfcb_amount'])
+        amount_str = self._get_cell_value(row, self.COLUMN_MAPPINGS["tyfcb_amount"])
         amount = self._parse_currency_amount(amount_str)
 
         if amount <= 0:
-            self.warnings.append(f"Row {row_idx + 1}: Invalid TYFCB amount: {amount_str}")
+            self.warnings.append(
+                f"Row {row_idx + 1}: Invalid TYFCB amount: {amount_str}"
+            )
             return None
 
         # Extract detail/description
-        detail = self._get_cell_value(row, self.COLUMN_MAPPINGS['detail'])
+        detail = self._get_cell_value(row, self.COLUMN_MAPPINGS["detail"])
 
         # Determine if inside or outside chapter
         # TYFCB is OUTSIDE if detail has a value (chapter name), INSIDE if detail is empty
@@ -424,26 +497,38 @@ class ExcelProcessorService:
             within_chapter=within_chapter,
             date_closed=week_of_date or timezone.now().date(),
             description=detail or "",
-            week_of=week_of_date
+            week_of=week_of_date,
         )
 
-    def _process_referral(self, row: pd.Series, row_idx: int, giver_name: str,
-                         receiver_name: str, members_lookup: Dict[str, Member],
-                         week_of_date: Optional[date]) -> bool:
+    def _process_referral(
+        self,
+        row: pd.Series,
+        row_idx: int,
+        giver_name: str,
+        receiver_name: str,
+        members_lookup: Dict[str, Member],
+        week_of_date: Optional[date],
+    ) -> bool:
         """Process a referral record."""
         if not all([giver_name, receiver_name]):
-            self.warnings.append(f"Row {row_idx + 1}: Referral missing giver or receiver name")
+            self.warnings.append(
+                f"Row {row_idx + 1}: Referral missing giver or receiver name"
+            )
             return False
 
         giver = self._find_member_by_name(giver_name, members_lookup)
         receiver = self._find_member_by_name(receiver_name, members_lookup)
 
         if not giver:
-            self.warnings.append(f"Row {row_idx + 1}: Could not find giver '{giver_name}'")
+            self.warnings.append(
+                f"Row {row_idx + 1}: Could not find giver '{giver_name}'"
+            )
             return False
 
         if not receiver:
-            self.warnings.append(f"Row {row_idx + 1}: Could not find receiver '{receiver_name}'")
+            self.warnings.append(
+                f"Row {row_idx + 1}: Could not find receiver '{receiver_name}'"
+            )
             return False
 
         if giver == receiver:
@@ -456,16 +541,22 @@ class ExcelProcessorService:
                 giver=giver,
                 receiver=receiver,
                 date_given=week_of_date or timezone.now().date(),
-                week_of=week_of_date
+                week_of=week_of_date,
             )
             return True
         except Exception as e:
             self.errors.append(f"Row {row_idx + 1}: Referral creation error: {e}")
             return False
 
-    def _process_one_to_one(self, row: pd.Series, row_idx: int, giver_name: str,
-                           receiver_name: str, members_lookup: Dict[str, Member],
-                           week_of_date: Optional[date]) -> bool:
+    def _process_one_to_one(
+        self,
+        row: pd.Series,
+        row_idx: int,
+        giver_name: str,
+        receiver_name: str,
+        members_lookup: Dict[str, Member],
+        week_of_date: Optional[date],
+    ) -> bool:
         """Process a one-to-one meeting record."""
         if not all([giver_name, receiver_name]):
             self.warnings.append(f"Row {row_idx + 1}: One-to-one missing member names")
@@ -475,11 +566,15 @@ class ExcelProcessorService:
         member2 = self._find_member_by_name(receiver_name, members_lookup)
 
         if not member1:
-            self.warnings.append(f"Row {row_idx + 1}: Could not find member '{giver_name}'")
+            self.warnings.append(
+                f"Row {row_idx + 1}: Could not find member '{giver_name}'"
+            )
             return False
 
         if not member2:
-            self.warnings.append(f"Row {row_idx + 1}: Could not find member '{receiver_name}'")
+            self.warnings.append(
+                f"Row {row_idx + 1}: Could not find member '{receiver_name}'"
+            )
             return False
 
         if member1 == member2:
@@ -492,16 +587,22 @@ class ExcelProcessorService:
                 member1=member1,
                 member2=member2,
                 meeting_date=week_of_date or timezone.now().date(),
-                week_of=week_of_date
+                week_of=week_of_date,
             )
             return True
         except Exception as e:
             self.errors.append(f"Row {row_idx + 1}: One-to-one creation error: {e}")
             return False
 
-    def _process_tyfcb(self, row: pd.Series, row_idx: int, giver_name: str,
-                      receiver_name: str, members_lookup: Dict[str, Member],
-                      week_of_date: Optional[date]) -> bool:
+    def _process_tyfcb(
+        self,
+        row: pd.Series,
+        row_idx: int,
+        giver_name: str,
+        receiver_name: str,
+        members_lookup: Dict[str, Member],
+        week_of_date: Optional[date],
+    ) -> bool:
         """Process a TYFCB record."""
         if not receiver_name:
             self.warnings.append(f"Row {row_idx + 1}: TYFCB missing receiver name")
@@ -509,7 +610,9 @@ class ExcelProcessorService:
 
         receiver = self._find_member_by_name(receiver_name, members_lookup)
         if not receiver:
-            self.warnings.append(f"Row {row_idx + 1}: Could not find receiver '{receiver_name}'")
+            self.warnings.append(
+                f"Row {row_idx + 1}: Could not find receiver '{receiver_name}'"
+            )
             return False
 
         # Giver is optional for TYFCB
@@ -518,19 +621,25 @@ class ExcelProcessorService:
             giver = self._find_member_by_name(giver_name, members_lookup)
 
         # Extract amount
-        amount_str = self._get_cell_value(row, self.COLUMN_MAPPINGS['tyfcb_amount'])
+        amount_str = self._get_cell_value(row, self.COLUMN_MAPPINGS["tyfcb_amount"])
         amount = self._parse_currency_amount(amount_str)
 
         if amount <= 0:
-            self.warnings.append(f"Row {row_idx + 1}: Invalid TYFCB amount: {amount_str}")
+            self.warnings.append(
+                f"Row {row_idx + 1}: Invalid TYFCB amount: {amount_str}"
+            )
             return False
 
         # Determine if inside or outside chapter based on Inside/Outside column
-        inside_outside = self._get_cell_value(row, self.COLUMN_MAPPINGS['inside_outside'])
-        within_chapter = bool(inside_outside and inside_outside.lower().strip() == 'inside')
+        inside_outside = self._get_cell_value(
+            row, self.COLUMN_MAPPINGS["inside_outside"]
+        )
+        within_chapter = bool(
+            inside_outside and inside_outside.lower().strip() == "inside"
+        )
 
         # Extract detail/description
-        detail = self._get_cell_value(row, self.COLUMN_MAPPINGS['detail'])
+        detail = self._get_cell_value(row, self.COLUMN_MAPPINGS["detail"])
 
         # Create TYFCB (duplicates already cleared at start)
         try:
@@ -541,7 +650,7 @@ class ExcelProcessorService:
                 within_chapter=within_chapter,
                 date_closed=week_of_date or timezone.now().date(),
                 description=detail or "",
-                week_of=week_of_date
+                week_of=week_of_date,
             )
             return True
         except Exception as e:
@@ -555,7 +664,7 @@ class ExcelProcessorService:
 
         try:
             # Remove currency symbols and commas
-            cleaned = str(amount_str).replace('$', '').replace(',', '').strip()
+            cleaned = str(amount_str).replace("$", "").replace(",", "").strip()
             return float(cleaned) if cleaned else 0.0
         except (ValueError, TypeError):
             return 0.0
@@ -563,17 +672,24 @@ class ExcelProcessorService:
     def _create_error_result(self, error_message: str) -> Dict:
         """Create error result dictionary."""
         return {
-            'success': False,
-            'error': error_message,
-            'referrals_created': 0,
-            'one_to_ones_created': 0,
-            'tyfcbs_created': 0,
-            'total_processed': 0,
-            'errors': [error_message],
-            'warnings': [],
+            "success": False,
+            "error": error_message,
+            "referrals_created": 0,
+            "one_to_ones_created": 0,
+            "tyfcbs_created": 0,
+            "total_processed": 0,
+            "errors": [error_message],
+            "warnings": [],
         }
 
-    def process_monthly_reports_batch(self, slip_audit_files: list, member_names_file, month_year: str) -> Dict:
+    def process_monthly_reports_batch(
+        self,
+        slip_audit_files: list,
+        member_names_file,
+        month_year: str,
+        week_of_date: Optional[date] = None,
+        require_palms_sheets: bool = False,
+    ) -> Dict:
         """
         Process multiple slip audit files and compile them into a single MonthlyReport.
 
@@ -581,11 +697,14 @@ class ExcelProcessorService:
             slip_audit_files: List of Excel files with slip audit data (one per week)
             member_names_file: Optional file with member names
             month_year: Month in format '2024-06'
+            week_of_date: Optional date representing the week this audit covers
+            require_palms_sheets: Whether PALMS data sheets are required for this report
 
         Returns:
             Dictionary with processing results from all files combined
         """
         import time
+
         total_start_time = time.time()
 
         try:
@@ -596,31 +715,89 @@ class ExcelProcessorService:
                 from analytics.models import Referral, OneToOne, TYFCB
 
                 delete_start = time.time()
-                logger.info(f"Clearing ALL analytics for {self.chapter.name} to ensure clean aggregation")
-                deleted_refs = Referral.objects.filter(giver__chapter=self.chapter).delete()
-                deleted_otos = OneToOne.objects.filter(member1__chapter=self.chapter).delete()
-                deleted_tyfcbs = TYFCB.objects.filter(receiver__chapter=self.chapter).delete()
+                logger.info(
+                    f"Clearing ALL analytics for {self.chapter.name} to ensure clean aggregation"
+                )
+                deleted_refs = Referral.objects.filter(
+                    giver__chapter=self.chapter
+                ).delete()
+                deleted_otos = OneToOne.objects.filter(
+                    member1__chapter=self.chapter
+                ).delete()
+                deleted_tyfcbs = TYFCB.objects.filter(
+                    receiver__chapter=self.chapter
+                ).delete()
                 delete_time = time.time() - delete_start
-                logger.info(f"Deleted {deleted_refs[0]} referrals, {deleted_otos[0]} OTOs, {deleted_tyfcbs[0]} TYFCBs in {delete_time:.2f}s")
+                logger.info(
+                    f"Deleted {deleted_refs[0]} referrals, {deleted_otos[0]} OTOs, {deleted_tyfcbs[0]} TYFCBs in {delete_time:.2f}s"
+                )
 
                 # Delete existing monthly report for this month (if any)
                 existing_reports = MonthlyReport.objects.filter(
-                    chapter=self.chapter,
-                    month_year=month_year
+                    chapter=self.chapter, month_year=month_year
                 )
                 if existing_reports.exists():
                     logger.info(f"Deleting existing report for {month_year}")
                     existing_reports.delete()
 
                 # Create new MonthlyReport
-                slip_filenames = [f.name if hasattr(f, 'name') else 'slip_audit.xls' for f in slip_audit_files]
-                member_filename = member_names_file.name if member_names_file and hasattr(member_names_file, 'name') else None
+                slip_filenames = [
+                    f.name if hasattr(f, "name") else "slip_audit.xls"
+                    for f in slip_audit_files
+                ]
+                member_filename = (
+                    member_names_file.name
+                    if member_names_file and hasattr(member_names_file, "name")
+                    else None
+                )
+
+                # Build uploaded file names metadata
+                uploaded_file_names = []
+                for slip_file in slip_audit_files:
+                    filename = (
+                        slip_file.name
+                        if hasattr(slip_file, "name")
+                        else "slip_audit.xls"
+                    )
+                    uploaded_file_names.append(
+                        {
+                            "original_filename": filename,
+                            "file_type": "slip_audit",
+                            "uploaded_at": timezone.now().isoformat(),
+                            "week_of": week_of_date.isoformat()
+                            if week_of_date
+                            else None,
+                        }
+                    )
+
+                if member_names_file:
+                    uploaded_file_names.append(
+                        {
+                            "original_filename": member_filename,
+                            "file_type": "member_names",
+                            "uploaded_at": timezone.now().isoformat(),
+                            "week_of": None,
+                        }
+                    )
+
+                # Calculate audit period (week_of_date to week_of_date + 6 days)
+                audit_period_start = week_of_date
+                audit_period_end = None
+                if week_of_date:
+                    from datetime import timedelta
+
+                    audit_period_end = week_of_date + timedelta(days=6)
 
                 monthly_report = MonthlyReport.objects.create(
                     chapter=self.chapter,
                     month_year=month_year,
-                    slip_audit_file=', '.join(slip_filenames),  # Store all filenames
+                    slip_audit_file=", ".join(slip_filenames),  # Store all filenames
                     member_names_file=member_filename,
+                    week_of_date=week_of_date,
+                    audit_period_start=audit_period_start,
+                    audit_period_end=audit_period_end,
+                    require_palms_sheets=require_palms_sheets,
+                    uploaded_file_names=uploaded_file_names,
                 )
 
                 # Process member_names_file first if provided
@@ -628,8 +805,8 @@ class ExcelProcessorService:
                 members_updated = 0
                 if member_names_file:
                     result = self._process_member_names_file(member_names_file)
-                    members_created = result['created']
-                    members_updated = result['updated']
+                    members_created = result["created"]
+                    members_updated = result["updated"]
 
                 # OPTIMIZATION: Get member lookup once and reuse for all slip files (saves N queries)
                 lookup_start = time.time()
@@ -654,17 +831,21 @@ class ExcelProcessorService:
 
                     # Check if result is valid
                     if not result:
-                        raise Exception(f"Failed to process {slip_file.name}: No result returned")
+                        raise Exception(
+                            f"Failed to process {slip_file.name}: No result returned"
+                        )
 
-                    if not result.get('success', False):
+                    if not result.get("success", False):
                         # If any file fails, rollback everything
-                        error_msg = result.get('error', 'Unknown error')
-                        raise Exception(f"Failed to process {slip_file.name}: {error_msg}")
+                        error_msg = result.get("error", "Unknown error")
+                        raise Exception(
+                            f"Failed to process {slip_file.name}: {error_msg}"
+                        )
 
-                    total_referrals += result['referrals_created']
-                    total_one_to_ones += result['one_to_ones_created']
-                    total_tyfcbs += result['tyfcbs_created']
-                    total_processed += result['total_processed']
+                    total_referrals += result["referrals_created"]
+                    total_one_to_ones += result["one_to_ones_created"]
+                    total_tyfcbs += result["tyfcbs_created"]
+                    total_processed += result["total_processed"]
 
                 processing_time = time.time() - processing_start
                 logger.info(f"All files processed in {processing_time:.2f}s")
@@ -678,25 +859,29 @@ class ExcelProcessorService:
                 logger.info(f"Matrix generation completed in {matrix_time:.2f}s")
 
                 total_time = time.time() - total_start_time
-                logger.info(f"TOTAL UPLOAD TIME: {total_time:.2f}s (delete: {delete_time:.2f}s, lookup: {lookup_time:.2f}s, processing: {processing_time:.2f}s, matrices: {matrix_time:.2f}s)")
+                logger.info(
+                    f"TOTAL UPLOAD TIME: {total_time:.2f}s (delete: {delete_time:.2f}s, lookup: {lookup_time:.2f}s, processing: {processing_time:.2f}s, matrices: {matrix_time:.2f}s)"
+                )
 
                 return {
-                    'success': True,
-                    'monthly_report_id': monthly_report.id,
-                    'month_year': monthly_report.month_year,
-                    'files_processed': len(slip_audit_files),
-                    'members_created': members_created,
-                    'members_updated': members_updated,
-                    'referrals_created': total_referrals,
-                    'one_to_ones_created': total_one_to_ones,
-                    'tyfcbs_created': total_tyfcbs,
-                    'total_processed': total_processed,
-                    'errors': self.errors,
-                    'warnings': self.warnings,
+                    "success": True,
+                    "monthly_report_id": monthly_report.id,
+                    "month_year": monthly_report.month_year,
+                    "files_processed": len(slip_audit_files),
+                    "members_created": members_created,
+                    "members_updated": members_updated,
+                    "referrals_created": total_referrals,
+                    "one_to_ones_created": total_one_to_ones,
+                    "tyfcbs_created": total_tyfcbs,
+                    "total_processed": total_processed,
+                    "errors": self.errors,
+                    "warnings": self.warnings,
                 }
 
         except Exception as e:
-            logger.exception(f"Error processing monthly reports batch for {self.chapter}")
+            logger.exception(
+                f"Error processing monthly reports batch for {self.chapter}"
+            )
             return self._create_error_result(f"Processing failed: {str(e)}")
 
     def _process_member_names_file(self, member_names_file) -> Dict:
@@ -705,12 +890,12 @@ class ExcelProcessorService:
         import os
 
         # Read member names file - OPTIMIZED file handling
-        if hasattr(member_names_file, 'temporary_file_path'):
+        if hasattr(member_names_file, "temporary_file_path"):
             member_names_path = member_names_file.temporary_file_path()
             member_df = parse_bni_xml_excel(member_names_path)
         else:
             # OPTIMIZED: Single flush after all writes
-            with tempfile.NamedTemporaryFile(delete=False, suffix='.xls') as temp_file:
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".xls") as temp_file:
                 for chunk in member_names_file.chunks():
                     temp_file.write(chunk)
                 temp_file.flush()  # Flush once after all writes
@@ -721,43 +906,45 @@ class ExcelProcessorService:
                     os.unlink(temp_file.name)
 
         # VECTORIZED: Clean and filter data using pandas operations
-        if 'First Name' not in member_df.columns or 'Last Name' not in member_df.columns:
-            return {'created': 0, 'updated': 0}
+        if (
+            "First Name" not in member_df.columns
+            or "Last Name" not in member_df.columns
+        ):
+            return {"created": 0, "updated": 0}
 
         # Clean data vectorized
-        member_df['First Name'] = member_df['First Name'].astype(str).str.strip()
-        member_df['Last Name'] = member_df['Last Name'].astype(str).str.strip()
+        member_df["First Name"] = member_df["First Name"].astype(str).str.strip()
+        member_df["Last Name"] = member_df["Last Name"].astype(str).str.strip()
 
         # Filter out invalid rows
         valid_mask = (
-            (member_df['First Name'] != 'nan') &
-            (member_df['Last Name'] != 'nan') &
-            member_df['First Name'].notna() &
-            member_df['Last Name'].notna() &
-            (member_df['First Name'].str.len() > 0) &
-            (member_df['Last Name'].str.len() > 0)
+            (member_df["First Name"] != "nan")
+            & (member_df["Last Name"] != "nan")
+            & member_df["First Name"].notna()
+            & member_df["Last Name"].notna()
+            & (member_df["First Name"].str.len() > 0)
+            & (member_df["Last Name"].str.len() > 0)
         )
         valid_df = member_df[valid_mask].copy()
 
         # Create normalized names vectorized
-        valid_df['normalized_name'] = (valid_df['First Name'] + ' ' + valid_df['Last Name']).apply(
-            lambda x: Member.normalize_name(x)
-        )
+        valid_df["normalized_name"] = (
+            valid_df["First Name"] + " " + valid_df["Last Name"]
+        ).apply(lambda x: Member.normalize_name(x))
 
         # Get existing members in one query
         existing_members = {
-            m.normalized_name: m
-            for m in Member.objects.filter(chapter=self.chapter)
+            m.normalized_name: m for m in Member.objects.filter(chapter=self.chapter)
         }
 
         members_to_create = []
         members_to_update = []
 
         # Convert to list of dicts (faster than iterrows)
-        for row_dict in valid_df.to_dict('records'):
-            first_name = row_dict['First Name']
-            last_name = row_dict['Last Name']
-            normalized_name = row_dict['normalized_name']
+        for row_dict in valid_df.to_dict("records"):
+            first_name = row_dict["First Name"]
+            last_name = row_dict["Last Name"]
+            normalized_name = row_dict["normalized_name"]
 
             if normalized_name in existing_members:
                 # Update existing member
@@ -767,15 +954,17 @@ class ExcelProcessorService:
                 members_to_update.append(existing_member)
             else:
                 # Create new member
-                members_to_create.append(Member(
-                    chapter=self.chapter,
-                    first_name=first_name,
-                    last_name=last_name,
-                    normalized_name=normalized_name,
-                    business_name='',
-                    classification='',
-                    is_active=True,
-                ))
+                members_to_create.append(
+                    Member(
+                        chapter=self.chapter,
+                        first_name=first_name,
+                        last_name=last_name,
+                        normalized_name=normalized_name,
+                        business_name="",
+                        classification="",
+                        is_active=True,
+                    )
+                )
 
         # Bulk create new members
         if members_to_create:
@@ -784,12 +973,10 @@ class ExcelProcessorService:
         # Bulk update existing members
         if members_to_update:
             Member.objects.bulk_update(
-                members_to_update,
-                ['first_name', 'last_name'],
-                batch_size=100
+                members_to_update, ["first_name", "last_name"], batch_size=100
             )
 
-        return {'created': len(members_to_create), 'updated': len(members_to_update)}
+        return {"created": len(members_to_create), "updated": len(members_to_update)}
 
     def _process_single_slip_file(self, slip_audit_file, members_lookup=None) -> Dict:
         """Process a single slip audit file and return results. OPTIMIZED to accept cached member lookup."""
@@ -798,12 +985,14 @@ class ExcelProcessorService:
 
         try:
             # Handle both InMemoryUploadedFile and TemporaryUploadedFile
-            if hasattr(slip_audit_file, 'temporary_file_path'):
+            if hasattr(slip_audit_file, "temporary_file_path"):
                 temp_file_path = slip_audit_file.temporary_file_path()
                 df = self._read_excel_file(Path(temp_file_path))
             else:
                 # OPTIMIZED: Single flush after all writes, not per chunk
-                with tempfile.NamedTemporaryFile(delete=False, suffix='.xls') as temp_file:
+                with tempfile.NamedTemporaryFile(
+                    delete=False, suffix=".xls"
+                ) as temp_file:
                     for chunk in slip_audit_file.chunks():
                         temp_file.write(chunk)
                     temp_file.flush()  # Flush once after all writes
@@ -814,9 +1003,14 @@ class ExcelProcessorService:
                         os.unlink(temp_file.name)
 
             if df is None:
-                return {'success': False, 'error': 'Failed to read Excel file',
-                        'referrals_created': 0, 'one_to_ones_created': 0,
-                        'tyfcbs_created': 0, 'total_processed': 0}
+                return {
+                    "success": False,
+                    "error": "Failed to read Excel file",
+                    "referrals_created": 0,
+                    "one_to_ones_created": 0,
+                    "tyfcbs_created": 0,
+                    "total_processed": 0,
+                }
 
             # Get members lookup (use cached if provided, otherwise fetch)
             if members_lookup is None:
@@ -827,19 +1021,31 @@ class ExcelProcessorService:
 
             # Ensure result has all required keys
             if not result:
-                return {'success': False, 'error': 'No result from dataframe processing',
-                        'referrals_created': 0, 'one_to_ones_created': 0,
-                        'tyfcbs_created': 0, 'total_processed': 0}
+                return {
+                    "success": False,
+                    "error": "No result from dataframe processing",
+                    "referrals_created": 0,
+                    "one_to_ones_created": 0,
+                    "tyfcbs_created": 0,
+                    "total_processed": 0,
+                }
 
             return result
 
         except Exception as e:
             logger.exception(f"Error processing slip file: {str(e)}")
-            return {'success': False, 'error': str(e),
-                    'referrals_created': 0, 'one_to_ones_created': 0,
-                    'tyfcbs_created': 0, 'total_processed': 0}
+            return {
+                "success": False,
+                "error": str(e),
+                "referrals_created": 0,
+                "one_to_ones_created": 0,
+                "tyfcbs_created": 0,
+                "total_processed": 0,
+            }
 
-    def process_monthly_report(self, slip_audit_file, member_names_file, month_year: str) -> Dict:
+    def process_monthly_report(
+        self, slip_audit_file, member_names_file, month_year: str
+    ) -> Dict:
         """
         Process files and create a MonthlyReport with processed matrix data.
 
@@ -854,16 +1060,24 @@ class ExcelProcessorService:
         try:
             with transaction.atomic():
                 # Create or get MonthlyReport (store just filename, not file object)
-                slip_filename = slip_audit_file.name if hasattr(slip_audit_file, 'name') else 'slip_audit.xls'
-                member_filename = member_names_file.name if member_names_file and hasattr(member_names_file, 'name') else None
+                slip_filename = (
+                    slip_audit_file.name
+                    if hasattr(slip_audit_file, "name")
+                    else "slip_audit.xls"
+                )
+                member_filename = (
+                    member_names_file.name
+                    if member_names_file and hasattr(member_names_file, "name")
+                    else None
+                )
 
                 monthly_report, created = MonthlyReport.objects.get_or_create(
                     chapter=self.chapter,
                     month_year=month_year,
                     defaults={
-                        'slip_audit_file': slip_filename,
-                        'member_names_file': member_filename,
-                    }
+                        "slip_audit_file": slip_filename,
+                        "member_names_file": member_filename,
+                    },
                 )
 
                 if not created:
@@ -880,11 +1094,13 @@ class ExcelProcessorService:
                     import os
 
                     # Read member names file
-                    if hasattr(member_names_file, 'temporary_file_path'):
+                    if hasattr(member_names_file, "temporary_file_path"):
                         member_names_path = member_names_file.temporary_file_path()
                         member_df = parse_bni_xml_excel(member_names_path)
                     else:
-                        with tempfile.NamedTemporaryFile(delete=False, suffix='.xls') as temp_file:
+                        with tempfile.NamedTemporaryFile(
+                            delete=False, suffix=".xls"
+                        ) as temp_file:
                             for chunk in member_names_file.chunks():
                                 temp_file.write(chunk)
                             temp_file.flush()
@@ -898,9 +1114,9 @@ class ExcelProcessorService:
                     for index, row in member_df.iterrows():
                         try:
                             # Extract member names directly from row
-                            if 'First Name' in row and 'Last Name' in row:
-                                first_name = row['First Name']
-                                last_name = row['Last Name']
+                            if "First Name" in row and "Last Name" in row:
+                                first_name = row["First Name"]
+                                last_name = row["Last Name"]
                             else:
                                 continue  # Skip if columns don't exist
 
@@ -919,9 +1135,9 @@ class ExcelProcessorService:
                                 chapter=self.chapter,
                                 first_name=first_name_str,
                                 last_name=last_name_str,
-                                business_name='',
-                                classification='',
-                                is_active=True
+                                business_name="",
+                                classification="",
+                                is_active=True,
                             )
 
                             if created:
@@ -931,12 +1147,16 @@ class ExcelProcessorService:
                                 members_updated += 1
 
                         except Exception as e:
-                            logger.error(f"Error processing member row {index}: {str(e)}")
-                            self.warnings.append(f"Error processing member row {index}: {str(e)}")
+                            logger.error(
+                                f"Error processing member row {index}: {str(e)}"
+                            )
+                            self.warnings.append(
+                                f"Error processing member row {index}: {str(e)}"
+                            )
 
                 # Process the slip audit file
                 # Handle both InMemoryUploadedFile and TemporaryUploadedFile
-                if hasattr(slip_audit_file, 'temporary_file_path'):
+                if hasattr(slip_audit_file, "temporary_file_path"):
                     # TemporaryUploadedFile - use temporary file path
                     temp_file_path = slip_audit_file.temporary_file_path()
                     df = self._read_excel_file(Path(temp_file_path))
@@ -945,7 +1165,9 @@ class ExcelProcessorService:
                     import tempfile
                     import os
 
-                    with tempfile.NamedTemporaryFile(delete=False, suffix='.xls') as temp_file:
+                    with tempfile.NamedTemporaryFile(
+                        delete=False, suffix=".xls"
+                    ) as temp_file:
                         for chunk in slip_audit_file.chunks():
                             temp_file.write(chunk)
                             temp_file.flush()
@@ -972,17 +1194,17 @@ class ExcelProcessorService:
                 self._generate_and_cache_matrices(monthly_report)
 
                 return {
-                    'success': True,
-                    'monthly_report_id': monthly_report.id,
-                    'month_year': monthly_report.month_year,
-                    'members_created': members_created,
-                    'members_updated': members_updated,
-                    'referrals_created': processing_result['referrals_created'],
-                    'one_to_ones_created': processing_result['one_to_ones_created'],
-                    'tyfcbs_created': processing_result['tyfcbs_created'],
-                    'total_processed': processing_result['total_processed'],
-                    'errors': self.errors,
-                    'warnings': self.warnings,
+                    "success": True,
+                    "monthly_report_id": monthly_report.id,
+                    "month_year": monthly_report.month_year,
+                    "members_created": members_created,
+                    "members_updated": members_updated,
+                    "referrals_created": processing_result["referrals_created"],
+                    "one_to_ones_created": processing_result["one_to_ones_created"],
+                    "tyfcbs_created": processing_result["tyfcbs_created"],
+                    "total_processed": processing_result["total_processed"],
+                    "errors": self.errors,
+                    "warnings": self.warnings,
                 }
 
         except Exception as e:
@@ -996,22 +1218,29 @@ class ExcelProcessorService:
         from bni.services.matrix_generator import MatrixGenerator
 
         # Get data - OPTIMIZED with select_related to prevent N+1 queries
-        members = list(Member.objects.filter(
-            chapter=self.chapter,
-            is_active=True
-        ).select_related('chapter'))
+        members = list(
+            Member.objects.filter(chapter=self.chapter, is_active=True).select_related(
+                "chapter"
+            )
+        )
 
-        referrals = list(Referral.objects.filter(
-            giver__chapter=self.chapter
-        ).select_related('giver', 'receiver', 'giver__chapter', 'receiver__chapter'))
+        referrals = list(
+            Referral.objects.filter(giver__chapter=self.chapter).select_related(
+                "giver", "receiver", "giver__chapter", "receiver__chapter"
+            )
+        )
 
-        one_to_ones = list(OneToOne.objects.filter(
-            member1__chapter=self.chapter
-        ).select_related('member1', 'member2', 'member1__chapter', 'member2__chapter'))
+        one_to_ones = list(
+            OneToOne.objects.filter(member1__chapter=self.chapter).select_related(
+                "member1", "member2", "member1__chapter", "member2__chapter"
+            )
+        )
 
-        tyfcbs = list(TYFCB.objects.filter(
-            receiver__chapter=self.chapter
-        ).select_related('receiver', 'giver', 'receiver__chapter'))
+        tyfcbs = list(
+            TYFCB.objects.filter(receiver__chapter=self.chapter).select_related(
+                "receiver", "giver", "receiver__chapter"
+            )
+        )
 
         generator = MatrixGenerator(members)
 
@@ -1021,22 +1250,27 @@ class ExcelProcessorService:
 
         # Cache matrices
         monthly_report.referral_matrix_data = {
-            'members': [m.full_name for m in members],
-            'matrix': ref_matrix.values.tolist(),
+            "members": [m.full_name for m in members],
+            "matrix": ref_matrix.values.tolist(),
         }
 
         monthly_report.oto_matrix_data = {
-            'members': [m.full_name for m in members],
-            'matrix': oto_matrix.values.tolist(),
+            "members": [m.full_name for m in members],
+            "matrix": oto_matrix.values.tolist(),
         }
 
         # Pass pre-generated matrices to avoid regeneration
         monthly_report.combination_matrix_data = {
-            'members': [m.full_name for m in members],
-            'matrix': generator.generate_combination_matrix(
+            "members": [m.full_name for m in members],
+            "matrix": generator.generate_combination_matrix(
                 referrals, one_to_ones, ref_matrix, oto_matrix
             ).values.tolist(),
-            'legend': {'0': 'Neither', '1': 'One-to-One Only', '2': 'Referral Only', '3': 'Both'}
+            "legend": {
+                "0": "Neither",
+                "1": "One-to-One Only",
+                "2": "Referral Only",
+                "3": "Both",
+            },
         }
 
         # Cache TYFCB data - OPTIMIZED with pre-grouping (O(N+M) instead of O(N*M))
@@ -1056,15 +1290,19 @@ class ExcelProcessorService:
             outside_by_member[t.receiver.full_name] += float(t.amount)
 
         monthly_report.tyfcb_inside_data = {
-            'total_amount': sum(float(t.amount) for t in inside_tyfcbs),
-            'count': len(inside_tyfcbs),
-            'by_member': {m.full_name: inside_by_member.get(m.full_name, 0.0) for m in members}
+            "total_amount": sum(float(t.amount) for t in inside_tyfcbs),
+            "count": len(inside_tyfcbs),
+            "by_member": {
+                m.full_name: inside_by_member.get(m.full_name, 0.0) for m in members
+            },
         }
 
         monthly_report.tyfcb_outside_data = {
-            'total_amount': sum(float(t.amount) for t in outside_tyfcbs),
-            'count': len(outside_tyfcbs),
-            'by_member': {m.full_name: outside_by_member.get(m.full_name, 0.0) for m in members}
+            "total_amount": sum(float(t.amount) for t in outside_tyfcbs),
+            "count": len(outside_tyfcbs),
+            "by_member": {
+                m.full_name: outside_by_member.get(m.full_name, 0.0) for m in members
+            },
         }
 
         monthly_report.save()

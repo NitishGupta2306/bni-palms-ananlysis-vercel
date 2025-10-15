@@ -5,7 +5,8 @@ import {
   Mail,
   Phone,
   UserPlus,
-  Loader2
+  Loader2,
+  Filter
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,6 +14,8 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { ChapterMemberData } from '../../../shared/services/ChapterDataLoader';
 import { API_BASE_URL } from '@/config/api';
@@ -41,6 +44,7 @@ const MembersTab: React.FC<MembersTabProps> = ({ chapterData, onMemberSelect, on
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [openAddDialog, setOpenAddDialog] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('active');
   const [formData, setFormData] = useState({
     first_name: '',
     last_name: '',
@@ -52,6 +56,7 @@ const MembersTab: React.FC<MembersTabProps> = ({ chapterData, onMemberSelect, on
     is_active: true,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [updatingStatus, setUpdatingStatus] = useState<number | null>(null);
   const { toast } = useToast();
 
   const fetchMembers = useCallback(async () => {
@@ -122,7 +127,7 @@ const MembersTab: React.FC<MembersTabProps> = ({ chapterData, onMemberSelect, on
         toast({
           title: "Success!",
           description: "Member added successfully!",
-          variant: "default"
+          variant: "success"
         });
         handleCloseDialog();
         fetchMembers();
@@ -147,6 +152,57 @@ const MembersTab: React.FC<MembersTabProps> = ({ chapterData, onMemberSelect, on
     }
     setIsSubmitting(false);
   };
+
+  const handleToggleStatus = async (member: Member) => {
+    setUpdatingStatus(member.id);
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/api/chapters/${chapterData.chapterId}/members/${member.id}/`,
+        {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            is_active: !member.is_active,
+          }),
+        }
+      );
+
+      if (response.ok) {
+        toast({
+          title: 'Status Updated',
+          description: `${member.full_name} marked as ${!member.is_active ? 'active' : 'inactive'}`,
+          variant: 'success',
+        });
+        fetchMembers();
+        if (onMemberAdded) {
+          onMemberAdded();
+        }
+      } else {
+        const errorData = await response.json();
+        toast({
+          title: 'Error',
+          description: errorData.error || 'Failed to update member status',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to update member status. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setUpdatingStatus(null);
+    }
+  };
+
+  const filteredMembers = members.filter((member) => {
+    if (statusFilter === 'active') return member.is_active;
+    if (statusFilter === 'inactive') return !member.is_active;
+    return true; // 'all'
+  });
 
 
   if (isLoading) {
@@ -186,38 +242,62 @@ const MembersTab: React.FC<MembersTabProps> = ({ chapterData, onMemberSelect, on
           Add Member
         </Button>
       </div>
-      <p className="text-sm text-muted-foreground">
-        All {members.length} active members in {chapterData.chapterName}
-      </p>
+
+      <div className="flex items-center justify-between gap-4">
+        <p className="text-sm text-muted-foreground">
+          Showing {filteredMembers.length} of {members.length} members in {chapterData.chapterName}
+        </p>
+        <div className="flex items-center gap-2">
+          <Filter className="h-4 w-4 text-muted-foreground" />
+          <Select value={statusFilter} onValueChange={(value: any) => setStatusFilter(value)}>
+            <SelectTrigger className="w-[150px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Members</SelectItem>
+              <SelectItem value="active">Active Only</SelectItem>
+              <SelectItem value="inactive">Inactive Only</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {members.map((member) => (
+        {filteredMembers.map((member) => (
           <Card
             key={member.id}
-            className="cursor-pointer transition-all duration-200 hover:shadow-md hover:-translate-y-1 dark:hover:shadow-lg dark:hover:shadow-gray-800/20"
-            onClick={() => onMemberSelect(member.full_name)}
+            className={`transition-all duration-200 hover:shadow-md dark:hover:shadow-lg dark:hover:shadow-gray-800/20 ${
+              !member.is_active ? 'opacity-60' : ''
+            }`}
           >
             <CardContent className="p-4">
-              <div className="mb-3">
-                <h3 className="font-semibold text-base mb-2">
-                  {member.full_name}
-                </h3>
-                {member.business_name && (
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex-1 cursor-pointer" onClick={() => onMemberSelect(member.full_name)}>
                   <div className="flex items-center gap-2 mb-2">
-                    <Building2 className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">
-                      {member.business_name}
-                    </span>
+                    <h3 className="font-semibold text-base">
+                      {member.full_name}
+                    </h3>
+                    <Badge variant={member.is_active ? 'default' : 'secondary'} className="text-xs">
+                      {member.is_active ? 'Active' : 'Inactive'}
+                    </Badge>
                   </div>
-                )}
-                {member.classification && (
-                  <Badge variant="outline" className="mb-2">
-                    {member.classification}
-                  </Badge>
-                )}
+                  {member.business_name && (
+                    <div className="flex items-center gap-2 mb-2">
+                      <Building2 className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">
+                        {member.business_name}
+                      </span>
+                    </div>
+                  )}
+                  {member.classification && (
+                    <Badge variant="outline" className="mb-2">
+                      {member.classification}
+                    </Badge>
+                  )}
+                </div>
               </div>
 
-              <div className="space-y-1">
+              <div className="space-y-1 mb-3">
                 {member.email && (
                   <div className="flex items-center gap-2">
                     <Mail className="h-3 w-3 text-muted-foreground" />
@@ -235,15 +315,35 @@ const MembersTab: React.FC<MembersTabProps> = ({ chapterData, onMemberSelect, on
                   </div>
                 )}
               </div>
+
+              <div className="flex items-center justify-between pt-3 border-t">
+                <span className="text-xs text-muted-foreground">
+                  {member.is_active ? 'Mark as Inactive' : 'Mark as Active'}
+                </span>
+                <Switch
+                  checked={member.is_active}
+                  onCheckedChange={() => handleToggleStatus(member)}
+                  disabled={updatingStatus === member.id}
+                  onClick={(e) => e.stopPropagation()}
+                />
+              </div>
             </CardContent>
           </Card>
         ))}
       </div>
 
+      {filteredMembers.length === 0 && members.length > 0 && (
+        <div className="text-center py-8">
+          <p className="text-sm text-muted-foreground">
+            No members found with the selected filter.
+          </p>
+        </div>
+      )}
+
       {members.length === 0 && (
         <div className="text-center py-8">
           <p className="text-sm text-muted-foreground">
-            No active members found for this chapter.
+            No members found for this chapter.
           </p>
         </div>
       )}

@@ -78,6 +78,17 @@ class MonthlyReportViewSet(viewsets.ModelViewSet):
                             "has_combination_matrix": bool(
                                 report.combination_matrix_data
                             ),
+                            "week_of_date": report.week_of_date.isoformat()
+                            if report.week_of_date
+                            else None,
+                            "audit_period_start": report.audit_period_start.isoformat()
+                            if report.audit_period_start
+                            else None,
+                            "audit_period_end": report.audit_period_end.isoformat()
+                            if report.audit_period_end
+                            else None,
+                            "require_palms_sheets": report.require_palms_sheets,
+                            "uploaded_file_names": report.uploaded_file_names,
                         }
                     )
                 except Exception as e:
@@ -566,6 +577,98 @@ class MonthlyReportViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
+    @action(detail=True, methods=["get"], url_path="download-palms")
+    def download_palms(self, request, pk=None, chapter_id=None):
+        """
+        Download original PALMS sheets for a report.
+
+        Returns:
+        - ZIP file containing all uploaded PALMS sheets if require_palms_sheets is True
+        - Error message if PALMS sheets are not available
+        """
+        import zipfile
+        import os
+        from django.conf import settings
+
+        try:
+            chapter = Chapter.objects.get(id=chapter_id)
+            monthly_report = MonthlyReport.objects.get(id=pk, chapter=chapter)
+
+            # Check if PALMS sheets are marked as downloadable
+            if not monthly_report.require_palms_sheets:
+                return Response(
+                    {
+                        "error": "PALMS sheets were not marked as downloadable for this report"
+                    },
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+
+            # Check if we have file metadata
+            if not monthly_report.uploaded_file_names:
+                return Response(
+                    {"error": "No file metadata available for this report"},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+
+            # Create ZIP file in memory
+            zip_buffer = BytesIO()
+            with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
+                # Add each PALMS file to the ZIP
+                for file_info in monthly_report.uploaded_file_names:
+                    if file_info.get("file_type") == "slip_audit":
+                        filename = file_info.get("original_filename", "slip_audit.xls")
+
+                        # Try to read the file from media storage
+                        # Note: This assumes files are stored in MEDIA_ROOT/uploads/
+                        # Adjust path based on your actual file storage setup
+                        media_root = getattr(settings, "MEDIA_ROOT", None)
+                        if media_root:
+                            file_path = os.path.join(media_root, "uploads", filename)
+                            if os.path.exists(file_path):
+                                with open(file_path, "rb") as f:
+                                    zip_file.writestr(filename, f.read())
+                        else:
+                            # If MEDIA_ROOT not configured, add a note about missing file
+                            zip_file.writestr(
+                                "README.txt",
+                                f"File storage not configured. Original files may not be available.\n"
+                                f"Expected file: {filename}",
+                            )
+
+            zip_buffer.seek(0)
+
+            # Generate filename with date
+            date_str = (
+                monthly_report.week_of_date.strftime("%Y-%m-%d")
+                if monthly_report.week_of_date
+                else monthly_report.month_year
+            )
+            filename = f"PALMS_Sheets_{chapter.name.replace(' ', '_')}_{date_str}.zip"
+
+            response = HttpResponse(
+                zip_buffer.getvalue(),
+                content_type="application/zip",
+            )
+            response["Content-Disposition"] = f'attachment; filename="{filename}"'
+            return response
+
+        except Chapter.DoesNotExist:
+            return Response(
+                {"error": "Chapter not found"}, status=status.HTTP_404_NOT_FOUND
+            )
+        except MonthlyReport.DoesNotExist:
+            return Response(
+                {"error": "Monthly report not found"}, status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            import traceback
+
+            traceback.print_exc()
+            return Response(
+                {"error": f"Failed to download PALMS files: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
     @action(detail=False, methods=["post"], url_path="aggregate")
     def aggregate_reports(self, request, chapter_id=None):
         """
@@ -629,7 +732,7 @@ class MonthlyReportViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=["post"], url_path="aggregate/download")
     def download_aggregated(self, request, chapter_id=None):
         """
-        Download ZIP package with aggregated analysis.
+        Download comprehensive Excel file with aggregated analysis.
 
         Request body:
             {
@@ -637,10 +740,11 @@ class MonthlyReportViewSet(viewsets.ModelViewSet):
             }
 
         Returns:
-            ZIP file containing:
-            - Aggregated matrices Excel
-            - Original slip audit files
-            - Member differences report
+            Single Excel file containing:
+            - Summary sheet
+            - Aggregated matrices (Referral, OTO, Combination)
+            - TYFCB data (Inside & Outside)
+            - Member differences (Inactive members)
         """
         try:
             chapter = Chapter.objects.get(id=chapter_id)
@@ -663,16 +767,19 @@ class MonthlyReportViewSet(viewsets.ModelViewSet):
                     status=status.HTTP_404_NOT_FOUND,
                 )
 
-            # Create aggregation service and generate download package
+            # Create aggregation service and generate comprehensive Excel file
             aggregation_service = AggregationService(list(reports))
-            zip_buffer = aggregation_service.generate_download_package()
+            excel_buffer = aggregation_service.generate_download_package()
 
-            # Create HTTP response with ZIP file
+            # Create HTTP response with Excel file
             month_range = aggregation_service._get_month_range()
-            filename = f"{chapter.name.replace(' ', '_')}_Aggregated_{month_range}.zip"
+            filename = (
+                f"{chapter.name.replace(' ', '_')}_Aggregated_Report_{month_range}.xlsx"
+            )
 
             response = HttpResponse(
-                zip_buffer.getvalue(), content_type="application/zip"
+                excel_buffer.getvalue(),
+                content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             )
             response["Content-Disposition"] = f'attachment; filename="{filename}"'
 

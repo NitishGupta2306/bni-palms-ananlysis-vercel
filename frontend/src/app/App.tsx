@@ -20,6 +20,10 @@ import { ErrorToastProvider } from "../shared/components/common/ErrorToast";
 import { useNetworkStatus } from "../shared/hooks/useNetworkStatus";
 import { queryClient } from "../shared/lib/queryClient";
 import SplashScreen from "../components/animations/SplashScreen";
+import { DownloadQueueProvider } from "../contexts/download-queue-context";
+import { DownloadProgressPanel } from "../components/ui/download-progress";
+import { Toaster } from "../components/ui/toaster";
+import { AuthProvider } from "../contexts/auth-context";
 
 function App() {
   const [showSplash, setShowSplash] = useState(() => {
@@ -47,15 +51,21 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <ThemeProvider>
           <ErrorToastProvider>
-            <NavigationProvider>
-              <Router>
-                <div className="min-h-screen bg-background text-foreground">
-                  <ErrorBoundary level="route">
-                    <AppContent />
-                  </ErrorBoundary>
-                </div>
-              </Router>
-            </NavigationProvider>
+            <AuthProvider>
+              <DownloadQueueProvider>
+                <NavigationProvider>
+                  <Router>
+                    <div className="min-h-screen bg-background text-foreground">
+                      <ErrorBoundary level="route">
+                        <AppContent />
+                      </ErrorBoundary>
+                      <DownloadProgressPanel />
+                      <Toaster />
+                    </div>
+                  </Router>
+                </NavigationProvider>
+              </DownloadQueueProvider>
+            </AuthProvider>
           </ErrorToastProvider>
         </ThemeProvider>
       </QueryClientProvider>

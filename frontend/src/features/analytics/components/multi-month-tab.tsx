@@ -9,7 +9,6 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { MatrixDisplay } from "./matrix-display";
 import { API_BASE_URL } from "@/config/api";
 
 interface MonthlyReportListItem {
@@ -27,34 +26,6 @@ interface MultiMonthTabProps {
   chapterName: string;
 }
 
-interface AggregatedData {
-  referral_matrix: any;
-  oto_matrix: any;
-  combination_matrix: any;
-  tyfcb_inside: any;
-  tyfcb_outside: any;
-  member_completeness: Record<
-    number,
-    {
-      member_name: string;
-      present_in_all: boolean;
-      months_present: string[];
-      months_missing: string[];
-      presence_count: number;
-      total_months: number;
-    }
-  >;
-  member_differences: Array<{
-    member_id: number;
-    member_name: string;
-    last_active_month: string;
-    business_name?: string;
-    classification?: string;
-  }>;
-  month_range: string;
-  total_months: number;
-}
-
 const MultiMonthTab: React.FC<MultiMonthTabProps> = ({
   chapterId,
   chapterName,
@@ -62,11 +33,7 @@ const MultiMonthTab: React.FC<MultiMonthTabProps> = ({
   const [reports, setReports] = useState<MonthlyReportListItem[]>([]);
   const [selectedReportIds, setSelectedReportIds] = useState<number[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [aggregatedData, setAggregatedData] = useState<AggregatedData | null>(
-    null,
-  );
   const [isGenerating, setIsGenerating] = useState(false);
-  const [isDownloading, setIsDownloading] = useState(false);
   const { toast } = useToast();
 
   // Fetch available reports
@@ -115,7 +82,7 @@ const MultiMonthTab: React.FC<MultiMonthTabProps> = ({
     setSelectedReportIds([]);
   };
 
-  const generateAggregatedAnalysis = async () => {
+  const generateAndDownloadReport = async () => {
     if (selectedReportIds.length === 0) {
       toast({
         title: "No reports selected",
@@ -127,54 +94,7 @@ const MultiMonthTab: React.FC<MultiMonthTabProps> = ({
 
     setIsGenerating(true);
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/api/chapters/${chapterId}/reports/aggregate/`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            report_ids: selectedReportIds,
-          }),
-        },
-      );
-
-      if (!response.ok) {
-        throw new Error("Failed to generate aggregated analysis");
-      }
-
-      const data: AggregatedData = await response.json();
-      setAggregatedData(data);
-
-      toast({
-        title: "Success",
-        description: `Generated analysis for ${data.total_months} month(s)`,
-      });
-    } catch (error) {
-      console.error("Error generating aggregated analysis:", error);
-      toast({
-        title: "Error",
-        description: "Failed to generate aggregated analysis",
-        variant: "destructive",
-      });
-    } finally {
-      setIsGenerating(false);
-    }
-  };
-
-  const downloadAggregatedPackage = async () => {
-    if (selectedReportIds.length === 0) {
-      toast({
-        title: "No reports selected",
-        description: "Please select at least one monthly report",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsDownloading(true);
-    try {
+      // Generate and download the package directly
       const response = await fetch(
         `${API_BASE_URL}/api/chapters/${chapterId}/reports/aggregate/download/`,
         {
@@ -189,12 +109,12 @@ const MultiMonthTab: React.FC<MultiMonthTabProps> = ({
       );
 
       if (!response.ok) {
-        throw new Error("Failed to download package");
+        throw new Error("Failed to generate report");
       }
 
       // Get filename from Content-Disposition header
       const contentDisposition = response.headers.get("Content-Disposition");
-      let filename = `${chapterName}_Aggregated_Analysis.zip`;
+      let filename = `${chapterName}_Aggregated_Report.xlsx`;
       if (contentDisposition) {
         const matches = /filename="?([^"]+)"?/.exec(contentDisposition);
         if (matches && matches[1]) {
@@ -215,17 +135,18 @@ const MultiMonthTab: React.FC<MultiMonthTabProps> = ({
 
       toast({
         title: "Success",
-        description: "Download started",
+        description: "Report generated and downloaded successfully",
+        variant: "success",
       });
     } catch (error) {
-      console.error("Error downloading package:", error);
+      console.error("Error generating report:", error);
       toast({
         title: "Error",
-        description: "Failed to download aggregated package",
+        description: "Failed to generate and download report",
         variant: "destructive",
       });
     } finally {
-      setIsDownloading(false);
+      setIsGenerating(false);
     }
   };
 
@@ -242,17 +163,6 @@ const MultiMonthTab: React.FC<MultiMonthTabProps> = ({
       return monthYear;
     }
   };
-
-  // Get partial data members (not present in all months)
-  const partialDataMembers = aggregatedData
-    ? Object.entries(aggregatedData.member_completeness)
-        .filter(([_, data]) => !data.present_in_all)
-        .map(([id, data]) => ({
-          id: parseInt(id),
-          name: data.member_name,
-          months_missing: data.months_missing,
-        }))
-    : [];
 
   return (
     <div className="space-y-6 p-6">
@@ -333,32 +243,18 @@ const MultiMonthTab: React.FC<MultiMonthTabProps> = ({
               </div>
               <div className="flex gap-2">
                 <Button
-                  onClick={generateAggregatedAnalysis}
+                  onClick={generateAndDownloadReport}
                   disabled={isGenerating}
                 >
                   {isGenerating ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Generating...
-                    </>
-                  ) : (
-                    "Generate Analysis"
-                  )}
-                </Button>
-                <Button
-                  onClick={downloadAggregatedPackage}
-                  variant="outline"
-                  disabled={isDownloading}
-                >
-                  {isDownloading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Downloading...
+                      Generating Report...
                     </>
                   ) : (
                     <>
                       <Download className="mr-2 h-4 w-4" />
-                      Download Package
+                      Generate Report
                     </>
                   )}
                 </Button>
@@ -367,120 +263,6 @@ const MultiMonthTab: React.FC<MultiMonthTabProps> = ({
           )}
         </CardContent>
       </Card>
-
-      {/* Aggregated Results */}
-      {aggregatedData && (
-        <>
-          {/* Summary Card */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Analysis Summary</CardTitle>
-              <CardDescription>
-                Aggregated data for {aggregatedData.month_range}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="p-4 bg-muted/50 rounded-lg">
-                  <div className="text-sm text-muted-foreground">
-                    Total Months
-                  </div>
-                  <div className="text-2xl font-bold">
-                    {aggregatedData.total_months}
-                  </div>
-                </div>
-                <div className="p-4 bg-muted/50 rounded-lg">
-                  <div className="text-sm text-muted-foreground">
-                    Partial Data Members
-                  </div>
-                  <div className="text-2xl font-bold">
-                    {partialDataMembers.length}
-                  </div>
-                </div>
-                <div className="p-4 bg-muted/50 rounded-lg">
-                  <div className="text-sm text-muted-foreground">
-                    Inactive Members
-                  </div>
-                  <div className="text-2xl font-bold">
-                    {aggregatedData.member_differences.length}
-                  </div>
-                </div>
-              </div>
-
-              {/* Partial Data Members Warning */}
-              {partialDataMembers.length > 0 && (
-                <div className="mt-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
-                  <div className="font-medium text-yellow-900 dark:text-yellow-100 mb-2">
-                    ⚠️ Members with Partial Data
-                  </div>
-                  <div className="text-sm text-yellow-800 dark:text-yellow-200">
-                    The following members were not present in all selected
-                    months and will be highlighted in yellow/orange:
-                  </div>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {partialDataMembers.slice(0, 10).map((member) => (
-                      <span
-                        key={member.id}
-                        className="px-2 py-1 bg-yellow-100 dark:bg-yellow-800 text-yellow-900 dark:text-yellow-100 rounded text-xs"
-                      >
-                        {member.name}
-                      </span>
-                    ))}
-                    {partialDataMembers.length > 10 && (
-                      <span className="px-2 py-1 bg-yellow-100 dark:bg-yellow-800 text-yellow-900 dark:text-yellow-100 rounded text-xs">
-                        +{partialDataMembers.length - 10} more
-                      </span>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Inactive Members List */}
-              {aggregatedData.member_differences.length > 0 && (
-                <div className="mt-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-                  <div className="font-medium text-red-900 dark:text-red-100 mb-2">
-                    Members Who Became Inactive
-                  </div>
-                  <div className="space-y-1">
-                    {aggregatedData.member_differences.map((member) => (
-                      <div
-                        key={member.member_id}
-                        className="text-sm text-red-800 dark:text-red-200"
-                      >
-                        {member.member_name} - Last active:{" "}
-                        {formatMonthYear(member.last_active_month)}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Matrices */}
-          <div className="space-y-6">
-            <h3 className="text-xl font-bold">Aggregated Matrices</h3>
-
-            <MatrixDisplay
-              matrixData={aggregatedData.referral_matrix}
-              matrixType="referral"
-              partialDataMembers={partialDataMembers.map((m) => m.name)}
-            />
-
-            <MatrixDisplay
-              matrixData={aggregatedData.oto_matrix}
-              matrixType="oto"
-              partialDataMembers={partialDataMembers.map((m) => m.name)}
-            />
-
-            <MatrixDisplay
-              matrixData={aggregatedData.combination_matrix}
-              matrixType="combination"
-              partialDataMembers={partialDataMembers.map((m) => m.name)}
-            />
-          </div>
-        </>
-      )}
     </div>
   );
 };

@@ -1,15 +1,39 @@
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { Info, Upload, GitCompare, Grid3X3, Building2, FileSpreadsheet, PlusCircle, Users } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ChapterMemberData } from '../../../shared/services/ChapterDataLoader';
-import ChapterInfoTab from './tabs/chapter-info-tab';
-import FileUploadTab from './tabs/file-upload-tab';
-import ComparisonTab from '../../analytics/components/comparison-tab';
-import MatrixPreviewTab from './tabs/matrix-preview-tab';
-import { useNavigationStats } from '../../../shared/contexts/NavigationContext';
+import React, { useState, useCallback, useMemo, useEffect } from "react";
+import { motion } from "framer-motion";
+import {
+  Info,
+  Upload,
+  GitCompare,
+  Grid3X3,
+  Building2,
+  FileSpreadsheet,
+  PlusCircle,
+  Users,
+  Calendar,
+} from "lucide-react";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { ChapterMemberData } from "../../../shared/services/ChapterDataLoader";
+import ChapterInfoTab from "./tabs/chapter-info-tab";
+import FileUploadTab from "./tabs/file-upload-tab";
+import ComparisonTab from "../../analytics/components/comparison-tab";
+import MatrixPreviewTab from "./tabs/matrix-preview-tab";
+import MultiMonthTab from "../../analytics/components/multi-month-tab";
+import { useNavigationStats } from "../../../shared/contexts/NavigationContext";
 
 interface UnifiedDashboardProps {
   chapterData: ChapterMemberData[];
@@ -28,55 +52,83 @@ const UnifiedDashboard: React.FC<UnifiedDashboardProps> = ({
   onMemberSelect,
   onDataRefresh,
 }) => {
-  const [activeTab, setActiveTab] = useState<'info' | 'members' | 'upload' | 'compare' | 'preview'>('upload');
+  const [activeTab, setActiveTab] = useState<
+    "info" | "members" | "upload" | "compare" | "preview" | "multimonth"
+  >("upload");
   const [refreshKey, setRefreshKey] = useState(0);
   const { setStats } = useNavigationStats();
 
   // Switch to upload tab when chapter changes
   useEffect(() => {
-    setActiveTab('upload');
+    setActiveTab("upload");
   }, [selectedChapterId]);
 
   // Update navigation stats
   useEffect(() => {
-    const totalMembers = chapterData.reduce((sum, chapter) => sum + chapter.memberCount, 0);
-    const biggestChapter = chapterData.reduce((max, chapter) =>
-      (!chapter.loadError && chapter.memberCount > max.memberCount) ? chapter : max
-    , { chapterName: '', memberCount: 0 } as ChapterMemberData);
+    const totalMembers = chapterData.reduce(
+      (sum, chapter) => sum + chapter.memberCount,
+      0,
+    );
+    const biggestChapter = chapterData.reduce(
+      (max, chapter) =>
+        !chapter.loadError && chapter.memberCount > max.memberCount
+          ? chapter
+          : max,
+      { chapterName: "", memberCount: 0 } as ChapterMemberData,
+    );
 
     setStats({
       totalMembers,
       biggestChapter: {
         chapterName: biggestChapter.chapterName,
-        memberCount: biggestChapter.memberCount
-      }
+        memberCount: biggestChapter.memberCount,
+      },
     });
   }, [chapterData, setStats]);
 
   const selectedChapter = useMemo(() => {
-    return chapterData.find(c => c.chapterId === selectedChapterId);
+    return chapterData.find((c) => c.chapterId === selectedChapterId);
   }, [chapterData, selectedChapterId]);
 
   const handleUploadSuccess = useCallback(() => {
-    setRefreshKey(prev => prev + 1);
+    setRefreshKey((prev) => prev + 1);
     if (onDataRefresh) {
       onDataRefresh();
     }
     // Switch to preview tab after successful upload
     setTimeout(() => {
-      setActiveTab('preview');
+      setActiveTab("preview");
     }, 500);
   }, [onDataRefresh]);
 
-  const tabs = useMemo(() => [
-    // Action tabs (left side)
-    { id: 'upload' as const, label: 'Upload', icon: Upload, group: 'action' },
-    { id: 'compare' as const, label: 'Compare', icon: GitCompare, group: 'action' },
-    { id: 'preview' as const, label: 'Matrices', icon: Grid3X3, group: 'action' },
-    // Info tabs (right side)
-    { id: 'info' as const, label: 'Chapter Info', icon: Info, group: 'info' },
-    { id: 'members' as const, label: 'Members', icon: Users, group: 'info' }
-  ], []);
+  const tabs = useMemo(
+    () => [
+      // Action tabs (left side)
+      { id: "upload" as const, label: "Upload", icon: Upload, group: "action" },
+      {
+        id: "compare" as const,
+        label: "Compare",
+        icon: GitCompare,
+        group: "action",
+      },
+      {
+        id: "preview" as const,
+        label: "Single-Month",
+        icon: Grid3X3,
+        group: "action",
+      },
+      {
+        id: "multimonth" as const,
+        label: "Multi-Month",
+        icon: Calendar,
+        group: "action",
+      },
+      // Info tabs (right side)
+      { id: "info" as const, label: "Chapter Info", icon: Info, group: "info" },
+      { id: "members" as const, label: "Members", icon: Users, group: "info" },
+    ],
+    [],
+  );
 
   if (isLoading && chapterData.length === 0) {
     return (
@@ -120,7 +172,8 @@ const UnifiedDashboard: React.FC<UnifiedDashboardProps> = ({
               <CardContent className="flex flex-col flex-1">
                 <div className="space-y-4 flex-1">
                   <p className="text-sm text-muted-foreground">
-                    Upload a Regional PALMS Summary report to automatically create chapters and add all members at once.
+                    Upload a Regional PALMS Summary report to automatically
+                    create chapters and add all members at once.
                   </p>
                   <ul className="text-sm space-y-2 text-muted-foreground">
                     <li className="flex items-start gap-2">
@@ -138,7 +191,7 @@ const UnifiedDashboard: React.FC<UnifiedDashboardProps> = ({
                   </ul>
                 </div>
                 <Button
-                  onClick={() => window.location.href = '/admin/bulk'}
+                  onClick={() => (window.location.href = "/admin/bulk")}
                   size="lg"
                   className="w-full mt-4"
                 >
@@ -164,7 +217,8 @@ const UnifiedDashboard: React.FC<UnifiedDashboardProps> = ({
               <CardContent className="flex flex-col flex-1">
                 <div className="space-y-4 flex-1">
                   <p className="text-sm text-muted-foreground">
-                    Manually add chapters one at a time and configure their settings individually.
+                    Manually add chapters one at a time and configure their
+                    settings individually.
                   </p>
                   <ul className="text-sm space-y-2 text-muted-foreground">
                     <li className="flex items-start gap-2">
@@ -182,7 +236,7 @@ const UnifiedDashboard: React.FC<UnifiedDashboardProps> = ({
                   </ul>
                 </div>
                 <Button
-                  onClick={() => window.location.href = '/admin/chapters'}
+                  onClick={() => (window.location.href = "/admin/chapters")}
                   size="lg"
                   variant="outline"
                   className="w-full mt-4"
@@ -213,15 +267,13 @@ const UnifiedDashboard: React.FC<UnifiedDashboardProps> = ({
 
               return (
                 <React.Fragment key={tab.id}>
-                  {showSeparator && (
-                    <div className="h-8 w-px bg-border mx-2" />
-                  )}
+                  {showSeparator && <div className="h-8 w-px bg-border mx-2" />}
                   <motion.button
                     onClick={() => setActiveTab(tab.id)}
                     className={`relative px-4 py-2 rounded-lg font-semibold transition-colors whitespace-nowrap ${
                       isActive
-                        ? 'text-foreground'
-                        : 'text-muted-foreground hover:text-foreground'
+                        ? "text-foreground"
+                        : "text-muted-foreground hover:text-foreground"
                     }`}
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
@@ -234,7 +286,11 @@ const UnifiedDashboard: React.FC<UnifiedDashboardProps> = ({
                       <motion.div
                         layoutId="activeTab"
                         className="absolute inset-0 bg-secondary/20 rounded-lg -z-10"
-                        transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
+                        transition={{
+                          type: "spring",
+                          bounce: 0.2,
+                          duration: 0.6,
+                        }}
                       />
                     )}
                   </motion.button>
@@ -255,10 +311,10 @@ const UnifiedDashboard: React.FC<UnifiedDashboardProps> = ({
           transition={{ duration: 0.3 }}
           className="p-4 sm:p-6"
         >
-          {activeTab === 'info' && (
+          {activeTab === "info" && (
             <ChapterInfoTab chapterData={selectedChapter} />
           )}
-          {activeTab === 'members' && (
+          {activeTab === "members" && (
             <Card>
               <Table>
                 <TableHeader>
@@ -270,13 +326,19 @@ const UnifiedDashboard: React.FC<UnifiedDashboardProps> = ({
                 <TableBody>
                   {selectedChapter.members.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={2} className="text-center text-muted-foreground py-8">
+                      <TableCell
+                        colSpan={2}
+                        className="text-center text-muted-foreground py-8"
+                      >
                         No members found in this chapter.
                       </TableCell>
                     </TableRow>
                   ) : (
                     selectedChapter.members.map((member, index) => {
-                      const memberName = typeof member === 'string' ? member : (member as any).name || 'Unknown';
+                      const memberName =
+                        typeof member === "string"
+                          ? member
+                          : (member as any).name || "Unknown";
                       return (
                         <motion.tr
                           key={index}
@@ -285,8 +347,12 @@ const UnifiedDashboard: React.FC<UnifiedDashboardProps> = ({
                           transition={{ duration: 0.2, delay: index * 0.02 }}
                           className="border-b transition-colors hover:bg-muted/50"
                         >
-                          <TableCell className="font-medium text-muted-foreground">{index + 1}</TableCell>
-                          <TableCell className="font-medium">{memberName}</TableCell>
+                          <TableCell className="font-medium text-muted-foreground">
+                            {index + 1}
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            {memberName}
+                          </TableCell>
                         </motion.tr>
                       );
                     })
@@ -295,23 +361,31 @@ const UnifiedDashboard: React.FC<UnifiedDashboardProps> = ({
               </Table>
             </Card>
           )}
-          {activeTab === 'upload' && (
+          {activeTab === "upload" && (
             <FileUploadTab
               chapterData={selectedChapter}
               onUploadSuccess={handleUploadSuccess}
             />
           )}
-          {activeTab === 'compare' && (
+          {activeTab === "compare" && (
             <ComparisonTab
               chapterId={selectedChapter.chapterId}
               key={refreshKey}
             />
           )}
-          {activeTab === 'preview' && (
+          {activeTab === "preview" && (
             <MatrixPreviewTab
               chapterData={selectedChapter}
-              onMemberSelect={(memberName) => onMemberSelect(selectedChapterId, memberName)}
+              onMemberSelect={(memberName) =>
+                onMemberSelect(selectedChapterId, memberName)
+              }
               refreshKey={refreshKey}
+            />
+          )}
+          {activeTab === "multimonth" && (
+            <MultiMonthTab
+              chapterId={selectedChapter.chapterId}
+              chapterName={selectedChapter.chapterName}
             />
           )}
         </motion.div>

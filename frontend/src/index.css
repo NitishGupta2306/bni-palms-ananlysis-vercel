@@ -146,4 +146,71 @@
   .focus-ring {
     @apply focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2;
   }
+
+  /* Loading state utilities */
+  .loading-shimmer {
+    @apply relative overflow-hidden;
+  }
+
+  .loading-shimmer::after {
+    content: '';
+    @apply absolute inset-0;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.2),
+      transparent
+    );
+    animation: shimmer 2s infinite;
+  }
+
+  @keyframes shimmer {
+    0% {
+      transform: translateX(-100%);
+    }
+    100% {
+      transform: translateX(100%);
+    }
+  }
+
+  /* Interactive state utilities */
+  .interactive-scale {
+    @apply transition-transform duration-150 active:scale-95;
+  }
+
+  .button-press {
+    @apply active:translate-y-0.5;
+  }
+
+  /* Status indicators */
+  .status-success {
+    @apply bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800;
+  }
+
+  .status-error {
+    @apply bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800;
+  }
+
+  .status-warning {
+    @apply bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800;
+  }
+
+  .status-info {
+    @apply bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800;
+  }
+
+  /* Pulse animation for loading */
+  .pulse-slow {
+    animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  /* Accessibility improvements */
+  .focus-visible-ring {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+  }
+
+  /* Disabled state improvements */
+  .disabled-muted {
+    @apply disabled:opacity-60 disabled:cursor-not-allowed disabled:saturate-50;
+  }
 }

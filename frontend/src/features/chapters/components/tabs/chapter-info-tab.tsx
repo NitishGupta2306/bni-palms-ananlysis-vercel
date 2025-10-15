@@ -1,8 +1,9 @@
 import React, { useMemo } from 'react';
-import { Trophy, DollarSign, Users, Award, Target } from 'lucide-react';
+import { Trophy, DollarSign, Users, Award, Target, TrendingUp } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { ChapterMemberData } from '../../../../shared/services/ChapterDataLoader';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, cn } from '@/lib/utils';
 
 interface ChapterInfoTabProps {
   chapterData: ChapterMemberData;
@@ -63,51 +64,91 @@ const ChapterInfoTab: React.FC<ChapterInfoTabProps> = ({ chapterData }) => {
 
       {/* Chapter Totals */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="border-l-4 border-l-primary/30">
+        <Card className="border-l-4 border-l-blue-500 hover:shadow-lg transition-shadow">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <Target className="h-4 w-4 text-primary" />
-              Total Referrals
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Total Referrals
+              </CardTitle>
+              <div className="p-2 bg-blue-500/10 rounded-lg">
+                <Target className="h-4 w-4 text-blue-500" />
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-bold">{stats.totals.totalReferrals}</p>
+            {stats.hasData && (
+              <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                <TrendingUp className="h-3 w-3" />
+                Active networking
+              </p>
+            )}
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-primary/30">
+        <Card className="border-l-4 border-l-purple-500 hover:shadow-lg transition-shadow">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <Users className="h-4 w-4 text-primary" />
-              Total One-to-Ones
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Total One-to-Ones
+              </CardTitle>
+              <div className="p-2 bg-purple-500/10 rounded-lg">
+                <Users className="h-4 w-4 text-purple-500" />
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-bold">{stats.totals.totalOTOs}</p>
+            {stats.hasData && (
+              <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                <TrendingUp className="h-3 w-3" />
+                Strong connections
+              </p>
+            )}
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-primary/30">
+        <Card className="border-l-4 border-l-green-500 hover:shadow-lg transition-shadow">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <DollarSign className="h-4 w-4 text-primary" />
-              Total TYFCB
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Total TYFCB
+              </CardTitle>
+              <div className="p-2 bg-green-500/10 rounded-lg">
+                <DollarSign className="h-4 w-4 text-green-500" />
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold">{formatCurrency(stats.totals.totalTYFCB)}</p>
+            {stats.hasData && (
+              <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                <TrendingUp className="h-3 w-3" />
+                Business growth
+              </p>
+            )}
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-primary/30">
+        <Card className="border-l-4 border-l-orange-500 hover:shadow-lg transition-shadow">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <Award className="h-4 w-4 text-primary" />
-              Total Visitors
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Total Visitors
+              </CardTitle>
+              <div className="p-2 bg-orange-500/10 rounded-lg">
+                <Award className="h-4 w-4 text-orange-500" />
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-bold">{stats.totals.totalVisitors}</p>
+            {stats.hasData && (
+              <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                <TrendingUp className="h-3 w-3" />
+                New prospects
+              </p>
+            )}
           </CardContent>
         </Card>
       </div>

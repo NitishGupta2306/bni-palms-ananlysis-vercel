@@ -7,7 +7,7 @@ Uses Django REST Framework routers for ViewSet-based endpoints.
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 
-from chapters.views import ChapterViewSet
+from chapters.views import ChapterViewSet, AdminAuthViewSet
 from members.views import MemberViewSet
 from reports.views import MonthlyReportViewSet
 from analytics.views import MatrixViewSet, ComparisonViewSet
@@ -17,6 +17,7 @@ from uploads.views import FileUploadViewSet
 router = DefaultRouter()
 router.register(r"chapters", ChapterViewSet, basename="chapter")
 router.register(r"upload", FileUploadViewSet, basename="upload")
+router.register(r"admin", AdminAuthViewSet, basename="admin-auth")
 
 urlpatterns = [
     # Dashboard endpoint (list view of chapters)
