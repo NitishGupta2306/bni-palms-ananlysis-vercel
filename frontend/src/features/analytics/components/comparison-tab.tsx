@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { TrendingUp, TrendingDown, Calendar, AlertCircle, Loader2, Download, FileSpreadsheet, Zap, Clock, Upload } from 'lucide-react';
+import { TrendingUp, TrendingDown, Calendar, AlertCircle, Download, FileSpreadsheet, Zap, Clock, Upload } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { MonthlyReport, ComparisonData, loadComparisonData, loadMonthlyReports } from '../../../shared/services/ChapterDataLoader';
+import { loadComparisonData, loadMonthlyReports } from '../../../shared/services/ChapterDataLoader';
 import { LoadingSkeleton } from '@/components/ui/loading-skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
 import { API_BASE_URL } from '@/config/api';

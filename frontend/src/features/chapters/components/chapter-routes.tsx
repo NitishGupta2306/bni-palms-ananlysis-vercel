@@ -1,4 +1,4 @@
-import React, { useState, useEffect, Suspense, lazy } from "react";
+import React, { useEffect, Suspense, lazy } from "react";
 import {
   Routes,
   Route,
@@ -6,7 +6,6 @@ import {
   useParams,
   useLocation,
 } from "react-router-dom";
-import UnifiedDashboard from "./unified-dashboard";
 import { ChapterMemberData } from "../../../shared/services/ChapterDataLoader";
 import { useChapterData } from "../../../shared/hooks/useChapterData";
 import { ProtectedRoute } from "../../../components/protected-route";
@@ -42,12 +41,16 @@ interface ChapterRoutesProps {
       memberCount: number;
     }>,
   ) => void;
+  showAdminLogin?: boolean;
+  onAdminLoginClose?: () => void;
 }
 
 const ChapterRoutes: React.FC<ChapterRoutesProps> = ({
   selectedChapterId,
   onChapterSelect,
   onChaptersLoad,
+  showAdminLogin,
+  onAdminLoginClose,
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -118,7 +121,15 @@ const ChapterRoutes: React.FC<ChapterRoutesProps> = ({
   return (
     <Routes>
       {/* Landing Page */}
-      <Route path="/" element={<LandingPage />} />
+      <Route
+        path="/"
+        element={
+          <LandingPage
+            showAdminLogin={showAdminLogin}
+            onAdminLoginClose={onAdminLoginClose}
+          />
+        }
+      />
 
       {/* Admin Dashboard - Protected */}
       <Route

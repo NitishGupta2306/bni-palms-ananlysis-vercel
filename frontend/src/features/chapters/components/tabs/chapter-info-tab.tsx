@@ -1,9 +1,8 @@
 import React, { useMemo } from 'react';
 import { Trophy, DollarSign, Users, Award, Target, TrendingUp } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { ChapterMemberData } from '../../../../shared/services/ChapterDataLoader';
-import { formatCurrency, cn } from '@/lib/utils';
+import { formatCurrency } from '@/lib/utils';
 
 interface ChapterInfoTabProps {
   chapterData: ChapterMemberData;
