@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Building2, Lock, Users } from "lucide-react";
+import { Building2, Lock, Users, Loader2 } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -136,7 +136,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </h3>
           {isLoading ? (
             <div className="text-center py-12">
-              <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+              <Loader2 className="h-12 w-12 animate-spin mx-auto text-primary" />
               <p className="mt-4 text-muted-foreground">Loading chapters...</p>
             </div>
           ) : (
