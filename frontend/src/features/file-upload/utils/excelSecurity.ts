@@ -109,7 +109,7 @@ const sanitizePropertyName = (name: string): string | null => {
   }
 
   // Only allow alphanumeric characters, spaces, and common punctuation
-  const sanitized = name.replace(/[^\w\s\-_\.]/g, '').trim();
+  const sanitized = name.replace(/[^\w\s\-_.]/g, '').trim();
 
   // Limit length
   return sanitized.length > 0 && sanitized.length <= 100 ? sanitized : null;

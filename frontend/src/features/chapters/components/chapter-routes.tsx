@@ -75,7 +75,7 @@ const ChapterRoutes: React.FC<ChapterRoutesProps> = ({
       );
 
       // Extract chapter ID from URL if present (e.g., /chapter/:chapterId)
-      const urlMatch = location.pathname.match(/^\/chapter\/([^\/]+)/);
+      const urlMatch = location.pathname.match(/^\/chapter\/([^/]+)/);
       const urlChapterId = urlMatch ? urlMatch[1] : null;
 
       // Priority: URL chapter ID > currently selected > first chapter
