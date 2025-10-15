@@ -52,7 +52,7 @@ const ChapterCard: React.FC<ChapterCardProps> = ({
   return (
     <Card
       className={cn(
-        "transition-all duration-300 hover:shadow-lg border-l-4 border-l-primary/30 cursor-pointer",
+        "transition-all duration-300 hover:shadow-lg border-l-4 border-l-primary/30 cursor-pointer hover:border-l-primary",
       )}
       data-testid={`chapter-card-${chapterData.chapterId}`}
       onClick={() => onTabSelect(chapterData.chapterId, "info")}
