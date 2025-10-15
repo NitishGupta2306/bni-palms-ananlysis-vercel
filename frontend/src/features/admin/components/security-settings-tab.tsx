@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Shield,
   Lock,
@@ -42,11 +42,7 @@ export const SecuritySettingsTab: React.FC = () => {
     [key: string]: boolean;
   }>({});
 
-  useEffect(() => {
-    fetchPasswords();
-  }, []);
-
-  const fetchPasswords = async () => {
+  const fetchPasswords = useCallback(async () => {
     try {
       setIsLoading(true);
 
@@ -98,7 +94,11 @@ export const SecuritySettingsTab: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [adminAuth]);
+
+  useEffect(() => {
+    fetchPasswords();
+  }, [fetchPasswords]);
 
   const showMessage = (type: "success" | "error", text: string) => {
     setMessage({ type, text });
