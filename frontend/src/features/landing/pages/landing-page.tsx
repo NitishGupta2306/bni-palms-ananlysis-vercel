@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { API_BASE_URL } from "@/config/api";
 import { ChapterLoginModal } from "../components/chapter-login-modal";
 import { AdminLoginModal } from "../components/admin-login-modal";
+import { apiClient } from "@/lib/apiClient";
 
 interface Chapter {
   id: number;
@@ -44,18 +45,17 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   useEffect(() => {
     const fetchChapters = async () => {
       try {
-        const response = await fetch(`${API_BASE_URL}/api/chapters/`);
-        if (response.ok) {
-          const data = await response.json();
-          // Transform the data to match our interface
-          const transformedChapters = data.map((chapter: any) => ({
-            id: chapter.id,
-            name: chapter.name,
-            location: chapter.location,
-            member_count: chapter.total_members || 0,
-          }));
-          setChapters(transformedChapters);
-        }
+        const data = await apiClient.get<any[]>(`/api/chapters/`, {
+          skipAuth: true,
+        });
+        // Transform the data to match our interface
+        const transformedChapters = data.map((chapter: any) => ({
+          id: chapter.id,
+          name: chapter.name,
+          location: chapter.location,
+          member_count: chapter.total_members || 0,
+        }));
+        setChapters(transformedChapters);
       } catch (error) {
         console.error("Failed to fetch chapters:", error);
       } finally {
