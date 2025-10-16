@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     # Third party apps
     "rest_framework",
     "corsheaders",
+    "csp",  # Content Security Policy
     # Our apps
     "chapters",
     "members",
@@ -53,8 +54,10 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    "django.middleware.security.SecurityMiddleware",  # Security headers
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
+    "csp.middleware.CSPMiddleware",  # Content Security Policy
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -182,3 +185,139 @@ CORS_ALLOW_HEADERS = [
     "x-csrftoken",
     "x-requested-with",
 ]
+
+# ==============================================================================
+# SECURITY HEADERS CONFIGURATION (Task #5)
+# ==============================================================================
+# Comprehensive security headers to protect against common web vulnerabilities
+# References:
+# - OWASP Security Headers: https://owasp.org/www-project-secure-headers/
+# - Mozilla Observatory: https://observatory.mozilla.org/
+
+# Content Security Policy (CSP)
+# Prevents XSS attacks by controlling which resources can be loaded
+# ==============================================================================
+CSP_DEFAULT_SRC = ("'self'",)  # Default: only load from same origin
+
+# Script sources - allow inline scripts for React
+CSP_SCRIPT_SRC = (
+    "'self'",
+    "'unsafe-inline'",  # Required for React inline event handlers
+    "'unsafe-eval'",    # Required for React development mode
+)
+
+# Style sources - allow inline styles for styled components
+CSP_STYLE_SRC = (
+    "'self'",
+    "'unsafe-inline'",  # Required for inline styles in components
+    "https://fonts.googleapis.com",  # Google Fonts if used
+)
+
+# Image sources - allow data URIs and HTTPS images
+CSP_IMG_SRC = (
+    "'self'",
+    "data:",           # Data URIs for inline images
+    "https:",          # HTTPS images
+    "blob:",           # Blob URLs for dynamically generated images
+)
+
+# Font sources
+CSP_FONT_SRC = (
+    "'self'",
+    "data:",           # Data URIs for fonts
+    "https://fonts.gstatic.com",  # Google Fonts if used
+)
+
+# Connection sources - API endpoints
+CSP_CONNECT_SRC = (
+    "'self'",
+    "http://localhost:8000",     # Local API
+    "https://*.vercel.app",      # Vercel API
+    "https://*.supabase.co",     # Supabase database
+)
+
+# Frame sources - prevent clickjacking
+CSP_FRAME_SRC = ("'none'",)  # Don't allow any frames
+
+# Object sources - prevent plugin-based attacks
+CSP_OBJECT_SRC = ("'none'",)  # Don't allow plugins
+
+# Base URI restriction
+CSP_BASE_URI = ("'self'",)
+
+# Form action restriction
+CSP_FORM_ACTION = ("'self'",)
+
+# Frame ancestors - prevent clickjacking
+CSP_FRAME_ANCESTORS = ("'none'",)  # Don't allow site to be framed
+
+# Upgrade insecure requests (force HTTPS in production)
+if not DEBUG:
+    CSP_UPGRADE_INSECURE_REQUESTS = True
+
+# X-Frame-Options (legacy browsers that don't support CSP frame-ancestors)
+# ==============================================================================
+X_FRAME_OPTIONS = "DENY"  # Prevent site from being embedded in iframes
+
+# X-Content-Type-Options
+# ==============================================================================
+# Prevent MIME-type sniffing attacks
+SECURE_CONTENT_TYPE_NOSNIFF = True  # X-Content-Type-Options: nosniff
+
+# X-XSS-Protection (legacy, but still useful for older browsers)
+# ==============================================================================
+SECURE_BROWSER_XSS_FILTER = True  # X-XSS-Protection: 1; mode=block
+
+# Referrer Policy
+# ==============================================================================
+# Control what information is sent in Referer header
+SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
+# Options:
+# - "no-referrer": Never send referrer
+# - "same-origin": Only send for same-origin requests
+# - "strict-origin": Only send origin (not full URL) for HTTPS→HTTPS
+# - "strict-origin-when-cross-origin": Full URL for same-origin, origin for cross-origin (RECOMMENDED)
+
+# Permissions Policy (formerly Feature-Policy)
+# ==============================================================================
+# Control which browser features can be used
+PERMISSIONS_POLICY = {
+    "accelerometer": [],        # Disable accelerometer
+    "camera": [],               # Disable camera access
+    "geolocation": [],          # Disable geolocation
+    "microphone": [],           # Disable microphone
+    "payment": [],              # Disable payment APIs
+    "usb": [],                  # Disable USB access
+}
+
+# HTTPS/SSL Settings (PRODUCTION ONLY)
+# ==============================================================================
+# Only enforce HTTPS in production (when DEBUG=False)
+if not DEBUG:
+    # Strict-Transport-Security (HSTS)
+    # Forces browsers to only use HTTPS for the specified duration
+    SECURE_HSTS_SECONDS = 31536000  # 1 year (recommended: 63072000 for 2 years)
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True  # Apply to subdomains
+    SECURE_HSTS_PRELOAD = True  # Allow submission to HSTS preload list
+
+    # Force HTTPS redirects
+    SECURE_SSL_REDIRECT = True  # Redirect all HTTP to HTTPS
+
+    # Secure cookies
+    SESSION_COOKIE_SECURE = True  # Only send session cookie over HTTPS
+    CSRF_COOKIE_SECURE = True     # Only send CSRF cookie over HTTPS
+
+    # Additional cookie security
+    SESSION_COOKIE_HTTPONLY = True  # Prevent JavaScript access to session cookie
+    CSRF_COOKIE_HTTPONLY = True     # Prevent JavaScript access to CSRF cookie
+    SESSION_COOKIE_SAMESITE = 'Lax'  # CSRF protection
+    CSRF_COOKIE_SAMESITE = 'Lax'     # CSRF protection
+else:
+    # Development settings - allow HTTP
+    SECURE_SSL_REDIRECT = False
+    SESSION_COOKIE_SECURE = False
+    CSRF_COOKIE_SECURE = False
+
+# ==============================================================================
+# END SECURITY HEADERS CONFIGURATION
+# ==============================================================================
