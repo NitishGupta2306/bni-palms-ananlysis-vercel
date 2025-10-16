@@ -60,42 +60,48 @@ class ChapterViewSet(viewsets.ModelViewSet):
         OPTIMIZED for Supabase/Vercel serverless with minimal queries.
         Uses aggregation and prefetch_related to avoid N+1 queries.
         """
-        from django.db.models import Count, Sum, Prefetch
+        from django.db.models import Count, Sum
         import logging
 
         logger = logging.getLogger(__name__)
 
         try:
-            # Single query to get all chapters with aggregated stats
-            chapters = (
-                self.get_queryset()
-                .prefetch_related(
-                    Prefetch(
-                        "members",
-                        queryset=Member.objects.filter(is_active=True).only(
-                            "id",
-                            "first_name",
-                            "last_name",
-                            "business_name",
-                            "classification",
-                            "email",
-                            "phone",
-                            "chapter_id",
-                        ),
-                    )
-                )
-                .annotate(
-                    active_member_count=Count(
-                        "members",
-                        filter=models.Q(members__is_active=True),
-                        distinct=True,
-                    ),
-                    report_count=Count("monthly_reports", distinct=True),
-                )
+            # Get chapter IDs first to avoid forcing queryset evaluation with prefetch
+            chapter_ids = list(self.get_queryset().values_list("id", flat=True))
+
+            # Get chapters with basic annotations only
+            chapters = self.get_queryset().annotate(
+                active_member_count=Count(
+                    "members",
+                    filter=models.Q(members__is_active=True),
+                    distinct=True,
+                ),
+                report_count=Count("monthly_reports", distinct=True),
             )
 
-            # Get all analytics data in batch queries
-            chapter_ids = [c.id for c in chapters]
+            # Get all members in one query
+            members_by_chapter = {}
+            all_members = Member.objects.filter(
+                chapter_id__in=chapter_ids, is_active=True
+            ).values(
+                "id",
+                "first_name",
+                "last_name",
+                "business_name",
+                "classification",
+                "email",
+                "phone",
+                "chapter_id",
+            )
+
+            for member in all_members:
+                chapter_id = member["chapter_id"]
+                if chapter_id not in members_by_chapter:
+                    members_by_chapter[chapter_id] = []
+                # Add full_name
+                member["name"] = f"{member['first_name']} {member['last_name']}"
+                member["is_active"] = True
+                members_by_chapter[chapter_id].append(member)
         except Exception as e:
             logger.exception(f"Error fetching chapters: {str(e)}")
             return Response(
@@ -173,18 +179,8 @@ class ChapterViewSet(viewsets.ModelViewSet):
                     else 0
                 )
 
-                # Prepare member list from prefetched data
-                member_list = [
-                    {
-                        "id": member.id,
-                        "name": member.full_name,
-                        "business_name": member.business_name,
-                        "classification": member.classification,
-                        "email": member.email,
-                        "phone": member.phone,
-                    }
-                    for member in chapter.members.all()
-                ]
+                # Get member list from our pre-built dictionary
+                member_list = members_by_chapter.get(chapter.id, [])
 
                 chapter_data.append(
                     {

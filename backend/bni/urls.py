@@ -9,9 +9,8 @@ from rest_framework.routers import DefaultRouter
 
 from chapters.views import ChapterViewSet, AdminAuthViewSet
 from members.views import MemberViewSet
-from reports.views import MonthlyReportViewSet
+from reports.views import MonthlyReportViewSet, FileUploadViewSet
 from analytics.views import MatrixViewSet, ComparisonViewSet
-from uploads.views import FileUploadViewSet
 
 # Main router for top-level resources
 router = DefaultRouter()

@@ -24,16 +24,18 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-b!bd3gycxy^srur!2ezi)i635ym@g9c$0p1a@$!b@uip(c02s(')
+SECRET_KEY = os.environ.get(
+    "SECRET_KEY", "django-insecure-b!bd3gycxy^srur!2ezi)i635ym@g9c$0p1a@$!b@uip(c02s("
+)
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DEBUG', 'True') == 'True'
+DEBUG = os.environ.get("DEBUG", "True") == "True"
 
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
+ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
 
 # Add Vercel hosts
-if os.environ.get('VERCEL'):
-    ALLOWED_HOSTS.extend(['.vercel.app', '.vercel.com'])
+if os.environ.get("VERCEL"):
+    ALLOWED_HOSTS.extend([".vercel.app", ".vercel.com"])
 
 
 # Application definition
@@ -47,7 +49,6 @@ INSTALLED_APPS = [
     "members",
     "reports",
     "analytics",
-    "uploads",
     "bni",
 ]
 
@@ -67,7 +68,7 @@ WSGI_APPLICATION = "config.wsgi.application"
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
 # Parse DATABASE_URL if provided (for production)
-DATABASE_URL = os.environ.get('DATABASE_URL')
+DATABASE_URL = os.environ.get("DATABASE_URL")
 
 if DATABASE_URL:
     # Parse Supabase/PostgreSQL connection string
@@ -78,18 +79,16 @@ if DATABASE_URL:
     db_config = dj_database_url.parse(DATABASE_URL, conn_max_age=600, ssl_require=True)
 
     # Add connection pooling and performance options
-    db_config['OPTIONS'] = {
-        'sslmode': 'require',
-        'connect_timeout': 10,
+    db_config["OPTIONS"] = {
+        "sslmode": "require",
+        "connect_timeout": 10,
     }
 
     # Enable connection pooling for better performance
-    db_config['CONN_MAX_AGE'] = 600  # Keep connections alive for 10 minutes
-    db_config['CONN_HEALTH_CHECKS'] = True  # Enable connection health checks
+    db_config["CONN_MAX_AGE"] = 600  # Keep connections alive for 10 minutes
+    db_config["CONN_HEALTH_CHECKS"] = True  # Enable connection health checks
 
-    DATABASES = {
-        "default": db_config
-    }
+    DATABASES = {"default": db_config}
 else:
     # Development - use SQLite
     DATABASES = {
@@ -152,33 +151,34 @@ REST_FRAMEWORK = {
 
 # CORS settings
 CORS_ALLOWED_ORIGINS = os.environ.get(
-    "CORS_ALLOWED_ORIGINS",
-    "http://localhost:3000,http://127.0.0.1:3000"
+    "CORS_ALLOWED_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000"
 ).split(",")
 
 # For Vercel deployments, allow all Vercel domains
-if os.environ.get('VERCEL') or any('.vercel.app' in origin for origin in CORS_ALLOWED_ORIGINS):
+if os.environ.get("VERCEL") or any(
+    ".vercel.app" in origin for origin in CORS_ALLOWED_ORIGINS
+):
     CORS_ALLOWED_ORIGIN_REGEXES = [
         r"^https://.*\.vercel\.app$",
     ]
 
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_METHODS = [
-    'DELETE',
-    'GET',
-    'OPTIONS',
-    'PATCH',
-    'POST',
-    'PUT',
+    "DELETE",
+    "GET",
+    "OPTIONS",
+    "PATCH",
+    "POST",
+    "PUT",
 ]
 CORS_ALLOW_HEADERS = [
-    'accept',
-    'accept-encoding',
-    'authorization',
-    'content-type',
-    'dnt',
-    'origin',
-    'user-agent',
-    'x-csrftoken',
-    'x-requested-with',
+    "accept",
+    "accept-encoding",
+    "authorization",
+    "content-type",
+    "dnt",
+    "origin",
+    "user-agent",
+    "x-csrftoken",
+    "x-requested-with",
 ]
