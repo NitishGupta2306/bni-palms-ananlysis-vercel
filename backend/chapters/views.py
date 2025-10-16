@@ -36,19 +36,19 @@ class ChapterViewSet(viewsets.ModelViewSet):
         """
         Override permissions based on action.
         """
-        if self.action == 'list':
-            # Only admins can list all chapters
-            return [IsAdmin()]
-        elif self.action in ['create', 'destroy', 'update', 'partial_update']:
+        if self.action == "list":
+            # Allow public access to list chapters (for landing page)
+            return [AllowAny()]
+        elif self.action in ["create", "destroy", "update", "partial_update"]:
             # Only admins can create/delete/update chapters
             return [IsAdmin()]
-        elif self.action in ['retrieve']:
+        elif self.action in ["retrieve"]:
             # Chapters can see their own, admins see all
             return [IsChapterOrAdmin()]
-        elif self.action == 'authenticate':
+        elif self.action == "authenticate":
             # Anyone can attempt to authenticate
             return [AllowAny()]
-        elif self.action == 'update_password':
+        elif self.action == "update_password":
             # Only admins can update passwords
             return [IsAdmin()]
         return super().get_permissions()
@@ -232,12 +232,12 @@ class ChapterViewSet(viewsets.ModelViewSet):
             )
 
         # Check if non-admin user is accessing their own chapter
-        if hasattr(request.user, 'is_admin') and not request.user.is_admin:
-            if hasattr(request.user, 'chapter_id'):
+        if hasattr(request.user, "is_admin") and not request.user.is_admin:
+            if hasattr(request.user, "chapter_id"):
                 if str(request.user.chapter_id) != str(chapter.id):
                     return Response(
                         {"error": "You can only access your own chapter"},
-                        status=status.HTTP_403_FORBIDDEN
+                        status=status.HTTP_403_FORBIDDEN,
                     )
 
         # Get all members (frontend will filter by status)
@@ -460,9 +460,9 @@ class AdminAuthViewSet(viewsets.ViewSet):
 
     def get_permissions(self):
         """Override permissions based on action."""
-        if self.action == 'authenticate':
+        if self.action == "authenticate":
             return [AllowAny()]
-        elif self.action in ['update_password', 'get_settings']:
+        elif self.action in ["update_password", "get_settings"]:
             return [IsAdmin()]
         return super().get_permissions()
 
