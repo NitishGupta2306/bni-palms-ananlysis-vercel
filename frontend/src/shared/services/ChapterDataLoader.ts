@@ -263,17 +263,17 @@ export const extractMemberNamesFromFile = async (
 
     // Get headers from first row
     const headerRow = worksheet.getRow(1);
-    headerRow.eachCell((cell, colNumber) => {
+    headerRow.eachCell((cell: ExcelJS.Cell, colNumber: number) => {
       const value = cell.value;
       headers[colNumber] = value ? value.toString() : "";
     });
 
     // Process data rows
-    worksheet.eachRow((row, rowNumber) => {
+    worksheet.eachRow((row: ExcelJS.Row, rowNumber: number) => {
       if (rowNumber === 1) return; // Skip header row
 
       const rowData: any = {};
-      row.eachCell((cell, colNumber) => {
+      row.eachCell((cell: ExcelJS.Cell, colNumber: number) => {
         const header = headers[colNumber];
         if (header) {
           // Get cell value (exceljs returns rich text as objects)
