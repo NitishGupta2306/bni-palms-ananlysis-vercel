@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Calendar, Download, Loader2 } from "lucide-react";
+import { Calendar, Download, Loader2, FileText } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -22,6 +22,7 @@ interface MonthlyReportListItem {
   has_referral_matrix: boolean;
   has_oto_matrix: boolean;
   has_combination_matrix: boolean;
+  require_palms_sheets: boolean;
 }
 
 interface MultiMonthTabProps {
@@ -37,6 +38,7 @@ const MultiMonthTab: React.FC<MultiMonthTabProps> = ({
   const [selectedReportIds, setSelectedReportIds] = useState<number[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isDownloadingPalms, setIsDownloadingPalms] = useState(false);
   const { toast } = useToast();
 
   // Fetch available reports
@@ -150,6 +152,68 @@ const MultiMonthTab: React.FC<MultiMonthTabProps> = ({
     }
   };
 
+  const downloadPalmsSheets = async () => {
+    // Filter selected reports that have PALMS sheets available
+    const reportsWithPalms = reports.filter(
+      (r) => selectedReportIds.includes(r.id) && r.require_palms_sheets,
+    );
+
+    if (reportsWithPalms.length === 0) {
+      toast({
+        title: "No PALMS Sheets Available",
+        description:
+          "None of the selected reports have PALMS sheets marked as downloadable.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsDownloadingPalms(true);
+
+    try {
+      // Download each report's PALMS sheets individually
+      for (const report of reportsWithPalms) {
+        const response = await fetchWithAuth(
+          `${API_BASE_URL}/api/chapters/${chapterId}/reports/${report.id}/download-palms/`,
+        );
+
+        if (!response.ok) {
+          throw new Error(`Failed to download PALMS for ${report.month_year}`);
+        }
+
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `PALMS_Sheets_${report.month_year}.zip`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+
+        // Add small delay between downloads to avoid browser blocking
+        if (reportsWithPalms.length > 1) {
+          await new Promise((resolve) => setTimeout(resolve, 500));
+        }
+      }
+
+      toast({
+        title: "Download Complete",
+        description: `Downloaded PALMS sheets for ${reportsWithPalms.length} report(s)`,
+        variant: "success",
+      });
+    } catch (error) {
+      console.error("Error downloading PALMS sheets:", error);
+      toast({
+        title: "Download Failed",
+        description: "Failed to download PALMS sheets. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDownloadingPalms(false);
+    }
+  };
+
   return (
     <div className="space-y-6 p-4 sm:p-6">
       <div>
@@ -235,7 +299,7 @@ const MultiMonthTab: React.FC<MultiMonthTabProps> = ({
               <div className="flex gap-2">
                 <Button
                   onClick={generateAndDownloadReport}
-                  disabled={isGenerating}
+                  disabled={isGenerating || isDownloadingPalms}
                 >
                   {isGenerating ? (
                     <>
@@ -249,6 +313,28 @@ const MultiMonthTab: React.FC<MultiMonthTabProps> = ({
                     </>
                   )}
                 </Button>
+                {reports.some(
+                  (r) =>
+                    selectedReportIds.includes(r.id) && r.require_palms_sheets,
+                ) && (
+                  <Button
+                    onClick={downloadPalmsSheets}
+                    disabled={isGenerating || isDownloadingPalms}
+                    variant="outline"
+                  >
+                    {isDownloadingPalms ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Downloading...
+                      </>
+                    ) : (
+                      <>
+                        <FileText className="mr-2 h-4 w-4" />
+                        Download PALMS
+                      </>
+                    )}
+                  </Button>
+                )}
               </div>
             </div>
           )}
