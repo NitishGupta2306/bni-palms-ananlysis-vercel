@@ -9,6 +9,8 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ChapterMemberData } from '../../../shared/services/ChapterDataLoader';
 import { useMemberManagement } from '../hooks/useMemberManagement';
+import { MemberEditDialog } from './member-edit-dialog';
+import { MemberAddDialog } from './member-add-dialog';
 
 interface MemberManagementTabProps {
   chapterData: ChapterMemberData[];
@@ -27,10 +29,15 @@ export const MemberManagementTab: React.FC<MemberManagementTabProps> = ({
     selectedMembers,
     deletingMemberId,
     isBulkDeleting,
+    editingMember,
+    showAddDialog,
     handleMemberSelect,
     handleSelectAll,
     handleBulkDelete,
     handleEdit,
+    handleCloseEditDialog,
+    handleAddMember,
+    handleCloseAddDialog,
     handleDelete,
     exportMemberData,
   } = useMemberManagement(chapterData, onDataRefresh);
@@ -47,7 +54,7 @@ export const MemberManagementTab: React.FC<MemberManagementTabProps> = ({
             Manage all members across all chapters. Perform bulk operations and export member data.
           </p>
         </div>
-        <Button onClick={() => alert('Add member functionality coming soon')} className="w-full sm:w-auto">
+        <Button onClick={handleAddMember} className="w-full sm:w-auto">
           <Plus className="h-4 w-4 mr-2" />
           Add Member
         </Button>
@@ -222,6 +229,22 @@ export const MemberManagementTab: React.FC<MemberManagementTabProps> = ({
           </TableBody>
         </Table>
       </Card>
+
+      {/* Member Edit Dialog */}
+      <MemberEditDialog
+        member={editingMember}
+        open={!!editingMember}
+        onClose={handleCloseEditDialog}
+        onSuccess={onDataRefresh}
+      />
+
+      {/* Member Add Dialog */}
+      <MemberAddDialog
+        open={showAddDialog}
+        onClose={handleCloseAddDialog}
+        onSuccess={onDataRefresh}
+        chapters={chapterData}
+      />
     </div>
   );
 };

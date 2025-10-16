@@ -1,14 +1,7 @@
 import React, { useState, useCallback, useMemo, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useSearchParams } from "react-router-dom";
-import {
-  Home,
-  Info,
-  Upload,
-  Grid3X3,
-  GitCompare,
-  Calendar,
-} from "lucide-react";
+import { Home, Info, Upload, FileText } from "lucide-react";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -20,9 +13,7 @@ import {
 import { ChapterMemberData } from "../../../shared/services/ChapterDataLoader";
 import ChapterInfoTab from "./tabs/chapter-info-tab";
 import FileUploadTab from "./tabs/file-upload-tab";
-import ComparisonTab from "../../analytics/components/comparison-tab";
-import MatrixPreviewTab from "./tabs/matrix-preview-tab";
-import MultiMonthTab from "../../analytics/components/multi-month-tab";
+import ReportWizardTab from "../../analytics/components/report-wizard-tab";
 
 interface ChapterDetailTabbedProps {
   chapterData: ChapterMemberData;
@@ -41,22 +32,16 @@ const ChapterDetailTabbed: React.FC<ChapterDetailTabbedProps> = ({
   const tabFromUrl = searchParams.get("tab") as
     | "info"
     | "upload"
-    | "compare"
-    | "preview"
+    | "reports"
     | null;
-  const [activeTab, setActiveTab] = useState<
-    "info" | "upload" | "compare" | "preview" | "multimonth"
-  >(tabFromUrl || "info");
+  const [activeTab, setActiveTab] = useState<"info" | "upload" | "reports">(
+    tabFromUrl || "info",
+  );
   const [refreshKey, setRefreshKey] = useState(0);
 
   // Update active tab when URL parameter changes
   useEffect(() => {
-    if (
-      tabFromUrl &&
-      ["info", "upload", "compare", "preview", "multimonth"].includes(
-        tabFromUrl,
-      )
-    ) {
+    if (tabFromUrl && ["info", "upload", "reports"].includes(tabFromUrl)) {
       setActiveTab(tabFromUrl);
     }
   }, [tabFromUrl]);
@@ -66,9 +51,9 @@ const ChapterDetailTabbed: React.FC<ChapterDetailTabbedProps> = ({
     if (onDataRefresh) {
       onDataRefresh();
     }
-    // Switch to preview tab after successful upload
+    // Switch to reports tab after successful upload
     setTimeout(() => {
-      setActiveTab("preview");
+      setActiveTab("reports");
     }, 500);
   }, [onDataRefresh]);
 
@@ -76,15 +61,13 @@ const ChapterDetailTabbed: React.FC<ChapterDetailTabbedProps> = ({
     () => [
       { id: "info" as const, label: "Chapter Info", icon: Info },
       { id: "upload" as const, label: "Upload", icon: Upload },
-      { id: "compare" as const, label: "Compare", icon: GitCompare },
-      { id: "preview" as const, label: "Single-Month", icon: Grid3X3 },
-      { id: "multimonth" as const, label: "Multi-Month", icon: Calendar },
+      { id: "reports" as const, label: "Reports", icon: FileText },
     ],
     [],
   );
 
   const handleTabChange = useCallback(
-    (tabId: "info" | "upload" | "compare" | "preview" | "multimonth") => {
+    (tabId: "info" | "upload" | "reports") => {
       setActiveTab(tabId);
       setSearchParams({ tab: tabId });
     },
@@ -165,21 +148,8 @@ const ChapterDetailTabbed: React.FC<ChapterDetailTabbedProps> = ({
             onUploadSuccess={handleUploadSuccess}
           />
         )}
-        {activeTab === "compare" && (
-          <ComparisonTab chapterId={chapterData.chapterId} key={refreshKey} />
-        )}
-        {activeTab === "preview" && (
-          <MatrixPreviewTab
-            chapterData={chapterData}
-            onMemberSelect={onMemberSelect}
-            refreshKey={refreshKey}
-          />
-        )}
-        {activeTab === "multimonth" && (
-          <MultiMonthTab
-            chapterId={chapterData.chapterId}
-            chapterName={chapterData.chapterName}
-          />
+        {activeTab === "reports" && (
+          <ReportWizardTab chapterData={chapterData} key={refreshKey} />
         )}
       </motion.div>
     </div>

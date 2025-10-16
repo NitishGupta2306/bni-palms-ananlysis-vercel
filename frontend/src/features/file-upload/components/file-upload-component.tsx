@@ -376,9 +376,9 @@ const FileUploadComponent: React.FC<FileUploadComponentProps> = ({
   );
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 max-w-2xl mx-auto">
       {/* Step Indicators */}
-      <div className="flex items-center justify-between max-w-md mx-auto">
+      <div className="flex items-center justify-between max-w-md mx-auto mb-6">
         <StepIndicator
           step={1}
           label="Select Month"
@@ -414,97 +414,86 @@ const FileUploadComponent: React.FC<FileUploadComponentProps> = ({
       {/* Step 1: Select Month */}
       {currentStep === 1 && (
         <Card className="border-2 border-primary/30">
-          <CardContent className="p-8">
-            <div className="space-y-6">
-              <div className="text-center space-y-2">
-                <div className="inline-flex p-3 rounded-full bg-primary/10 mb-2">
-                  <CalendarIcon className="h-8 w-8 text-primary" />
+          <CardContent className="p-6">
+            <div className="space-y-5">
+              <div className="text-center space-y-1">
+                <div className="inline-flex p-2 rounded-full bg-primary/10 mb-1">
+                  <CalendarIcon className="h-6 w-6 text-primary" />
                 </div>
-                <h3 className="text-2xl font-bold">Select Report Month</h3>
-                <p className="text-muted-foreground">
+                <h3 className="text-xl font-bold">Select Report Month</h3>
+                <p className="text-sm text-muted-foreground">
                   Choose the month and year for this report
                 </p>
               </div>
 
-              <div className="max-w-sm mx-auto space-y-4">
+              <div className="max-w-md mx-auto space-y-3">
                 <div className="space-y-2">
-                  <Label>Report Month & Year</Label>
+                  <Label className="text-sm">Report Month & Year</Label>
                   <input
                     type="month"
                     value={monthYear}
                     onChange={(e) => setMonthYear(e.target.value)}
-                    className="w-full h-14 px-4 rounded-md border border-input bg-background text-base"
+                    className="w-full h-11 px-4 rounded-md border border-input bg-background text-sm"
                   />
                 </div>
 
                 {/* Week Date Picker */}
-                <div className="space-y-2 pt-2">
-                  <Label>Week Starting Date (Optional)</Label>
+                <div className="space-y-2">
+                  <Label className="text-sm">
+                    Week Starting Date (Optional)
+                  </Label>
                   <input
                     type="date"
                     value={weekOfDate}
                     onChange={(e) => setWeekOfDate(e.target.value)}
-                    className="w-full h-14 px-4 rounded-md border border-input bg-background text-base"
+                    className="w-full h-11 px-4 rounded-md border border-input bg-background text-sm"
                   />
                   <p className="text-xs text-muted-foreground">
-                    Specify which week this PALMS audit represents. Will be
-                    auto-detected from filename if not set.
+                    Will be auto-detected from filename if not set
                   </p>
                 </div>
 
                 {/* PALMS Download Availability Toggle */}
-                <div className="space-y-2 pt-2">
-                  <div className="flex items-center space-x-3 p-4 border rounded-lg bg-muted/30">
-                    <input
-                      type="checkbox"
-                      id="require-palms"
-                      checked={requirePalmsSheets}
-                      onChange={(e) => setRequirePalmsSheets(e.target.checked)}
-                      className="h-5 w-5 rounded border-gray-300"
-                    />
-                    <div className="flex-1">
-                      <Label
-                        htmlFor="require-palms"
-                        className="font-medium cursor-pointer"
-                      >
-                        Keep PALMS Sheets Downloadable
-                      </Label>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Allow downloading original PALMS files for audit or
-                        review purposes
-                      </p>
-                    </div>
+                <div className="flex items-center space-x-3 p-3 border rounded-lg bg-muted/30">
+                  <input
+                    type="checkbox"
+                    id="require-palms"
+                    checked={requirePalmsSheets}
+                    onChange={(e) => setRequirePalmsSheets(e.target.checked)}
+                    className="h-4 w-4 rounded border-gray-300"
+                  />
+                  <div className="flex-1">
+                    <Label
+                      htmlFor="require-palms"
+                      className="text-sm font-medium cursor-pointer"
+                    >
+                      Keep PALMS Sheets Downloadable
+                    </Label>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Allow downloading original files for audit purposes
+                    </p>
                   </div>
                 </div>
 
                 {/* Tips Section */}
                 <Alert className="bg-primary/5 border-primary/20">
                   <Info className="h-4 w-4 text-primary" />
-                  <AlertDescription>
-                    <div className="space-y-1">
-                      <p className="font-medium text-primary">Tips:</p>
-                      <ul className="text-xs text-muted-foreground space-y-1 ml-4">
-                        <li>• Current month is pre-selected by default</li>
-                        <li>
-                          • Week date will be auto-detected from filenames
-                        </li>
-                        <li>
-                          • You can upload past reports by changing the date
-                        </li>
-                      </ul>
-                    </div>
+                  <AlertDescription className="text-xs">
+                    <span className="font-medium text-primary">Tips:</span>{" "}
+                    Current month is pre-selected • Week date auto-detected from
+                    filenames • You can upload past reports
                   </AlertDescription>
                 </Alert>
               </div>
 
-              <div className="flex justify-center pt-4">
+              <div className="flex justify-center pt-2">
                 <Button
                   onClick={() => setCurrentStep(2)}
-                  size="lg"
-                  className="px-8"
+                  size="default"
+                  className="px-6"
                 >
                   Continue to Upload
-                  <ChevronRight className="ml-2 h-5 w-5" />
+                  <ChevronRight className="ml-2 h-4 w-4" />
                 </Button>
               </div>
             </div>
@@ -515,29 +504,29 @@ const FileUploadComponent: React.FC<FileUploadComponentProps> = ({
       {/* Step 2: Upload Files */}
       {currentStep === 2 && (
         <Card className="border-2 border-primary/30">
-          <CardContent className="p-8">
-            <div className="space-y-6">
-              <div className="text-center space-y-2">
-                <div className="inline-flex p-3 rounded-full bg-primary/10 mb-2">
-                  <CloudUpload className="h-8 w-8 text-primary" />
+          <CardContent className="p-6">
+            <div className="space-y-5">
+              <div className="text-center space-y-1">
+                <div className="inline-flex p-2 rounded-full bg-primary/10 mb-1">
+                  <CloudUpload className="h-6 w-6 text-primary" />
                 </div>
-                <h3 className="text-2xl font-bold">Upload Report Files</h3>
-                <p className="text-muted-foreground">
-                  Upload slip audit and optionally member names files for{" "}
+                <h3 className="text-xl font-bold">Upload Report Files</h3>
+                <p className="text-sm text-muted-foreground">
+                  Upload files for{" "}
                   {format(new Date(monthYear + "-01"), "MMMM yyyy")}
                 </p>
               </div>
 
-              <div className="space-y-4">
+              <div className="space-y-3">
                 <div className="space-y-2">
-                  <Label>Upload Option</Label>
+                  <Label className="text-sm">Upload Option</Label>
                   <Select
                     value={uploadOption}
                     onValueChange={(value) =>
                       setUploadOption(value as "slip_only" | "slip_and_members")
                     }
                   >
-                    <SelectTrigger className="h-12">
+                    <SelectTrigger className="h-10">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -553,35 +542,35 @@ const FileUploadComponent: React.FC<FileUploadComponentProps> = ({
                 <div
                   {...getRootProps()}
                   className={`
-                    p-8 text-center border-4 border-dashed rounded-lg cursor-pointer transition-all duration-200
+                    p-6 text-center border-2 border-dashed rounded-lg cursor-pointer transition-all duration-200
                     ${
                       isDragActive
-                        ? "border-primary bg-primary/10 dark:bg-primary/20 scale-[1.02]"
+                        ? "border-primary bg-primary/10 dark:bg-primary/20 scale-[1.01]"
                         : "border-primary/40 hover:border-primary bg-primary/5 hover:bg-primary/10"
                     }
                   `}
                   data-testid="file-dropzone"
                 >
                   <input {...getInputProps()} />
-                  <div className="flex flex-col items-center space-y-4">
+                  <div className="flex flex-col items-center space-y-3">
                     <div
-                      className={`p-3 rounded-full ${isDragActive ? "bg-primary/20" : "bg-primary/10"}`}
+                      className={`p-2 rounded-full ${isDragActive ? "bg-primary/20" : "bg-primary/10"}`}
                     >
                       <CloudUpload
-                        className={`h-12 w-12 ${isDragActive ? "text-primary" : "text-primary/80"}`}
+                        className={`h-8 w-8 ${isDragActive ? "text-primary" : "text-primary/80"}`}
                       />
                     </div>
                     <div>
-                      <h3 className="text-xl font-bold text-primary">
+                      <h3 className="text-lg font-bold text-primary">
                         {isDragActive
                           ? "Drop files here..."
                           : "Drop PALMS Files Here"}
                       </h3>
-                      <p className="text-sm text-muted-foreground mt-1">
+                      <p className="text-xs text-muted-foreground mt-1">
                         Or click to browse and select files
                       </p>
                     </div>
-                    <Badge variant="secondary" className="text-xs px-3 py-1">
+                    <Badge variant="secondary" className="text-xs px-2 py-0.5">
                       Supported: .xls, .xlsx
                     </Badge>
                   </div>
@@ -589,28 +578,30 @@ const FileUploadComponent: React.FC<FileUploadComponentProps> = ({
 
                 {/* Selected Files */}
                 {files.length > 0 && (
-                  <div className="space-y-3">
-                    <Label>Selected Files ({files.length})</Label>
+                  <div className="space-y-2">
+                    <Label className="text-sm">
+                      Selected Files ({files.length})
+                    </Label>
                     <div className="space-y-2">
                       {files.map((file, index) => (
                         <div
                           key={index}
-                          className="flex flex-col sm:flex-row sm:items-center gap-3 p-3 border rounded-lg bg-muted/30"
+                          className="flex flex-col sm:flex-row sm:items-center gap-2 p-2.5 border rounded-lg bg-muted/30"
                         >
-                          <div className="flex items-start gap-3 flex-1 min-w-0">
-                            <File className="h-5 w-5 text-muted-foreground mt-0.5 flex-shrink-0" />
+                          <div className="flex items-start gap-2 flex-1 min-w-0">
+                            <File className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
                             <div className="flex-1 min-w-0">
-                              <p className="font-medium truncate text-sm">
+                              <p className="font-medium truncate text-xs">
                                 {file.name}
                               </p>
-                              <div className="flex items-center gap-2 mt-1">
+                              <div className="flex items-center gap-1.5 mt-0.5">
                                 <p className="text-xs text-muted-foreground">
                                   {file.size}
                                 </p>
                                 {file.extractedDate && (
                                   <Badge
                                     variant="secondary"
-                                    className="text-xs"
+                                    className="text-xs h-4 px-1.5"
                                   >
                                     {format(
                                       new Date(file.extractedDate + "-01"),
@@ -621,7 +612,7 @@ const FileUploadComponent: React.FC<FileUploadComponentProps> = ({
                               </div>
                             </div>
                           </div>
-                          <div className="flex items-center gap-2 flex-shrink-0">
+                          <div className="flex items-center gap-1.5 flex-shrink-0">
                             <Select
                               value={file.type}
                               onValueChange={(value) =>
@@ -631,7 +622,7 @@ const FileUploadComponent: React.FC<FileUploadComponentProps> = ({
                                 )
                               }
                             >
-                              <SelectTrigger className="w-[140px] h-9">
+                              <SelectTrigger className="w-[120px] h-8 text-xs">
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
@@ -647,9 +638,9 @@ const FileUploadComponent: React.FC<FileUploadComponentProps> = ({
                               onClick={() => removeFile(index)}
                               variant="ghost"
                               size="sm"
-                              className="text-destructive hover:text-destructive hover:bg-destructive/10 h-9 w-9 p-0"
+                              className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 w-8 p-0"
                             >
-                              <Trash2 className="h-4 w-4" />
+                              <Trash2 className="h-3.5 w-3.5" />
                             </Button>
                           </div>
                         </div>
@@ -659,8 +650,8 @@ const FileUploadComponent: React.FC<FileUploadComponentProps> = ({
                 )}
 
                 {files.some((f) => f.extractedDate) && (
-                  <Alert>
-                    <Info className="h-4 w-4" />
+                  <Alert className="py-2">
+                    <Info className="h-3.5 w-3.5" />
                     <AlertDescription className="text-xs">
                       Date auto-detected from filename and applied to Step 1.
                     </AlertDescription>
@@ -669,13 +660,13 @@ const FileUploadComponent: React.FC<FileUploadComponentProps> = ({
               </div>
 
               {/* Navigation Buttons */}
-              <div className="flex justify-between pt-4">
+              <div className="flex justify-between pt-2">
                 <Button
                   variant="outline"
                   onClick={() => setCurrentStep(1)}
-                  size="lg"
+                  size="default"
                 >
-                  <ChevronLeft className="mr-2 h-5 w-5" />
+                  <ChevronLeft className="mr-2 h-4 w-4" />
                   Back
                 </Button>
                 <Button
@@ -693,18 +684,18 @@ const FileUploadComponent: React.FC<FileUploadComponentProps> = ({
                     setUploadResult(null);
                     setCurrentStep(3);
                   }}
-                  size="lg"
+                  size="default"
                   disabled={files.length === 0}
                 >
                   Review & Submit
-                  <ChevronRight className="ml-2 h-5 w-5" />
+                  <ChevronRight className="ml-2 h-4 w-4" />
                 </Button>
               </div>
 
               {uploadResult && uploadResult.type === "error" && (
-                <Alert className="mt-4">
-                  <AlertTriangle className="h-4 w-4" />
-                  <AlertDescription className="text-red-800 dark:text-red-200">
+                <Alert className="mt-3 py-2">
+                  <AlertTriangle className="h-3.5 w-3.5" />
+                  <AlertDescription className="text-xs text-red-800 dark:text-red-200">
                     {uploadResult.message}
                   </AlertDescription>
                 </Alert>
@@ -717,28 +708,28 @@ const FileUploadComponent: React.FC<FileUploadComponentProps> = ({
       {/* Step 3: Review & Submit */}
       {currentStep === 3 && (
         <Card className="border-2 border-primary/30">
-          <CardContent className="p-8">
-            <div className="space-y-6">
-              <div className="text-center space-y-2">
-                <div className="inline-flex p-3 rounded-full bg-primary/10 mb-2">
-                  <CheckCircle className="h-8 w-8 text-primary" />
+          <CardContent className="p-6">
+            <div className="space-y-5">
+              <div className="text-center space-y-1">
+                <div className="inline-flex p-2 rounded-full bg-primary/10 mb-1">
+                  <CheckCircle className="h-6 w-6 text-primary" />
                 </div>
-                <h3 className="text-2xl font-bold">Review & Submit</h3>
-                <p className="text-muted-foreground">
-                  Please review your upload before submitting
+                <h3 className="text-xl font-bold">Review & Submit</h3>
+                <p className="text-sm text-muted-foreground">
+                  Review your upload before submitting
                 </p>
               </div>
 
-              <div className="max-w-2xl mx-auto space-y-4">
+              <div className="max-w-2xl mx-auto space-y-3">
                 {/* Summary Card */}
                 <Card className="bg-muted/30">
-                  <CardContent className="p-6 space-y-4">
+                  <CardContent className="p-4 space-y-3">
                     <div className="flex items-center justify-between">
                       <div>
                         <Label className="text-muted-foreground text-xs">
                           Report Month
                         </Label>
-                        <p className="text-lg font-semibold mt-1">
+                        <p className="text-base font-semibold mt-0.5">
                           {format(new Date(monthYear + "-01"), "MMMM yyyy")}
                         </p>
                       </div>
@@ -746,16 +737,17 @@ const FileUploadComponent: React.FC<FileUploadComponentProps> = ({
                         variant="outline"
                         size="sm"
                         onClick={() => setCurrentStep(1)}
+                        className="h-8 text-xs"
                       >
                         Edit
                       </Button>
                     </div>
 
-                    <div className="border-t pt-4">
+                    <div className="border-t pt-3">
                       <Label className="text-muted-foreground text-xs">
                         Upload Option
                       </Label>
-                      <p className="font-medium mt-1">
+                      <p className="text-sm font-medium mt-0.5">
                         {uploadOption === "slip_only"
                           ? "Slip Audit Only"
                           : "Slip Audit + Member Names"}
@@ -763,14 +755,14 @@ const FileUploadComponent: React.FC<FileUploadComponentProps> = ({
                     </div>
 
                     {weekOfDate && (
-                      <div className="border-t pt-4">
+                      <div className="border-t pt-3">
                         <Label className="text-muted-foreground text-xs">
                           Audit Week Starting
                         </Label>
-                        <p className="text-lg font-semibold mt-1">
+                        <p className="text-base font-semibold mt-0.5">
                           {format(new Date(weekOfDate), "MMMM d, yyyy")}
                         </p>
-                        <p className="text-xs text-muted-foreground mt-1">
+                        <p className="text-xs text-muted-foreground mt-0.5">
                           Week: {format(new Date(weekOfDate), "MMM d")} -{" "}
                           {format(
                             new Date(
@@ -784,18 +776,20 @@ const FileUploadComponent: React.FC<FileUploadComponentProps> = ({
                     )}
 
                     {requirePalmsSheets && (
-                      <div className="border-t pt-4">
+                      <div className="border-t pt-3">
                         <div className="flex items-center gap-2">
-                          <Badge variant="default">PALMS Downloadable</Badge>
-                          <p className="text-sm text-muted-foreground">
-                            Original PALMS sheets will be available for download
+                          <Badge variant="default" className="h-5 text-xs">
+                            PALMS Downloadable
+                          </Badge>
+                          <p className="text-xs text-muted-foreground">
+                            Original files will be available
                           </p>
                         </div>
                       </div>
                     )}
 
-                    <div className="border-t pt-4">
-                      <div className="flex items-center justify-between mb-3">
+                    <div className="border-t pt-3">
+                      <div className="flex items-center justify-between mb-2">
                         <Label className="text-muted-foreground text-xs">
                           Files to Upload ({files.length})
                         </Label>
@@ -803,17 +797,18 @@ const FileUploadComponent: React.FC<FileUploadComponentProps> = ({
                           variant="outline"
                           size="sm"
                           onClick={() => setCurrentStep(2)}
+                          className="h-8 text-xs"
                         >
                           Edit
                         </Button>
                       </div>
-                      <div className="space-y-2">
+                      <div className="space-y-1.5">
                         {files.map((file, index) => (
                           <div
                             key={index}
-                            className="flex items-center gap-3 p-2 bg-background rounded border text-sm"
+                            className="flex items-center gap-2 p-2 bg-background rounded border text-xs"
                           >
-                            <File className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                            <File className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
                             <span className="flex-1 truncate font-medium">
                               {file.name}
                             </span>
@@ -823,7 +818,7 @@ const FileUploadComponent: React.FC<FileUploadComponentProps> = ({
                                   ? "default"
                                   : "secondary"
                               }
-                              className="text-xs"
+                              className="text-xs h-4 px-1.5"
                             >
                               {file.type === "slip_audit"
                                 ? "Slip Audit"

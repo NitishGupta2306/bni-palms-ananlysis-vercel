@@ -20,6 +20,8 @@ export const useMemberManagement = (
   const [selectedMembers, setSelectedMembers] = useState<number[]>([]); // Changed to number[] for real IDs
   const [deletingMemberId, setDeletingMemberId] = useState<number | null>(null);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+  const [editingMember, setEditingMember] = useState<AdminMember | null>(null);
+  const [showAddDialog, setShowAddDialog] = useState(false);
 
   // Flatten all members from all chapters with chapter info
   const members = useMemo((): AdminMember[] => {
@@ -137,9 +139,19 @@ export const useMemberManagement = (
   }, [selectedMembers, members, toast, onDataRefresh]);
 
   const handleEdit = useCallback((member: AdminMember) => {
-    // TODO: Implementation would open edit dialog or navigate to edit page
-    console.log("Edit member:", member);
-    alert(`Edit functionality for ${member.name} will be implemented here`);
+    setEditingMember(member);
+  }, []);
+
+  const handleCloseEditDialog = useCallback(() => {
+    setEditingMember(null);
+  }, []);
+
+  const handleAddMember = useCallback(() => {
+    setShowAddDialog(true);
+  }, []);
+
+  const handleCloseAddDialog = useCallback(() => {
+    setShowAddDialog(false);
   }, []);
 
   const handleDelete = useCallback(
@@ -209,10 +221,15 @@ export const useMemberManagement = (
     selectedMembers,
     deletingMemberId,
     isBulkDeleting,
+    editingMember,
+    showAddDialog,
     handleMemberSelect,
     handleSelectAll,
     handleBulkDelete,
     handleEdit,
+    handleCloseEditDialog,
+    handleAddMember,
+    handleCloseAddDialog,
     handleDelete,
     exportMemberData,
   };
