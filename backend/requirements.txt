@@ -10,3 +10,5 @@ lxml==5.1.0
 gunicorn==21.2.0
 whitenoise==6.6.0
 supabase>=2.0,<3.0
+bcrypt==4.1.2
+django-csp==3.8

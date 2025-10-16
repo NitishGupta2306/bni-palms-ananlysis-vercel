@@ -1,5 +1,10 @@
 """
 Member ViewSet - RESTful API for Member management
+
+Authentication:
+- All endpoints require authentication (IsChapterOrAdmin)
+- Chapters can only access their own members
+- Admins can access all members
 """
 from urllib.parse import unquote
 from django.db import models
@@ -9,6 +14,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
 from chapters.models import Chapter
+from chapters.permissions import IsChapterOrAdmin
 from members.models import Member
 from analytics.models import Referral, OneToOne, TYFCB
 from bni.serializers import MemberSerializer, MemberCreateSerializer, MemberUpdateSerializer
@@ -20,9 +26,13 @@ class MemberViewSet(viewsets.ModelViewSet):
     ViewSet for Member CRUD operations and analytics.
 
     Nested under /api/chapters/{chapter_id}/members/
+
+    Permissions:
+    - Chapters can access their own members
+    - Admins can access all members
     """
     serializer_class = MemberSerializer
-    permission_classes = [AllowAny]  # TODO: Add proper authentication
+    permission_classes = [IsChapterOrAdmin]
 
     def get_queryset(self):
         """Filter members by chapter from URL."""

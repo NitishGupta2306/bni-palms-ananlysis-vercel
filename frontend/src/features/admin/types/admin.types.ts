@@ -1,9 +1,17 @@
 export interface AdminMember {
-  name?: string;
+  id: number; // Real database ID
+  name: string;
+  first_name?: string;
+  last_name?: string;
+  business_name?: string;
+  classification?: string;
+  email?: string;
+  phone?: string;
+  is_active?: boolean;
+  joined_date?: string;
+  // Chapter context
   chapterName: string;
   chapterId: string;
-  memberId: string;
-  memberIndex: number;
 }
 
 export interface AdminChapter {

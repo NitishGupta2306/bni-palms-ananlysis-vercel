@@ -1,0 +1,347 @@
+import React, { useState, useEffect } from "react";
+import { Calendar, Download, Loader2, FileText } from "lucide-react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
+import { API_BASE_URL } from "@/config/api";
+import { formatMonthYearShort } from "@/lib/utils";
+import { apiClient, fetchWithAuth } from "@/lib/apiClient";
+
+interface MonthlyReportListItem {
+  id: number;
+  month_year: string;
+  uploaded_at: string | null;
+  processed_at: string | null;
+  has_referral_matrix: boolean;
+  has_oto_matrix: boolean;
+  has_combination_matrix: boolean;
+  require_palms_sheets: boolean;
+}
+
+interface MultiMonthTabProps {
+  chapterId: number | string;
+  chapterName: string;
+}
+
+const MultiMonthTab: React.FC<MultiMonthTabProps> = ({
+  chapterId,
+  chapterName,
+}) => {
+  const [reports, setReports] = useState<MonthlyReportListItem[]>([]);
+  const [selectedReportIds, setSelectedReportIds] = useState<number[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [isDownloadingPalms, setIsDownloadingPalms] = useState(false);
+  const { toast } = useToast();
+
+  // Fetch available reports
+  useEffect(() => {
+    const fetchReports = async () => {
+      setIsLoading(true);
+      try {
+        const data = await apiClient.get<MonthlyReportListItem[]>(
+          `/api/chapters/${chapterId}/reports/`,
+        );
+        setReports(data);
+      } catch (error) {
+        console.error("Error fetching reports:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load monthly reports",
+          variant: "destructive",
+          duration: 5000,
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchReports();
+  }, [chapterId, toast]);
+
+  const toggleReportSelection = (reportId: number) => {
+    setSelectedReportIds((prev) => {
+      if (prev.includes(reportId)) {
+        return prev.filter((id) => id !== reportId);
+      } else {
+        return [...prev, reportId];
+      }
+    });
+  };
+
+  const selectAll = () => {
+    setSelectedReportIds(reports.map((r) => r.id));
+  };
+
+  const clearAll = () => {
+    setSelectedReportIds([]);
+  };
+
+  const generateAndDownloadReport = async () => {
+    if (selectedReportIds.length === 0) {
+      toast({
+        title: "No reports selected",
+        description: "Please select at least one monthly report",
+        variant: "destructive",
+        duration: 4000,
+      });
+      return;
+    }
+
+    setIsGenerating(true);
+    try {
+      // Generate and download the package directly
+      const response = await fetchWithAuth(
+        `${API_BASE_URL}/api/chapters/${chapterId}/reports/aggregate/download/`,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            report_ids: selectedReportIds,
+          }),
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to generate report");
+      }
+
+      // Get filename from Content-Disposition header
+      const contentDisposition = response.headers.get("Content-Disposition");
+      let filename = `${chapterName}_Aggregated_Report.xlsx`;
+      if (contentDisposition) {
+        const matches = /filename="?([^"]+)"?/.exec(contentDisposition);
+        if (matches && matches[1]) {
+          filename = matches[1];
+        }
+      }
+
+      // Download the file
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+
+      toast({
+        title: "Success",
+        description: "Report generated and downloaded successfully",
+        variant: "success",
+        duration: 3000,
+      });
+    } catch (error) {
+      console.error("Error generating report:", error);
+      toast({
+        title: "Error",
+        description: "Failed to generate and download report",
+        variant: "destructive",
+        duration: 5000,
+      });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const downloadPalmsSheets = async () => {
+    // Filter selected reports that have PALMS sheets available
+    const reportsWithPalms = reports.filter(
+      (r) => selectedReportIds.includes(r.id) && r.require_palms_sheets,
+    );
+
+    if (reportsWithPalms.length === 0) {
+      toast({
+        title: "No PALMS Sheets Available",
+        description:
+          "None of the selected reports have PALMS sheets marked as downloadable.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsDownloadingPalms(true);
+
+    try {
+      // Download each report's PALMS sheets individually
+      for (const report of reportsWithPalms) {
+        const response = await fetchWithAuth(
+          `${API_BASE_URL}/api/chapters/${chapterId}/reports/${report.id}/download-palms/`,
+        );
+
+        if (!response.ok) {
+          throw new Error(`Failed to download PALMS for ${report.month_year}`);
+        }
+
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `PALMS_Sheets_${report.month_year}.zip`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+
+        // Add small delay between downloads to avoid browser blocking
+        if (reportsWithPalms.length > 1) {
+          await new Promise((resolve) => setTimeout(resolve, 500));
+        }
+      }
+
+      toast({
+        title: "Download Complete",
+        description: `Downloaded PALMS sheets for ${reportsWithPalms.length} report(s)`,
+        variant: "success",
+      });
+    } catch (error) {
+      console.error("Error downloading PALMS sheets:", error);
+      toast({
+        title: "Download Failed",
+        description: "Failed to download PALMS sheets. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDownloadingPalms(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6 p-4 sm:p-6">
+      <div>
+        <h2 className="text-xl sm:text-2xl font-bold mb-2">
+          Multi-Month Analysis
+        </h2>
+        <p className="text-sm sm:text-base text-muted-foreground">
+          Select one or more monthly reports to generate aggregated analysis
+        </p>
+      </div>
+
+      {/* Report Selection */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Select Monthly Reports</CardTitle>
+              <CardDescription>
+                Choose which months to include in the aggregated analysis
+              </CardDescription>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={selectAll}>
+                Select All
+              </Button>
+              <Button variant="outline" size="sm" onClick={clearAll}>
+                Clear All
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : reports.length === 0 ? (
+            <Alert>
+              <AlertDescription>
+                No monthly reports found. Upload some data first using the
+                Upload tab.
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+              {reports.map((report) => (
+                <label
+                  key={report.id}
+                  className={`flex items-center gap-3 p-4 border rounded-lg cursor-pointer transition-all ${
+                    selectedReportIds.includes(report.id)
+                      ? "border-primary bg-primary/5 shadow-sm"
+                      : "border-border hover:border-primary/50"
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedReportIds.includes(report.id)}
+                    onChange={() => toggleReportSelection(report.id)}
+                    className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                  />
+                  <div className="flex-1">
+                    <div className="font-medium">
+                      {formatMonthYearShort(report.month_year)}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {report.has_referral_matrix && report.has_oto_matrix
+                        ? "Complete"
+                        : "Partial data"}
+                    </div>
+                  </div>
+                </label>
+              ))}
+            </div>
+          )}
+
+          {selectedReportIds.length > 0 && (
+            <div className="mt-6 flex items-center gap-4">
+              <div className="flex-1 text-sm text-muted-foreground">
+                <Calendar className="inline h-4 w-4 mr-1" />
+                {selectedReportIds.length} month
+                {selectedReportIds.length !== 1 ? "s" : ""} selected
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  onClick={generateAndDownloadReport}
+                  disabled={isGenerating || isDownloadingPalms}
+                >
+                  {isGenerating ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Generating Report...
+                    </>
+                  ) : (
+                    <>
+                      <Download className="mr-2 h-4 w-4" />
+                      Generate Report
+                    </>
+                  )}
+                </Button>
+                {reports.some(
+                  (r) =>
+                    selectedReportIds.includes(r.id) && r.require_palms_sheets,
+                ) && (
+                  <Button
+                    onClick={downloadPalmsSheets}
+                    disabled={isGenerating || isDownloadingPalms}
+                    variant="outline"
+                  >
+                    {isDownloadingPalms ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Downloading...
+                      </>
+                    ) : (
+                      <>
+                        <FileText className="mr-2 h-4 w-4" />
+                        Download PALMS
+                      </>
+                    )}
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
+export default MultiMonthTab;

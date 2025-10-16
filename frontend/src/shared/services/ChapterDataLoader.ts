@@ -1,6 +1,10 @@
-import { read, utils } from 'xlsx';
-import { validateExcelFile, sanitizeSheetData, ExcelSecurityError } from '../../features/file-upload/utils/excelSecurity';
-import { API_BASE_URL } from '../../config/api';
+import * as ExcelJS from "exceljs";
+import {
+  validateExcelFile,
+  sanitizeSheetData,
+  ExcelSecurityError,
+} from "../../features/file-upload/utils/excelSecurity";
+import { apiClient } from "../../lib/apiClient";
 
 export interface ChapterInfo {
   id: string;
@@ -18,6 +22,16 @@ export interface MonthlyReport {
   has_referral_matrix: boolean;
   has_oto_matrix: boolean;
   has_combination_matrix: boolean;
+  week_of_date?: string | null;
+  audit_period_start?: string | null;
+  audit_period_end?: string | null;
+  require_palms_sheets?: boolean;
+  uploaded_file_names?: Array<{
+    original_filename: string;
+    file_type: string;
+    uploaded_at: string;
+    week_of?: string | null;
+  }>;
 }
 
 export interface MemberDetail {
@@ -39,10 +53,10 @@ export interface MemberDetail {
     tyfcb_outside_amount: number;
   };
   missing_interactions: {
-    missing_otos: Array<{id: number, name: string}>;
-    missing_referrals_given_to: Array<{id: number, name: string}>;
-    missing_referrals_received_from: Array<{id: number, name: string}>;
-    priority_connections: Array<{id: number, name: string}>;
+    missing_otos: Array<{ id: number; name: string }>;
+    missing_referrals_given_to: Array<{ id: number; name: string }>;
+    missing_referrals_received_from: Array<{ id: number; name: string }>;
+    priority_connections: Array<{ id: number; name: string }>;
   };
   monthly_report: {
     id: number;
@@ -59,7 +73,7 @@ export interface MemberChange {
   previous_unique?: number;
   unique_change?: number;
   direction: string;
-  status: 'improved' | 'declined' | 'no_change';
+  status: "improved" | "declined" | "no_change";
   is_new_member: boolean;
   current_counts?: {
     neither: number;
@@ -158,10 +172,23 @@ export interface ComparisonData {
   };
 }
 
+export interface MemberData {
+  id: number;
+  name: string;
+  first_name?: string;
+  last_name?: string;
+  business_name?: string;
+  classification?: string;
+  email?: string;
+  phone?: string;
+  is_active?: boolean;
+  joined_date?: string;
+}
+
 export interface ChapterMemberData {
   chapterName: string;
   chapterId: string;
-  members: string[];
+  members: MemberData[]; // Changed from string[] to MemberData[]
   memberCount: number;
   memberFile: string;
   loadedAt: Date;
@@ -177,132 +204,160 @@ export interface ChapterMemberData {
 }
 
 export const REAL_CHAPTERS: ChapterInfo[] = [
-  { id: 'continental', name: 'BNI Continental', memberFile: 'bni-continental.xls' },
-  { id: 'elevate', name: 'BNI Elevate', memberFile: 'bni-elevate.xls' },
-  { id: 'energy', name: 'BNI Energy', memberFile: 'bni-energy.xls' },
-  { id: 'excelerate', name: 'BNI Excelerate', memberFile: 'bni-excelerate.xls' },
-  { id: 'givers', name: 'BNI Givers', memberFile: 'bni-givers.xls' },
-  { id: 'gladiators', name: 'BNI Gladiators', memberFile: 'bni-gladiators.xls' },
-  { id: 'legends', name: 'BNI Legends', memberFile: 'bni-legends.xls' },
-  { id: 'synergy', name: 'BNI Synergy', memberFile: 'bni-synergy.xls' },
-  { id: 'united', name: 'BNI United', memberFile: 'bni-united.xls' }
+  {
+    id: "continental",
+    name: "BNI Continental",
+    memberFile: "bni-continental.xls",
+  },
+  { id: "elevate", name: "BNI Elevate", memberFile: "bni-elevate.xls" },
+  { id: "energy", name: "BNI Energy", memberFile: "bni-energy.xls" },
+  {
+    id: "excelerate",
+    name: "BNI Excelerate",
+    memberFile: "bni-excelerate.xls",
+  },
+  { id: "givers", name: "BNI Givers", memberFile: "bni-givers.xls" },
+  {
+    id: "gladiators",
+    name: "BNI Gladiators",
+    memberFile: "bni-gladiators.xls",
+  },
+  { id: "legends", name: "BNI Legends", memberFile: "bni-legends.xls" },
+  { id: "synergy", name: "BNI Synergy", memberFile: "bni-synergy.xls" },
+  { id: "united", name: "BNI United", memberFile: "bni-united.xls" },
 ];
 
-export const extractMemberNamesFromFile = async (file: File): Promise<string[]> => {
-  return new Promise((resolve, reject) => {
-    try {
-      // Validate file before processing
-      validateExcelFile(file);
-    } catch (error) {
-      reject(error);
-      return;
+export const extractMemberNamesFromFile = async (
+  file: File,
+): Promise<string[]> => {
+  try {
+    // Validate file before processing
+    validateExcelFile(file);
+  } catch (error) {
+    throw error;
+  }
+
+  // Read file as ArrayBuffer for exceljs
+  const arrayBuffer = await file.arrayBuffer();
+
+  try {
+    // Create new workbook and load from buffer
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(arrayBuffer);
+
+    // Validate number of worksheets
+    if (workbook.worksheets.length > 10) {
+      throw new ExcelSecurityError("Too many sheets in workbook");
     }
 
-    const reader = new FileReader();
+    if (workbook.worksheets.length === 0) {
+      throw new ExcelSecurityError("No sheets found in workbook");
+    }
 
-    reader.onload = (e) => {
-      try {
-        const data = e.target?.result;
+    // Get first worksheet
+    const worksheet = workbook.worksheets[0];
 
-        if (!data) {
-          throw new ExcelSecurityError('Failed to read file data');
-        }
+    // Convert worksheet to JSON-like array
+    const jsonData: any[] = [];
+    const headers: string[] = [];
 
-        // Read with security options
-        const workbook = read(data, {
-          type: 'binary',
-          // Security options to prevent vulnerabilities
-          raw: false,
-          cellDates: false,
-          cellNF: false,
-          cellHTML: false
-        });
+    // Get headers from first row
+    const headerRow = worksheet.getRow(1);
+    headerRow.eachCell((cell: ExcelJS.Cell, colNumber: number) => {
+      const value = cell.value;
+      headers[colNumber] = value ? value.toString() : "";
+    });
 
-        // Validate number of sheets
-        if (workbook.SheetNames.length > 10) {
-          throw new ExcelSecurityError('Too many sheets in workbook');
-        }
+    // Process data rows
+    worksheet.eachRow((row: ExcelJS.Row, rowNumber: number) => {
+      if (rowNumber === 1) return; // Skip header row
 
-        const sheetName = workbook.SheetNames[0];
-        if (!sheetName) {
-          throw new ExcelSecurityError('No sheets found in workbook');
-        }
-
-        const worksheet = workbook.Sheets[sheetName];
-        if (!worksheet) {
-          throw new ExcelSecurityError('Failed to read worksheet');
-        }
-
-        const jsonData = utils.sheet_to_json(worksheet);
-
-        // Sanitize the data before processing
-        const sanitizedData = sanitizeSheetData(jsonData);
-
-        const members: string[] = [];
-        sanitizedData.forEach((row: any) => {
-          let firstName = '';
-          let lastName = '';
-
-          Object.keys(row).forEach(key => {
-            const lowerKey = key.toLowerCase();
-            if (lowerKey.includes('first') && lowerKey.includes('name')) {
-              const value = row[key];
-              firstName = (typeof value === 'string' || typeof value === 'number')
-                ? value.toString().trim()
-                : '';
-            } else if (lowerKey.includes('last') && lowerKey.includes('name')) {
-              const value = row[key];
-              lastName = (typeof value === 'string' || typeof value === 'number')
-                ? value.toString().trim()
-                : '';
-            }
-          });
-
-          // Additional validation for member names
-          if (firstName && lastName && firstName.length <= 50 && lastName.length <= 50) {
-            // Sanitize names to remove potential harmful characters
-            const sanitizedFirstName = firstName.replace(/[^\w\s\-'.]/g, '').trim();
-            const sanitizedLastName = lastName.replace(/[^\w\s\-'.]/g, '').trim();
-
-            if (sanitizedFirstName && sanitizedLastName) {
-              members.push(`${sanitizedFirstName} ${sanitizedLastName}`);
-            }
+      const rowData: any = {};
+      row.eachCell((cell: ExcelJS.Cell, colNumber: number) => {
+        const header = headers[colNumber];
+        if (header) {
+          // Get cell value (exceljs returns rich text as objects)
+          let value = cell.value;
+          if (value && typeof value === "object" && "richText" in value) {
+            value = (value as any).richText.map((t: any) => t.text).join("");
           }
-        });
-
-        // Limit number of members to prevent DoS
-        if (members.length > 1000) {
-          throw new ExcelSecurityError('Too many members in file. Maximum allowed: 1000');
+          rowData[header] = value;
         }
+      });
 
-        resolve(members);
-      } catch (error) {
-        if (error instanceof ExcelSecurityError) {
-          reject(error);
-        } else {
-          reject(new ExcelSecurityError(`Failed to process Excel file: ${error instanceof Error ? error.message : 'Unknown error'}`));
+      if (Object.keys(rowData).length > 0) {
+        jsonData.push(rowData);
+      }
+    });
+
+    // Sanitize the data before processing
+    const sanitizedData = sanitizeSheetData(jsonData);
+
+    const members: string[] = [];
+    sanitizedData.forEach((row: any) => {
+      let firstName = "";
+      let lastName = "";
+
+      Object.keys(row).forEach((key) => {
+        const lowerKey = key.toLowerCase();
+        if (lowerKey.includes("first") && lowerKey.includes("name")) {
+          const value = row[key];
+          firstName =
+            typeof value === "string" || typeof value === "number"
+              ? value.toString().trim()
+              : "";
+        } else if (lowerKey.includes("last") && lowerKey.includes("name")) {
+          const value = row[key];
+          lastName =
+            typeof value === "string" || typeof value === "number"
+              ? value.toString().trim()
+              : "";
+        }
+      });
+
+      // Additional validation for member names
+      if (
+        firstName &&
+        lastName &&
+        firstName.length <= 50 &&
+        lastName.length <= 50
+      ) {
+        // Sanitize names to remove potential harmful characters
+        const sanitizedFirstName = firstName.replace(/[^\w\s\-'.]/g, "").trim();
+        const sanitizedLastName = lastName.replace(/[^\w\s\-'.]/g, "").trim();
+
+        if (sanitizedFirstName && sanitizedLastName) {
+          members.push(`${sanitizedFirstName} ${sanitizedLastName}`);
         }
       }
-    };
+    });
 
-    reader.onerror = () => reject(new ExcelSecurityError('Failed to read file'));
-    reader.readAsBinaryString(file);
-  });
+    // Limit number of members to prevent DoS
+    if (members.length > 1000) {
+      throw new ExcelSecurityError(
+        "Too many members in file. Maximum allowed: 1000",
+      );
+    }
+
+    return members;
+  } catch (error) {
+    if (error instanceof ExcelSecurityError) {
+      throw error;
+    } else {
+      throw new ExcelSecurityError(
+        `Failed to process Excel file: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
+    }
+  }
 };
 
 export const loadAllChapterData = async (): Promise<ChapterMemberData[]> => {
   try {
     // Call the real backend API using API_BASE_URL
-    const response = await fetch(`${API_BASE_URL}/api/dashboard/`);
-    
-    if (!response.ok) {
-      throw new Error(`API request failed: ${response.status} ${response.statusText}`);
-    }
-    
-    const data = await response.json();
+    const data = await apiClient.get<any>(`/api/dashboard/`);
 
     // API returns array directly, not wrapped in {chapters: [...]}
-    const chapters = Array.isArray(data) ? data : (data.chapters || []);
+    const chapters = Array.isArray(data) ? data : data.chapters || [];
 
     // Transform API data to match our ChapterMemberData interface
     const results: ChapterMemberData[] = chapters.map((chapter: any) => ({
@@ -310,75 +365,79 @@ export const loadAllChapterData = async (): Promise<ChapterMemberData[]> => {
       chapterId: chapter.id.toString(), // Convert to string for consistency
       members: chapter.members || [], // Include member list from API
       memberCount: chapter.total_members || chapter.member_count || 0,
-      memberFile: `${chapter.name.toLowerCase().replace(/\s+/g, '-')}.xls`,
+      memberFile: `${chapter.name.toLowerCase().replace(/\s+/g, "-")}.xls`,
       loadedAt: new Date(),
-      monthlyReports: chapter.monthly_reports_count ? Array(chapter.monthly_reports_count).fill({}) : [],
+      monthlyReports: chapter.monthly_reports_count
+        ? Array(chapter.monthly_reports_count).fill({})
+        : [],
       performanceMetrics: {
         avgReferralsPerMember: chapter.avg_referrals_per_member || 0,
-        avgOTOsPerMember: chapter.avg_one_to_ones_per_member || chapter.avg_otos_per_member || 0,
-        totalTYFCB: (chapter.total_tyfcb_inside || 0) + (chapter.total_tyfcb_outside || 0),
-        topPerformer: 'Loading...' // Will be loaded with chapter details
-      }
+        avgOTOsPerMember:
+          chapter.avg_one_to_ones_per_member ||
+          chapter.avg_otos_per_member ||
+          0,
+        totalTYFCB:
+          (chapter.total_tyfcb_inside || 0) +
+          (chapter.total_tyfcb_outside || 0),
+        topPerformer: "Loading...", // Will be loaded with chapter details
+      },
     }));
-    
+
     return results;
-    
   } catch (error) {
-    console.error('Failed to load chapter data from API:', error);
-    
+    console.error("Failed to load chapter data from API:", error);
+
     // Fallback to empty chapters with error indication
-    return REAL_CHAPTERS.map(chapter => ({
+    return REAL_CHAPTERS.map((chapter) => ({
       chapterName: chapter.name,
       chapterId: chapter.id,
       members: [],
       memberCount: 0,
       memberFile: chapter.memberFile,
       loadedAt: new Date(),
-      loadError: error instanceof Error ? error.message : 'Unknown error',
+      loadError: error instanceof Error ? error.message : "Unknown error",
       performanceMetrics: {
         avgReferralsPerMember: 0,
         avgOTOsPerMember: 0,
         totalTYFCB: 0,
-        topPerformer: 'N/A'
-      }
+        topPerformer: "N/A",
+      },
     }));
   }
 };
 
-export const loadMonthlyReports = async (chapterId: string): Promise<MonthlyReport[]> => {
+export const loadMonthlyReports = async (
+  chapterId: string,
+): Promise<MonthlyReport[]> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/chapters/${chapterId}/reports/`);
-    
-    if (!response.ok) {
-      throw new Error(`Failed to load monthly reports: ${response.status} ${response.statusText}`);
-    }
-    
-    const reports = await response.json();
+    const reports = await apiClient.get<MonthlyReport[]>(
+      `/api/chapters/${chapterId}/reports/`,
+    );
     return reports;
   } catch (error) {
-    console.error(`Failed to load monthly reports for chapter ${chapterId}:`, error);
+    console.error(
+      `Failed to load monthly reports for chapter ${chapterId}:`,
+      error,
+    );
     throw error;
   }
 };
 
 export const loadMemberDetail = async (
-  chapterId: string, 
-  reportId: number, 
-  memberId: number
+  chapterId: string,
+  reportId: number,
+  memberId: number,
 ): Promise<MemberDetail> => {
   try {
-    const response = await fetch(
-      `${API_BASE_URL}/api/chapters/${chapterId}/reports/${reportId}/members/${memberId}/`
+    const memberDetail = await apiClient.get<MemberDetail>(
+      `/api/chapters/${chapterId}/reports/${reportId}/members/${memberId}/`,
     );
-    
-    if (!response.ok) {
-      throw new Error(`Failed to load member detail: ${response.status} ${response.statusText}`);
-    }
-    
-    const memberDetail = await response.json();
     return memberDetail;
   } catch (error) {
-    console.error(`Failed to load member detail for chapter ${chapterId}, report ${reportId}, member ${memberId}:`, error);
+    console.error(
+      `Failed to load member detail for chapter ${chapterId}, report ${reportId}, member ${memberId}:`,
+      error,
+    );
     throw error;
   }
 };
@@ -386,48 +445,46 @@ export const loadMemberDetail = async (
 export const loadMatrixData = async (
   chapterId: string,
   reportId: number,
-  matrixType: 'referral-matrix' | 'one-to-one-matrix' | 'combination-matrix'
+  matrixType: "referral-matrix" | "one-to-one-matrix" | "combination-matrix",
 ): Promise<any> => {
   try {
-    const response = await fetch(
-      `${API_BASE_URL}/api/chapters/${chapterId}/reports/${reportId}/${matrixType}/`
+    const matrixData = await apiClient.get<any>(
+      `/api/chapters/${chapterId}/reports/${reportId}/${matrixType}/`,
     );
-    
-    if (!response.ok) {
-      throw new Error(`Failed to load ${matrixType}: ${response.status} ${response.statusText}`);
-    }
-    
-    const matrixData = await response.json();
     return matrixData;
   } catch (error) {
-    console.error(`Failed to load ${matrixType} for chapter ${chapterId}, report ${reportId}:`, error);
-    throw error;
-  }
-};
-
-export const deleteMonthlyReport = async (chapterId: string, reportId: number): Promise<void> => {
-  try {
-    const response = await fetch(
-      `${API_BASE_URL}/api/chapters/${chapterId}/reports/${reportId}/`,
-      { method: 'DELETE' }
+    console.error(
+      `Failed to load ${matrixType} for chapter ${chapterId}, report ${reportId}:`,
+      error,
     );
-    
-    if (!response.ok) {
-      throw new Error(`Failed to delete monthly report: ${response.status} ${response.statusText}`);
-    }
-  } catch (error) {
-    console.error(`Failed to delete monthly report ${reportId} for chapter ${chapterId}:`, error);
     throw error;
   }
 };
 
-export const generateMockPerformanceMetrics = (members: string[]): ChapterMemberData['performanceMetrics'] => {
+export const deleteMonthlyReport = async (
+  chapterId: string,
+  reportId: number,
+): Promise<void> => {
+  try {
+    await apiClient.delete(`/api/chapters/${chapterId}/reports/${reportId}/`);
+  } catch (error) {
+    console.error(
+      `Failed to delete monthly report ${reportId} for chapter ${chapterId}:`,
+      error,
+    );
+    throw error;
+  }
+};
+
+export const generateMockPerformanceMetrics = (
+  members: MemberData[],
+): ChapterMemberData["performanceMetrics"] => {
   if (members.length === 0) {
     return {
       avgReferralsPerMember: 0,
       avgOTOsPerMember: 0,
       totalTYFCB: 0,
-      topPerformer: 'N/A'
+      topPerformer: "N/A",
     };
   }
 
@@ -435,7 +492,7 @@ export const generateMockPerformanceMetrics = (members: string[]): ChapterMember
     avgReferralsPerMember: Math.floor(Math.random() * 10) + 5,
     avgOTOsPerMember: Math.floor(Math.random() * 8) + 3,
     totalTYFCB: Math.floor(Math.random() * 500000) + 100000,
-    topPerformer: members[Math.floor(Math.random() * members.length)]
+    topPerformer: members[Math.floor(Math.random() * members.length)].name,
   };
 };
 
@@ -443,18 +500,12 @@ export const generateMockPerformanceMetrics = (members: string[]): ChapterMember
 export const loadComparisonData = async (
   chapterId: string,
   currentReportId: number,
-  previousReportId: number
+  previousReportId: number,
 ): Promise<ComparisonData> => {
   try {
-    const response = await fetch(
-      `${API_BASE_URL}/api/chapters/${chapterId}/reports/${currentReportId}/compare/${previousReportId}/`
+    const comparisonData = await apiClient.get<ComparisonData>(
+      `/api/chapters/${chapterId}/reports/${currentReportId}/compare/${previousReportId}/`,
     );
-
-    if (!response.ok) {
-      throw new Error(`Failed to load comparison data: ${response.status} ${response.statusText}`);
-    }
-
-    const comparisonData = await response.json();
     return comparisonData;
   } catch (error) {
     console.error(`Failed to load comparison for chapter ${chapterId}:`, error);
@@ -465,18 +516,12 @@ export const loadComparisonData = async (
 export const loadReferralComparison = async (
   chapterId: string,
   currentReportId: number,
-  previousReportId: number
+  previousReportId: number,
 ): Promise<{ comparison: MatrixComparison }> => {
   try {
-    const response = await fetch(
-      `${API_BASE_URL}/api/chapters/${chapterId}/reports/${currentReportId}/compare/${previousReportId}/referrals/`
+    return await apiClient.get<{ comparison: MatrixComparison }>(
+      `/api/chapters/${chapterId}/reports/${currentReportId}/compare/${previousReportId}/referrals/`,
     );
-
-    if (!response.ok) {
-      throw new Error(`Failed to load referral comparison: ${response.status} ${response.statusText}`);
-    }
-
-    return await response.json();
   } catch (error) {
     console.error(`Failed to load referral comparison:`, error);
     throw error;
@@ -486,18 +531,12 @@ export const loadReferralComparison = async (
 export const loadOTOComparison = async (
   chapterId: string,
   currentReportId: number,
-  previousReportId: number
+  previousReportId: number,
 ): Promise<{ comparison: MatrixComparison }> => {
   try {
-    const response = await fetch(
-      `${API_BASE_URL}/api/chapters/${chapterId}/reports/${currentReportId}/compare/${previousReportId}/one-to-ones/`
+    return await apiClient.get<{ comparison: MatrixComparison }>(
+      `/api/chapters/${chapterId}/reports/${currentReportId}/compare/${previousReportId}/one-to-ones/`,
     );
-
-    if (!response.ok) {
-      throw new Error(`Failed to load one-to-one comparison: ${response.status} ${response.statusText}`);
-    }
-
-    return await response.json();
   } catch (error) {
     console.error(`Failed to load one-to-one comparison:`, error);
     throw error;
@@ -507,18 +546,12 @@ export const loadOTOComparison = async (
 export const loadCombinationComparison = async (
   chapterId: string,
   currentReportId: number,
-  previousReportId: number
+  previousReportId: number,
 ): Promise<{ comparison: MatrixComparison }> => {
-  try{
-    const response = await fetch(
-      `${API_BASE_URL}/api/chapters/${chapterId}/reports/${currentReportId}/compare/${previousReportId}/combination/`
+  try {
+    return await apiClient.get<{ comparison: MatrixComparison }>(
+      `/api/chapters/${chapterId}/reports/${currentReportId}/compare/${previousReportId}/combination/`,
     );
-
-    if (!response.ok) {
-      throw new Error(`Failed to load combination comparison: ${response.status} ${response.statusText}`);
-    }
-
-    return await response.json();
   } catch (error) {
     console.error(`Failed to load combination comparison:`, error);
     throw error;

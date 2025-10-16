@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
-import { MemberAnalytics } from '../types/member.types';
+import { useState, useEffect, useCallback } from "react";
+import { MemberAnalytics } from "../types/member.types";
+import { apiClient } from "@/lib/apiClient";
 
 interface UseMemberDetailProps {
   chapterId: string | number;
@@ -17,7 +18,8 @@ export const useMemberDetail = ({
   chapterId,
   memberName,
 }: UseMemberDetailProps): UseMemberDetailReturn => {
-  const [memberAnalytics, setMemberAnalytics] = useState<MemberAnalytics | null>(null);
+  const [memberAnalytics, setMemberAnalytics] =
+    useState<MemberAnalytics | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -27,18 +29,15 @@ export const useMemberDetail = ({
 
     try {
       const encodedMemberName = encodeURIComponent(memberName);
-      const response = await fetch(`/api/chapters/${chapterId}/members/${encodedMemberName}/analytics/`);
-
-      if (!response.ok) {
-        throw new Error(`API request failed: ${response.status} ${response.statusText}`);
-      }
-
-      const data = await response.json();
+      const data = await apiClient.get<MemberAnalytics>(
+        `/api/chapters/${chapterId}/members/${encodedMemberName}/analytics/`,
+      );
       setMemberAnalytics(data);
-
     } catch (error) {
-      console.error('Failed to load member analytics:', error);
-      setError(error instanceof Error ? error.message : 'Unknown error occurred');
+      console.error("Failed to load member analytics:", error);
+      setError(
+        error instanceof Error ? error.message : "Unknown error occurred",
+      );
     } finally {
       setIsLoading(false);
     }

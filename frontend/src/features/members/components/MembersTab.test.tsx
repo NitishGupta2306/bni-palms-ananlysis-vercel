@@ -189,7 +189,7 @@ describe('MembersTab Component', () => {
       });
     });
 
-    it('should validate file size (10MB limit)', async () => {
+    it('should validate file size (50MB limit)', async () => {
       const { user } = renderWithProviders(
         <MembersTab
           chapterName={mockChapterData.name}
