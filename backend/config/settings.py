@@ -149,7 +149,8 @@ REST_FRAMEWORK = {
     "UNAUTHENTICATED_USER": None,  # Don't use Django User model
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 100,
-    "EXCEPTION_HANDLER": "rest_framework.views.exception_handler",
+    # Custom exception handler for standardized error responses
+    "EXCEPTION_HANDLER": "bni.exceptions.custom_exception_handler",
 }
 
 # CORS settings
