@@ -5,6 +5,7 @@ import {
   ExcelSecurityError,
 } from "../../features/file-upload/utils/excelSecurity";
 import { API_BASE_URL } from "../../config/api";
+import { apiClient } from "../../lib/apiClient";
 
 export interface ChapterInfo {
   id: string;
@@ -352,15 +353,7 @@ export const extractMemberNamesFromFile = async (
 export const loadAllChapterData = async (): Promise<ChapterMemberData[]> => {
   try {
     // Call the real backend API using API_BASE_URL
-    const response = await fetch(`${API_BASE_URL}/api/dashboard/`);
-
-    if (!response.ok) {
-      throw new Error(
-        `API request failed: ${response.status} ${response.statusText}`,
-      );
-    }
-
-    const data = await response.json();
+    const data = await apiClient.get<any>(`/api/dashboard/`);
 
     // API returns array directly, not wrapped in {chapters: [...]}
     const chapters = Array.isArray(data) ? data : data.chapters || [];
@@ -416,17 +409,9 @@ export const loadMonthlyReports = async (
   chapterId: string,
 ): Promise<MonthlyReport[]> => {
   try {
-    const response = await fetch(
-      `${API_BASE_URL}/api/chapters/${chapterId}/reports/`,
+    const reports = await apiClient.get<MonthlyReport[]>(
+      `/api/chapters/${chapterId}/reports/`,
     );
-
-    if (!response.ok) {
-      throw new Error(
-        `Failed to load monthly reports: ${response.status} ${response.statusText}`,
-      );
-    }
-
-    const reports = await response.json();
     return reports;
   } catch (error) {
     console.error(
@@ -443,17 +428,9 @@ export const loadMemberDetail = async (
   memberId: number,
 ): Promise<MemberDetail> => {
   try {
-    const response = await fetch(
-      `${API_BASE_URL}/api/chapters/${chapterId}/reports/${reportId}/members/${memberId}/`,
+    const memberDetail = await apiClient.get<MemberDetail>(
+      `/api/chapters/${chapterId}/reports/${reportId}/members/${memberId}/`,
     );
-
-    if (!response.ok) {
-      throw new Error(
-        `Failed to load member detail: ${response.status} ${response.statusText}`,
-      );
-    }
-
-    const memberDetail = await response.json();
     return memberDetail;
   } catch (error) {
     console.error(
@@ -470,17 +447,9 @@ export const loadMatrixData = async (
   matrixType: "referral-matrix" | "one-to-one-matrix" | "combination-matrix",
 ): Promise<any> => {
   try {
-    const response = await fetch(
-      `${API_BASE_URL}/api/chapters/${chapterId}/reports/${reportId}/${matrixType}/`,
+    const matrixData = await apiClient.get<any>(
+      `/api/chapters/${chapterId}/reports/${reportId}/${matrixType}/`,
     );
-
-    if (!response.ok) {
-      throw new Error(
-        `Failed to load ${matrixType}: ${response.status} ${response.statusText}`,
-      );
-    }
-
-    const matrixData = await response.json();
     return matrixData;
   } catch (error) {
     console.error(
@@ -496,16 +465,7 @@ export const deleteMonthlyReport = async (
   reportId: number,
 ): Promise<void> => {
   try {
-    const response = await fetch(
-      `${API_BASE_URL}/api/chapters/${chapterId}/reports/${reportId}/`,
-      { method: "DELETE" },
-    );
-
-    if (!response.ok) {
-      throw new Error(
-        `Failed to delete monthly report: ${response.status} ${response.statusText}`,
-      );
-    }
+    await apiClient.delete(`/api/chapters/${chapterId}/reports/${reportId}/`);
   } catch (error) {
     console.error(
       `Failed to delete monthly report ${reportId} for chapter ${chapterId}:`,
@@ -542,17 +502,9 @@ export const loadComparisonData = async (
   previousReportId: number,
 ): Promise<ComparisonData> => {
   try {
-    const response = await fetch(
-      `${API_BASE_URL}/api/chapters/${chapterId}/reports/${currentReportId}/compare/${previousReportId}/`,
+    const comparisonData = await apiClient.get<ComparisonData>(
+      `/api/chapters/${chapterId}/reports/${currentReportId}/compare/${previousReportId}/`,
     );
-
-    if (!response.ok) {
-      throw new Error(
-        `Failed to load comparison data: ${response.status} ${response.statusText}`,
-      );
-    }
-
-    const comparisonData = await response.json();
     return comparisonData;
   } catch (error) {
     console.error(`Failed to load comparison for chapter ${chapterId}:`, error);
@@ -566,17 +518,9 @@ export const loadReferralComparison = async (
   previousReportId: number,
 ): Promise<{ comparison: MatrixComparison }> => {
   try {
-    const response = await fetch(
-      `${API_BASE_URL}/api/chapters/${chapterId}/reports/${currentReportId}/compare/${previousReportId}/referrals/`,
+    return await apiClient.get<{ comparison: MatrixComparison }>(
+      `/api/chapters/${chapterId}/reports/${currentReportId}/compare/${previousReportId}/referrals/`,
     );
-
-    if (!response.ok) {
-      throw new Error(
-        `Failed to load referral comparison: ${response.status} ${response.statusText}`,
-      );
-    }
-
-    return await response.json();
   } catch (error) {
     console.error(`Failed to load referral comparison:`, error);
     throw error;
@@ -589,17 +533,9 @@ export const loadOTOComparison = async (
   previousReportId: number,
 ): Promise<{ comparison: MatrixComparison }> => {
   try {
-    const response = await fetch(
-      `${API_BASE_URL}/api/chapters/${chapterId}/reports/${currentReportId}/compare/${previousReportId}/one-to-ones/`,
+    return await apiClient.get<{ comparison: MatrixComparison }>(
+      `/api/chapters/${chapterId}/reports/${currentReportId}/compare/${previousReportId}/one-to-ones/`,
     );
-
-    if (!response.ok) {
-      throw new Error(
-        `Failed to load one-to-one comparison: ${response.status} ${response.statusText}`,
-      );
-    }
-
-    return await response.json();
   } catch (error) {
     console.error(`Failed to load one-to-one comparison:`, error);
     throw error;
@@ -612,17 +548,9 @@ export const loadCombinationComparison = async (
   previousReportId: number,
 ): Promise<{ comparison: MatrixComparison }> => {
   try {
-    const response = await fetch(
-      `${API_BASE_URL}/api/chapters/${chapterId}/reports/${currentReportId}/compare/${previousReportId}/combination/`,
+    return await apiClient.get<{ comparison: MatrixComparison }>(
+      `/api/chapters/${chapterId}/reports/${currentReportId}/compare/${previousReportId}/combination/`,
     );
-
-    if (!response.ok) {
-      throw new Error(
-        `Failed to load combination comparison: ${response.status} ${response.statusText}`,
-      );
-    }
-
-    return await response.json();
   } catch (error) {
     console.error(`Failed to load combination comparison:`, error);
     throw error;

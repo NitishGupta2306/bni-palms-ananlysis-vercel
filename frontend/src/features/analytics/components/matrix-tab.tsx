@@ -29,6 +29,8 @@ import { TYFCBReport } from "./tyfcb-report";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { formatMonthYearLong } from "@/lib/utils";
+import { fetchWithAuth } from "@/lib/apiClient";
+import { API_BASE_URL } from "@/config/api";
 
 interface MatrixTabProps {
   chapterData: ChapterMemberData;
@@ -155,8 +157,8 @@ const MatrixTab: React.FC<MatrixTabProps> = ({ chapterData }) => {
             if (!selectedReport) return;
 
             try {
-              const response = await fetch(
-                `/api/chapters/${chapterData.chapterId}/reports/${selectedReport.id}/download-matrices/`,
+              const response = await fetchWithAuth(
+                `${API_BASE_URL}/api/chapters/${chapterData.chapterId}/reports/${selectedReport.id}/download-matrices/`,
               );
 
               if (!response.ok) {

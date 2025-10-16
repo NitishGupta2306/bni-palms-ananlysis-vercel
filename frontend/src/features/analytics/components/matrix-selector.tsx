@@ -12,6 +12,8 @@ import { Download, Calendar, FileText } from "lucide-react";
 import { format } from "date-fns";
 import { MonthlyReport } from "../../../shared/services/ChapterDataLoader";
 import { useToast } from "@/hooks/use-toast";
+import { fetchWithAuth } from "@/lib/apiClient";
+import { API_BASE_URL } from "@/config/api";
 
 interface MatrixSelectorProps {
   monthlyReports: MonthlyReport[];
@@ -45,8 +47,8 @@ export const MatrixSelector: React.FC<MatrixSelectorProps> = ({
     }
 
     try {
-      const response = await fetch(
-        `/api/chapters/${chapterId}/reports/${selectedReport.id}/download-palms/`,
+      const response = await fetchWithAuth(
+        `${API_BASE_URL}/api/chapters/${chapterId}/reports/${selectedReport.id}/download-palms/`,
       );
 
       if (!response.ok) {

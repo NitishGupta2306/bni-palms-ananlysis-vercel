@@ -1,14 +1,21 @@
-import { useState, useMemo, useCallback } from 'react';
-import { AdminMember, MemberFilters } from '../types/admin.types';
-import { ChapterMemberData, MemberData } from '../../../shared/services/ChapterDataLoader';
-import { useToast } from '@/hooks/use-toast';
-import { API_BASE_URL } from '@/config/api';
+import { useState, useMemo, useCallback } from "react";
+import { AdminMember, MemberFilters } from "../types/admin.types";
+import {
+  ChapterMemberData,
+  MemberData,
+} from "../../../shared/services/ChapterDataLoader";
+import { useToast } from "@/hooks/use-toast";
+import { API_BASE_URL } from "@/config/api";
+import { apiClient } from "@/lib/apiClient";
 
-export const useMemberManagement = (chapterData: ChapterMemberData[], onDataRefresh?: () => void) => {
+export const useMemberManagement = (
+  chapterData: ChapterMemberData[],
+  onDataRefresh?: () => void,
+) => {
   const { toast } = useToast();
   const [filters, setFilters] = useState<MemberFilters>({
-    searchTerm: '',
-    chapterFilter: 'all',
+    searchTerm: "",
+    chapterFilter: "all",
   });
   const [selectedMembers, setSelectedMembers] = useState<number[]>([]); // Changed to number[] for real IDs
   const [deletingMemberId, setDeletingMemberId] = useState<number | null>(null);
@@ -16,12 +23,12 @@ export const useMemberManagement = (chapterData: ChapterMemberData[], onDataRefr
 
   // Flatten all members from all chapters with chapter info
   const members = useMemo((): AdminMember[] => {
-    return chapterData.flatMap(chapter =>
+    return chapterData.flatMap((chapter) =>
       chapter.members.map((member: MemberData) => ({
         ...member,
         chapterName: chapter.chapterName,
         chapterId: chapter.chapterId,
-      }))
+      })),
     );
   }, [chapterData]);
 
@@ -30,43 +37,57 @@ export const useMemberManagement = (chapterData: ChapterMemberData[], onDataRefr
     let filtered = members;
 
     // Chapter filter
-    if (filters.chapterFilter !== 'all') {
-      filtered = filtered.filter(member => member.chapterId === filters.chapterFilter);
+    if (filters.chapterFilter !== "all") {
+      filtered = filtered.filter(
+        (member) => member.chapterId === filters.chapterFilter,
+      );
     }
 
     // Search filter
     if (filters.searchTerm) {
-      filtered = filtered.filter(member =>
-        member.name?.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
-        member.chapterName.toLowerCase().includes(filters.searchTerm.toLowerCase())
+      filtered = filtered.filter(
+        (member) =>
+          member.name
+            ?.toLowerCase()
+            .includes(filters.searchTerm.toLowerCase()) ||
+          member.chapterName
+            .toLowerCase()
+            .includes(filters.searchTerm.toLowerCase()),
       );
     }
 
     return filtered;
   }, [members, filters]);
 
-  const handleMemberSelect = useCallback((memberId: number, checked: boolean) => {
-    setSelectedMembers(prev =>
-      checked
-        ? [...prev, memberId]
-        : prev.filter(id => id !== memberId)
-    );
-  }, []);
+  const handleMemberSelect = useCallback(
+    (memberId: number, checked: boolean) => {
+      setSelectedMembers((prev) =>
+        checked ? [...prev, memberId] : prev.filter((id) => id !== memberId),
+      );
+    },
+    [],
+  );
 
-  const handleSelectAll = useCallback((checked: boolean) => {
-    if (checked) {
-      setSelectedMembers(filteredMembers.map(member => member.id));
-    } else {
-      setSelectedMembers([]);
-    }
-  }, [filteredMembers]);
+  const handleSelectAll = useCallback(
+    (checked: boolean) => {
+      if (checked) {
+        setSelectedMembers(filteredMembers.map((member) => member.id));
+      } else {
+        setSelectedMembers([]);
+      }
+    },
+    [filteredMembers],
+  );
 
   const handleBulkDelete = useCallback(async () => {
     if (selectedMembers.length === 0) return;
 
-    if (!window.confirm(
-      `Are you sure you want to delete ${selectedMembers.length} member(s)? This cannot be undone.`
-    )) return;
+    if (
+      !window.confirm(
+        `Are you sure you want to delete ${selectedMembers.length} member(s)? This cannot be undone.`,
+      )
+    )
+      return;
 
     setIsBulkDeleting(true);
     const errors: string[] = [];
@@ -75,22 +96,16 @@ export const useMemberManagement = (chapterData: ChapterMemberData[], onDataRefr
     try {
       // Delete in sequence to avoid overwhelming the server
       for (const memberId of selectedMembers) {
-        const member = members.find(m => m.id === memberId);
+        const member = members.find((m) => m.id === memberId);
         if (!member) continue;
 
         try {
-          const response = await fetch(
-            `${API_BASE_URL}/api/chapters/${member.chapterId}/members/${member.id}/`,
-            { method: 'DELETE' }
+          await apiClient.delete(
+            `/api/chapters/${member.chapterId}/members/${member.id}/`,
           );
-
-          if (response.ok) {
-            successCount++;
-          } else {
-            errors.push(member.name || 'Unknown');
-          }
+          successCount++;
         } catch (error) {
-          errors.push(member.name || 'Unknown');
+          errors.push(member.name || "Unknown");
         }
       }
 
@@ -98,13 +113,17 @@ export const useMemberManagement = (chapterData: ChapterMemberData[], onDataRefr
         toast({
           title: "Success",
           description: `Deleted ${successCount} member(s) successfully`,
-          variant: "default"
+          variant: "default",
         });
       } else {
         toast({
-          title: errors.length < selectedMembers.length ? "Partial Success" : "Error",
-          description: `Deleted ${successCount} of ${selectedMembers.length}. Failed: ${errors.join(', ')}`,
-          variant: errors.length < selectedMembers.length ? "default" : "destructive"
+          title:
+            errors.length < selectedMembers.length
+              ? "Partial Success"
+              : "Error",
+          description: `Deleted ${successCount} of ${selectedMembers.length}. Failed: ${errors.join(", ")}`,
+          variant:
+            errors.length < selectedMembers.length ? "default" : "destructive",
         });
       }
 
@@ -119,68 +138,63 @@ export const useMemberManagement = (chapterData: ChapterMemberData[], onDataRefr
 
   const handleEdit = useCallback((member: AdminMember) => {
     // TODO: Implementation would open edit dialog or navigate to edit page
-    console.log('Edit member:', member);
+    console.log("Edit member:", member);
     alert(`Edit functionality for ${member.name} will be implemented here`);
   }, []);
 
-  const handleDelete = useCallback(async (member: AdminMember) => {
-    if (!window.confirm(`Are you sure you want to delete ${member.name}? This cannot be undone.`)) return;
+  const handleDelete = useCallback(
+    async (member: AdminMember) => {
+      if (
+        !window.confirm(
+          `Are you sure you want to delete ${member.name}? This cannot be undone.`,
+        )
+      )
+        return;
 
-    setDeletingMemberId(member.id);
+      setDeletingMemberId(member.id);
 
-    try {
-      const response = await fetch(
-        `${API_BASE_URL}/api/chapters/${member.chapterId}/members/${member.id}/`,
-        {
-          method: 'DELETE',
-          headers: {
-            'Content-Type': 'application/json',
-          }
-        }
-      );
+      try {
+        await apiClient.delete(
+          `/api/chapters/${member.chapterId}/members/${member.id}/`,
+        );
 
-      if (response.ok) {
         toast({
           title: "Success",
           description: `${member.name} has been deleted`,
-          variant: "default"
+          variant: "default",
         });
 
         if (onDataRefresh) {
           onDataRefresh();
         }
-      } else {
-        const errorData = await response.json().catch(() => ({}));
+      } catch (error) {
         toast({
           title: "Error",
-          description: errorData.error || 'Failed to delete member',
-          variant: "destructive"
+          description: "Network error. Please try again.",
+          variant: "destructive",
         });
+      } finally {
+        setDeletingMemberId(null);
       }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: 'Network error. Please try again.',
-        variant: "destructive"
-      });
-    } finally {
-      setDeletingMemberId(null);
-    }
-  }, [toast, onDataRefresh]);
+    },
+    [toast, onDataRefresh],
+  );
 
   const exportMemberData = useCallback(() => {
-    const csvContent = "data:text/csv;charset=utf-8,"
-      + "Name,Chapter\n"
-      + filteredMembers.map(member =>
-          `"${member.name || ''}","${member.chapterName}"`
-        ).join("\n");
+    const csvContent =
+      "data:text/csv;charset=utf-8," +
+      "Name,Chapter\n" +
+      filteredMembers
+        .map((member) => `"${member.name || ""}","${member.chapterName}"`)
+        .join("\n");
 
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    const filename = filters.chapterFilter === 'all'
-      ? 'all_members.csv'
-      : `${chapterData.find(c => c.chapterId === filters.chapterFilter)?.chapterName}_members.csv`;
+    const filename =
+      filters.chapterFilter === "all"
+        ? "all_members.csv"
+        : `${chapterData.find((c) => c.chapterId === filters.chapterFilter)?.chapterName}_members.csv`;
     link.setAttribute("download", filename);
     document.body.appendChild(link);
     link.click();

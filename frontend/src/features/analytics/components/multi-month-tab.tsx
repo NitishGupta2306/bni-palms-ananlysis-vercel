@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { API_BASE_URL } from "@/config/api";
 import { formatMonthYearShort } from "@/lib/utils";
+import { apiClient, fetchWithAuth } from "@/lib/apiClient";
 
 interface MonthlyReportListItem {
   id: number;
@@ -43,13 +44,9 @@ const MultiMonthTab: React.FC<MultiMonthTabProps> = ({
     const fetchReports = async () => {
       setIsLoading(true);
       try {
-        const response = await fetch(
-          `${API_BASE_URL}/api/chapters/${chapterId}/reports/`,
+        const data = await apiClient.get<MonthlyReportListItem[]>(
+          `/api/chapters/${chapterId}/reports/`,
         );
-        if (!response.ok) {
-          throw new Error("Failed to fetch reports");
-        }
-        const data = await response.json();
         setReports(data);
       } catch (error) {
         console.error("Error fetching reports:", error);
@@ -99,13 +96,10 @@ const MultiMonthTab: React.FC<MultiMonthTabProps> = ({
     setIsGenerating(true);
     try {
       // Generate and download the package directly
-      const response = await fetch(
+      const response = await fetchWithAuth(
         `${API_BASE_URL}/api/chapters/${chapterId}/reports/aggregate/download/`,
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
           body: JSON.stringify({
             report_ids: selectedReportIds,
           }),
