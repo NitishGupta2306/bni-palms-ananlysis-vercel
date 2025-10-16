@@ -217,10 +217,10 @@ const ReportWizardTab: React.FC<ReportWizardTabProps> = ({ chapterData }) => {
   const downloadMatrices = async () => {
     setIsDownloadingMatrices(true);
     try {
-      if (reportType === "single" && selectedReportIds.length > 0) {
-        // For single month, download matrices for the first selected report
+      if (reportType === "single" && selectedReportId) {
+        // For single month, download matrices for the selected report
         const response = await fetchWithAuth(
-          `${API_BASE_URL}/api/chapters/${chapterData.chapterId}/reports/${selectedReportIds[0]}/download-matrices/`,
+          `${API_BASE_URL}/api/chapters/${chapterData.chapterId}/reports/${selectedReportId}/download-matrices/`,
         );
 
         if (!response.ok) {
@@ -231,7 +231,7 @@ const ReportWizardTab: React.FC<ReportWizardTabProps> = ({ chapterData }) => {
         const url = window.URL.createObjectURL(blob);
         const link = document.createElement("a");
         link.href = url;
-        const report = reports.find((r) => r.id === selectedReportIds[0]);
+        const report = reports.find((r) => r.id === selectedReportId);
         link.download = `${chapterData.chapterName}_Matrices_${report?.month_year}.xlsx`;
         document.body.appendChild(link);
         link.click();
