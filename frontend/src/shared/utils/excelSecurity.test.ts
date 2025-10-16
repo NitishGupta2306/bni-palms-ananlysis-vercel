@@ -16,7 +16,7 @@ describe('Excel Security Utils', () => {
     });
 
     it('rejects files that are too large', () => {
-      const largeContent = 'x'.repeat(11 * 1024 * 1024); // 11MB
+      const largeContent = 'x'.repeat(51 * 1024 * 1024); // 51MB (exceeds 50MB limit)
       const largeFile = new File([largeContent], 'large.xlsx', {
         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
       });

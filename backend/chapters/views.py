@@ -1,6 +1,7 @@
 """
 Chapter ViewSet - RESTful API for Chapter management
 """
+
 from django.db import models
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
@@ -8,6 +9,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
 from chapters.models import Chapter
+from chapters.permissions import IsAdmin, IsChapterOrAdmin
 from members.models import Member
 from analytics.models import Referral, OneToOne, TYFCB
 from reports.models import MonthlyReport
@@ -20,14 +22,36 @@ class ChapterViewSet(viewsets.ModelViewSet):
     ViewSet for Chapter CRUD operations and dashboard.
 
     Provides:
-    - list: Dashboard with all chapters and statistics
-    - retrieve: Detailed chapter information with members
-    - create: Create new chapter
-    - destroy: Delete chapter and all members
+    - list: Dashboard with all chapters and statistics (Admin only)
+    - retrieve: Detailed chapter information with members (Chapter can see own, Admin sees all)
+    - create: Create new chapter (Admin only)
+    - destroy: Delete chapter and all members (Admin only)
     """
+
     queryset = Chapter.objects.all()
     serializer_class = ChapterSerializer
-    permission_classes = [AllowAny]  # TODO: Add proper authentication
+    permission_classes = [IsChapterOrAdmin]  # Default: authenticated users
+
+    def get_permissions(self):
+        """
+        Override permissions based on action.
+        """
+        if self.action == "list":
+            # Allow public access to list chapters (for landing page)
+            return [AllowAny()]
+        elif self.action in ["create", "destroy", "update", "partial_update"]:
+            # Only admins can create/delete/update chapters
+            return [IsAdmin()]
+        elif self.action in ["retrieve"]:
+            # Chapters can see their own, admins see all
+            return [IsChapterOrAdmin()]
+        elif self.action == "authenticate":
+            # Anyone can attempt to authenticate
+            return [AllowAny()]
+        elif self.action == "update_password":
+            # Only admins can update passwords
+            return [IsAdmin()]
+        return super().get_permissions()
 
     def list(self, request):
         """
@@ -36,78 +60,92 @@ class ChapterViewSet(viewsets.ModelViewSet):
         OPTIMIZED for Supabase/Vercel serverless with minimal queries.
         Uses aggregation and prefetch_related to avoid N+1 queries.
         """
-        from django.db.models import Count, Sum, Prefetch
+        from django.db.models import Count, Sum
         import logging
+
         logger = logging.getLogger(__name__)
 
         try:
-            # Single query to get all chapters with aggregated stats
-            chapters = (
-                self.get_queryset()
-                .prefetch_related(
-                    Prefetch(
-                        'members',
-                        queryset=Member.objects.filter(is_active=True).only(
-                            'id', 'first_name', 'last_name', 'business_name',
-                            'classification', 'email', 'phone', 'chapter_id'
-                        )
-                    )
-                )
-                .annotate(
-                    active_member_count=Count('members', filter=models.Q(members__is_active=True), distinct=True),
-                    report_count=Count('monthly_reports', distinct=True)
-                )
+            # Get chapter IDs first to avoid forcing queryset evaluation with prefetch
+            chapter_ids = list(self.get_queryset().values_list("id", flat=True))
+
+            # Get chapters with basic annotations only
+            chapters = self.get_queryset().annotate(
+                active_member_count=Count(
+                    "members",
+                    filter=models.Q(members__is_active=True),
+                    distinct=True,
+                ),
+                report_count=Count("monthly_reports", distinct=True),
             )
 
-            # Get all analytics data in batch queries
-            chapter_ids = [c.id for c in chapters]
+            # Get all members in one query
+            members_by_chapter = {}
+            all_members = Member.objects.filter(
+                chapter_id__in=chapter_ids, is_active=True
+            ).values(
+                "id",
+                "first_name",
+                "last_name",
+                "business_name",
+                "classification",
+                "email",
+                "phone",
+                "chapter_id",
+            )
+
+            for member in all_members:
+                chapter_id = member["chapter_id"]
+                if chapter_id not in members_by_chapter:
+                    members_by_chapter[chapter_id] = []
+                # Add full_name
+                member["name"] = f"{member['first_name']} {member['last_name']}"
+                member["is_active"] = True
+                members_by_chapter[chapter_id].append(member)
         except Exception as e:
             logger.exception(f"Error fetching chapters: {str(e)}")
             return Response(
-                {'error': f'Failed to fetch chapters: {str(e)}'},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {"error": f"Failed to fetch chapters: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
         try:
             # Batch query for referral counts
             referral_stats = (
-                Referral.objects
-                .filter(giver__chapter_id__in=chapter_ids)
-                .values('giver__chapter_id')
-                .annotate(total=Count('id'))
+                Referral.objects.filter(giver__chapter_id__in=chapter_ids)
+                .values("giver__chapter_id")
+                .annotate(total=Count("id"))
             )
-            referral_dict = {r['giver__chapter_id']: r['total'] for r in referral_stats}
+            referral_dict = {r["giver__chapter_id"]: r["total"] for r in referral_stats}
 
             # Batch query for one-to-one counts
             oto_stats = (
-                OneToOne.objects
-                .filter(member1__chapter_id__in=chapter_ids)
-                .values('member1__chapter_id')
-                .annotate(total=Count('id'))
+                OneToOne.objects.filter(member1__chapter_id__in=chapter_ids)
+                .values("member1__chapter_id")
+                .annotate(total=Count("id"))
             )
-            oto_dict = {o['member1__chapter_id']: o['total'] for o in oto_stats}
+            oto_dict = {o["member1__chapter_id"]: o["total"] for o in oto_stats}
 
             # Batch query for TYFCB amounts
             tyfcb_stats = (
-                TYFCB.objects
-                .filter(receiver__chapter_id__in=chapter_ids)
-                .values('receiver__chapter_id', 'within_chapter')
-                .annotate(total=Sum('amount'))
+                TYFCB.objects.filter(receiver__chapter_id__in=chapter_ids)
+                .values("receiver__chapter_id", "within_chapter")
+                .annotate(total=Sum("amount"))
             )
             tyfcb_dict = {}
             for t in tyfcb_stats:
-                chapter_id = t['receiver__chapter_id']
+                chapter_id = t["receiver__chapter_id"]
                 if chapter_id not in tyfcb_dict:
-                    tyfcb_dict[chapter_id] = {'inside': 0, 'outside': 0}
-                if t['within_chapter']:
-                    tyfcb_dict[chapter_id]['inside'] = float(t['total'] or 0)
+                    tyfcb_dict[chapter_id] = {"inside": 0, "outside": 0}
+                if t["within_chapter"]:
+                    tyfcb_dict[chapter_id]["inside"] = float(t["total"] or 0)
                 else:
-                    tyfcb_dict[chapter_id]['outside'] = float(t['total'] or 0)
+                    tyfcb_dict[chapter_id]["outside"] = float(t["total"] or 0)
         except Exception as e:
             logger.exception(f"Error fetching analytics data: {str(e)}")
             return Response(
-                {'error': f'Failed to fetch analytics data: {str(e)}'},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {"error": f"Failed to fetch analytics data: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
         # Build response
@@ -117,52 +155,60 @@ class ChapterViewSet(viewsets.ModelViewSet):
                 member_count = chapter.active_member_count
                 total_referrals = referral_dict.get(chapter.id, 0)
                 total_one_to_ones = oto_dict.get(chapter.id, 0)
-                tyfcb_data = tyfcb_dict.get(chapter.id, {'inside': 0, 'outside': 0})
-                total_tyfcb_inside = tyfcb_data['inside']
-                total_tyfcb_outside = tyfcb_data['outside']
+                tyfcb_data = tyfcb_dict.get(chapter.id, {"inside": 0, "outside": 0})
+                total_tyfcb_inside = tyfcb_data["inside"]
+                total_tyfcb_outside = tyfcb_data["outside"]
 
                 # Calculate averages
-                avg_referrals = round(total_referrals / member_count, 2) if member_count > 0 else 0
-                avg_one_to_ones = round(total_one_to_ones / member_count, 2) if member_count > 0 else 0
-                avg_tyfcb_inside = round(total_tyfcb_inside / member_count, 2) if member_count > 0 else 0
-                avg_tyfcb_outside = round(total_tyfcb_outside / member_count, 2) if member_count > 0 else 0
+                avg_referrals = (
+                    round(total_referrals / member_count, 2) if member_count > 0 else 0
+                )
+                avg_one_to_ones = (
+                    round(total_one_to_ones / member_count, 2)
+                    if member_count > 0
+                    else 0
+                )
+                avg_tyfcb_inside = (
+                    round(total_tyfcb_inside / member_count, 2)
+                    if member_count > 0
+                    else 0
+                )
+                avg_tyfcb_outside = (
+                    round(total_tyfcb_outside / member_count, 2)
+                    if member_count > 0
+                    else 0
+                )
 
-                # Prepare member list from prefetched data
-                member_list = [
+                # Get member list from our pre-built dictionary
+                member_list = members_by_chapter.get(chapter.id, [])
+
+                chapter_data.append(
                     {
-                        'id': member.id,
-                        'name': member.full_name,
-                        'business_name': member.business_name,
-                        'classification': member.classification,
-                        'email': member.email,
-                        'phone': member.phone,
+                        "id": chapter.id,
+                        "name": chapter.name,
+                        "location": chapter.location,
+                        "meeting_day": chapter.meeting_day,
+                        "meeting_time": str(chapter.meeting_time)
+                        if chapter.meeting_time
+                        else None,
+                        "total_members": member_count,
+                        "monthly_reports_count": chapter.report_count,
+                        "total_referrals": total_referrals,
+                        "total_one_to_ones": total_one_to_ones,
+                        "total_tyfcb_inside": total_tyfcb_inside,
+                        "total_tyfcb_outside": total_tyfcb_outside,
+                        "avg_referrals_per_member": avg_referrals,
+                        "avg_one_to_ones_per_member": avg_one_to_ones,
+                        "avg_tyfcb_inside_per_member": avg_tyfcb_inside,
+                        "avg_tyfcb_outside_per_member": avg_tyfcb_outside,
+                        "members": member_list,
                     }
-                    for member in chapter.members.all()
-                ]
-
-                chapter_data.append({
-                    'id': chapter.id,
-                    'name': chapter.name,
-                    'location': chapter.location,
-                    'meeting_day': chapter.meeting_day,
-                    'meeting_time': str(chapter.meeting_time) if chapter.meeting_time else None,
-                    'total_members': member_count,
-                    'monthly_reports_count': chapter.report_count,
-                    'total_referrals': total_referrals,
-                    'total_one_to_ones': total_one_to_ones,
-                    'total_tyfcb_inside': total_tyfcb_inside,
-                    'total_tyfcb_outside': total_tyfcb_outside,
-                    'avg_referrals_per_member': avg_referrals,
-                    'avg_one_to_ones_per_member': avg_one_to_ones,
-                    'avg_tyfcb_inside_per_member': avg_tyfcb_inside,
-                    'avg_tyfcb_outside_per_member': avg_tyfcb_outside,
-                    'members': member_list,
-                })
+                )
         except Exception as e:
             logger.exception(f"Error building response: {str(e)}")
             return Response(
-                {'error': f'Failed to build response: {str(e)}'},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {"error": f"Failed to build response: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
         return Response(chapter_data)
@@ -172,25 +218,35 @@ class ChapterViewSet(viewsets.ModelViewSet):
         Get detailed information for a specific chapter.
 
         Returns chapter details with all active members and their full information.
+        Chapters can only see their own data, admins can see all.
         """
         try:
             chapter = self.get_object()
         except Chapter.DoesNotExist:
             return Response(
-                {'error': 'Chapter not found'},
-                status=status.HTTP_404_NOT_FOUND
+                {"error": "Chapter not found"}, status=status.HTTP_404_NOT_FOUND
             )
 
-        # Get all active members
-        members = Member.objects.filter(chapter=chapter, is_active=True)
+        # Check if non-admin user is accessing their own chapter
+        if hasattr(request.user, "is_admin") and not request.user.is_admin:
+            if hasattr(request.user, "chapter_id"):
+                if str(request.user.chapter_id) != str(chapter.id):
+                    return Response(
+                        {"error": "You can only access your own chapter"},
+                        status=status.HTTP_403_FORBIDDEN,
+                    )
+
+        # Get all members (frontend will filter by status)
+        members = Member.objects.filter(chapter=chapter)
 
         # Calculate performance metrics
         total_referrals = Referral.objects.filter(giver__chapter=chapter).count()
         total_one_to_ones = OneToOne.objects.filter(member1__chapter=chapter).count()
         total_tyfcb = float(
-            TYFCB.objects.filter(
-                receiver__chapter=chapter
-            ).aggregate(total=models.Sum('amount'))['total'] or 0
+            TYFCB.objects.filter(receiver__chapter=chapter).aggregate(
+                total=models.Sum("amount")
+            )["total"]
+            or 0
         )
 
         # Prepare member details
@@ -204,40 +260,43 @@ class ChapterViewSet(viewsets.ModelViewSet):
             ).count()
             tyfcb_received = float(
                 TYFCB.objects.filter(receiver=member).aggregate(
-                    total=models.Sum('amount')
-                )['total'] or 0
+                    total=models.Sum("amount")
+                )["total"]
+                or 0
             )
 
-            member_details.append({
-                'id': member.id,
-                'first_name': member.first_name,
-                'last_name': member.last_name,
-                'full_name': member.full_name,
-                'business_name': member.business_name,
-                'classification': member.classification,
-                'email': member.email,
-                'phone': member.phone,
-                'is_active': member.is_active,
-                'joined_date': member.joined_date,
-                'referrals_given': referrals_given,
-                'referrals_received': referrals_received,
-                'one_to_ones': otos,
-                'tyfcb_received': tyfcb_received,
-            })
+            member_details.append(
+                {
+                    "id": member.id,
+                    "first_name": member.first_name,
+                    "last_name": member.last_name,
+                    "full_name": member.full_name,
+                    "business_name": member.business_name,
+                    "classification": member.classification,
+                    "email": member.email,
+                    "phone": member.phone,
+                    "is_active": member.is_active,
+                    "joined_date": member.joined_date,
+                    "referrals_given": referrals_given,
+                    "referrals_received": referrals_received,
+                    "one_to_ones": otos,
+                    "tyfcb_received": tyfcb_received,
+                }
+            )
 
         chapter_data = {
-            'id': chapter.id,
-            'name': chapter.name,
-            'location': chapter.location,
-            'meeting_day': chapter.meeting_day,
-            'meeting_time': str(chapter.meeting_time) if chapter.meeting_time else None,
-            'created_at': chapter.created_at,
-            'updated_at': chapter.updated_at,
-            'total_members': members.count(),
-            'total_referrals': total_referrals,
-            'total_one_to_ones': total_one_to_ones,
-            'total_tyfcb': total_tyfcb,
-            'members': member_details,
+            "id": chapter.id,
+            "name": chapter.name,
+            "location": chapter.location,
+            "meeting_day": chapter.meeting_day,
+            "meeting_time": str(chapter.meeting_time) if chapter.meeting_time else None,
+            "created_at": chapter.created_at,
+            "updated_at": chapter.updated_at,
+            "total_members": members.count(),
+            "total_referrals": total_referrals,
+            "total_one_to_ones": total_one_to_ones,
+            "total_tyfcb": total_tyfcb,
+            "members": member_details,
         }
 
         return Response(chapter_data)
@@ -249,28 +308,28 @@ class ChapterViewSet(viewsets.ModelViewSet):
         Uses ChapterService for centralized chapter creation logic.
         Returns 201 if created, 200 if already exists.
         """
-        name = request.data.get('name')
+        name = request.data.get("name")
         if not name:
             return Response(
-                {'error': 'Chapter name is required'},
-                status=status.HTTP_400_BAD_REQUEST
+                {"error": "Chapter name is required"},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
-        location = request.data.get('location', 'Dubai')
-        meeting_day = request.data.get('meeting_day', '')
-        meeting_time = request.data.get('meeting_time')
+        location = request.data.get("location", "Dubai")
+        meeting_day = request.data.get("meeting_day", "")
+        meeting_time = request.data.get("meeting_time")
 
         chapter, created = ChapterService.get_or_create_chapter(
             name=name,
             location=location,
             meeting_day=meeting_day,
-            meeting_time=meeting_time
+            meeting_time=meeting_time,
         )
 
         serializer = self.get_serializer(chapter)
         return Response(
             serializer.data,
-            status=status.HTTP_201_CREATED if created else status.HTTP_200_OK
+            status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
         )
 
     def destroy(self, request, pk=None):
@@ -284,13 +343,236 @@ class ChapterViewSet(viewsets.ModelViewSet):
             chapter = self.get_object()
         except Chapter.DoesNotExist:
             return Response(
-                {'error': 'Chapter not found'},
-                status=status.HTTP_404_NOT_FOUND
+                {"error": "Chapter not found"}, status=status.HTTP_404_NOT_FOUND
             )
 
         result = ChapterService.delete_chapter(chapter.id)
 
-        return Response({
-            'message': f"Chapter '{chapter.name}' deleted successfully",
-            'members_deleted': result['members_deleted']
-        })
+        return Response(
+            {
+                "message": f"Chapter '{chapter.name}' deleted successfully",
+                "members_deleted": result["members_deleted"],
+            }
+        )
+
+    @action(detail=True, methods=["post"], permission_classes=[AllowAny])
+    def authenticate(self, request, pk=None):
+        """
+        Authenticate a user to access a specific chapter.
+
+        Request body: {"password": "chapter_password"}
+        Response: {"token": "jwt_token", "chapter": {...}} or error with attempts_remaining
+        """
+        from chapters.utils import generate_chapter_token
+        from bni.serializers import ChapterAuthSerializer, ChapterPublicSerializer
+        from django.utils import timezone
+
+        chapter = self.get_object()
+        serializer = ChapterAuthSerializer(data=request.data)
+
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        # Check if locked out
+        if chapter.is_locked_out():
+            lockout_remaining = (chapter.lockout_until - timezone.now()).total_seconds()
+            minutes_remaining = int(lockout_remaining / 60) + 1
+            return Response(
+                {
+                    "error": f"Too many failed attempts. Please try again in {minutes_remaining} minutes.",
+                    "locked_out": True,
+                    "retry_after_minutes": minutes_remaining,
+                },
+                status=status.HTTP_429_TOO_MANY_REQUESTS,
+            )
+
+        # Verify password using secure comparison
+        password = serializer.validated_data["password"]
+        if chapter.check_password(password):
+            # Success - generate token and reset attempts
+            token = generate_chapter_token(chapter.id)
+            chapter.reset_failed_attempts()
+
+            chapter_serializer = ChapterPublicSerializer(chapter)
+            return Response(
+                {
+                    "token": token,
+                    "chapter": chapter_serializer.data,
+                    "expires_in_hours": 24,
+                }
+            )
+        else:
+            # Failed attempt
+            chapter.increment_failed_attempts()
+            attempts_remaining = max(0, 5 - chapter.failed_login_attempts)
+
+            return Response(
+                {"error": "Invalid password", "attempts_remaining": attempts_remaining},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+    @action(detail=True, methods=["post"])
+    def update_password(self, request, pk=None):
+        """
+        Update a chapter's password (admin only).
+
+        Request body: {"new_password": "new_password"}
+        Requires admin authentication token.
+        """
+        from bni.serializers import UpdatePasswordSerializer
+
+        # Permission check handled by get_permissions() - IsAdmin only
+
+        chapter = self.get_object()
+        serializer = UpdatePasswordSerializer(data=request.data)
+
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        new_password = serializer.validated_data["new_password"]
+        chapter.set_password(new_password)  # Use set_password for hashing
+        chapter.reset_failed_attempts()
+        chapter.save()
+
+        return Response(
+            {
+                "success": True,
+                "message": f'Password for chapter "{chapter.name}" updated successfully',
+            }
+        )
+
+
+class AdminAuthViewSet(viewsets.ViewSet):
+    """
+    ViewSet for admin authentication.
+
+    Permissions:
+    - authenticate: AllowAny (must allow login)
+    - update_password: IsAdmin only
+    - get_settings: IsAdmin only
+    """
+
+    permission_classes = [AllowAny]  # Default for authenticate action
+
+    def get_permissions(self):
+        """Override permissions based on action."""
+        if self.action == "authenticate":
+            return [AllowAny()]
+        elif self.action in ["update_password", "get_settings"]:
+            return [IsAdmin()]
+        return super().get_permissions()
+
+    @action(detail=False, methods=["post"])
+    def authenticate(self, request):
+        """
+        Authenticate admin user.
+
+        Request body: {"password": "admin_password"}
+        Response: {"token": "jwt_token"} or error with attempts_remaining
+        """
+        from chapters.models import AdminSettings
+        from chapters.utils import generate_admin_token
+        from bni.serializers import AdminAuthSerializer
+        from django.utils import timezone
+
+        admin_settings = AdminSettings.load()
+        serializer = AdminAuthSerializer(data=request.data)
+
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        # Check if locked out
+        if admin_settings.is_locked_out():
+            lockout_remaining = (
+                admin_settings.admin_lockout_until - timezone.now()
+            ).total_seconds()
+            minutes_remaining = int(lockout_remaining / 60) + 1
+            return Response(
+                {
+                    "error": f"Too many failed attempts. Please try again in {minutes_remaining} minutes.",
+                    "locked_out": True,
+                    "retry_after_minutes": minutes_remaining,
+                },
+                status=status.HTTP_429_TOO_MANY_REQUESTS,
+            )
+
+        # Verify password using secure comparison
+        password = serializer.validated_data["password"]
+        if admin_settings.check_password(password):
+            # Success - generate token and reset attempts
+            token = generate_admin_token()
+            admin_settings.reset_failed_attempts()
+
+            return Response({"token": token, "expires_in_hours": 24})
+        else:
+            # Failed attempt
+            admin_settings.increment_failed_attempts()
+            attempts_remaining = max(0, 5 - admin_settings.failed_admin_attempts)
+
+            return Response(
+                {"error": "Invalid password", "attempts_remaining": attempts_remaining},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+    @action(detail=False, methods=["post"])
+    def update_password(self, request):
+        """
+        Update admin password (admin only).
+
+        Request body: {"new_password": "new_password"}
+        Requires admin authentication token.
+        """
+        from chapters.models import AdminSettings
+        from bni.serializers import UpdatePasswordSerializer
+
+        # Permission check handled by get_permissions() - IsAdmin only
+
+        admin_settings = AdminSettings.load()
+        serializer = UpdatePasswordSerializer(data=request.data)
+
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        new_password = serializer.validated_data["new_password"]
+        admin_settings.set_password(new_password)  # Use set_password for hashing
+        admin_settings.reset_failed_attempts()
+        admin_settings.save()
+
+        return Response(
+            {"success": True, "message": "Admin password updated successfully"}
+        )
+
+    @action(detail=False, methods=["get"], url_path="get-settings")
+    def get_settings(self, request):
+        """
+        Get all security settings including admin password and all chapter passwords.
+
+        Admin only endpoint.
+
+        Response includes:
+        - admin_password: Current admin password (hashed)
+        - chapters: List of all chapters with their passwords (hashed)
+        """
+        from chapters.models import AdminSettings
+
+        # Permission check handled by get_permissions() - IsAdmin only
+
+        admin_settings = AdminSettings.load()
+        chapters = Chapter.objects.all()
+
+        chapters_data = [
+            {
+                "id": chapter.id,
+                "name": chapter.name,
+                "location": chapter.location,
+                "password": chapter.password,
+            }
+            for chapter in chapters
+        ]
+
+        return Response(
+            {
+                "admin_password": admin_settings.admin_password,
+                "chapters": chapters_data,
+            }
+        )

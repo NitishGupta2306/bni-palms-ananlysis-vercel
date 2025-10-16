@@ -24,16 +24,18 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-b!bd3gycxy^srur!2ezi)i635ym@g9c$0p1a@$!b@uip(c02s(')
+SECRET_KEY = os.environ.get(
+    "SECRET_KEY", "django-insecure-b!bd3gycxy^srur!2ezi)i635ym@g9c$0p1a@$!b@uip(c02s("
+)
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DEBUG', 'True') == 'True'
+DEBUG = os.environ.get("DEBUG", "True") == "True"
 
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
+ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
 
 # Add Vercel hosts
-if os.environ.get('VERCEL'):
-    ALLOWED_HOSTS.extend(['.vercel.app', '.vercel.com'])
+if os.environ.get("VERCEL"):
+    ALLOWED_HOSTS.extend([".vercel.app", ".vercel.com"])
 
 
 # Application definition
@@ -42,18 +44,20 @@ INSTALLED_APPS = [
     # Third party apps
     "rest_framework",
     "corsheaders",
+    "csp",  # Content Security Policy
     # Our apps
     "chapters",
     "members",
     "reports",
     "analytics",
-    "uploads",
     "bni",
 ]
 
 MIDDLEWARE = [
+    "django.middleware.security.SecurityMiddleware",  # Security headers
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
+    "csp.middleware.CSPMiddleware",  # Content Security Policy
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -67,7 +71,7 @@ WSGI_APPLICATION = "config.wsgi.application"
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
 # Parse DATABASE_URL if provided (for production)
-DATABASE_URL = os.environ.get('DATABASE_URL')
+DATABASE_URL = os.environ.get("DATABASE_URL")
 
 if DATABASE_URL:
     # Parse Supabase/PostgreSQL connection string
@@ -78,18 +82,16 @@ if DATABASE_URL:
     db_config = dj_database_url.parse(DATABASE_URL, conn_max_age=600, ssl_require=True)
 
     # Add connection pooling and performance options
-    db_config['OPTIONS'] = {
-        'sslmode': 'require',
-        'connect_timeout': 10,
+    db_config["OPTIONS"] = {
+        "sslmode": "require",
+        "connect_timeout": 10,
     }
 
     # Enable connection pooling for better performance
-    db_config['CONN_MAX_AGE'] = 600  # Keep connections alive for 10 minutes
-    db_config['CONN_HEALTH_CHECKS'] = True  # Enable connection health checks
+    db_config["CONN_MAX_AGE"] = 600  # Keep connections alive for 10 minutes
+    db_config["CONN_HEALTH_CHECKS"] = True  # Enable connection health checks
 
-    DATABASES = {
-        "default": db_config
-    }
+    DATABASES = {"default": db_config}
 else:
     # Development - use SQLite
     DATABASES = {
@@ -136,46 +138,154 @@ MEDIA_ROOT = BASE_DIR / "media"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# REST Framework settings - no auth
+# REST Framework settings - JWT authentication enabled
 REST_FRAMEWORK = {
-    "DEFAULT_PERMISSION_CLASSES": [
-        "rest_framework.permissions.AllowAny",
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "chapters.authentication.JWTAuthentication",
     ],
-    "DEFAULT_AUTHENTICATION_CLASSES": [],  # No authentication
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.IsAuthenticated",  # Require authentication by default
+    ],
     "UNAUTHENTICATED_USER": None,  # Don't use Django User model
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 100,
+    # Custom exception handler for standardized error responses
+    "EXCEPTION_HANDLER": "bni.exceptions.custom_exception_handler",
 }
 
 # CORS settings
 CORS_ALLOWED_ORIGINS = os.environ.get(
-    "CORS_ALLOWED_ORIGINS",
-    "http://localhost:3000,http://127.0.0.1:3000"
+    "CORS_ALLOWED_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000"
 ).split(",")
 
 # For Vercel deployments, allow all Vercel domains
-if os.environ.get('VERCEL') or any('.vercel.app' in origin for origin in CORS_ALLOWED_ORIGINS):
+if os.environ.get("VERCEL") or any(
+    ".vercel.app" in origin for origin in CORS_ALLOWED_ORIGINS
+):
     CORS_ALLOWED_ORIGIN_REGEXES = [
         r"^https://.*\.vercel\.app$",
     ]
 
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_METHODS = [
-    'DELETE',
-    'GET',
-    'OPTIONS',
-    'PATCH',
-    'POST',
-    'PUT',
+    "DELETE",
+    "GET",
+    "OPTIONS",
+    "PATCH",
+    "POST",
+    "PUT",
 ]
 CORS_ALLOW_HEADERS = [
-    'accept',
-    'accept-encoding',
-    'authorization',
-    'content-type',
-    'dnt',
-    'origin',
-    'user-agent',
-    'x-csrftoken',
-    'x-requested-with',
+    "accept",
+    "accept-encoding",
+    "authorization",
+    "content-type",
+    "dnt",
+    "origin",
+    "user-agent",
+    "x-csrftoken",
+    "x-requested-with",
 ]
+
+# ==============================================================================
+# SECURITY HEADERS CONFIGURATION (Task #5)
+# ==============================================================================
+# Comprehensive security headers to protect against common web vulnerabilities
+# References:
+# - OWASP Security Headers: https://owasp.org/www-project-secure-headers/
+# - Mozilla Observatory: https://observatory.mozilla.org/
+
+# Content Security Policy (CSP) - django-csp 4.0+ format
+# Prevents XSS attacks by controlling which resources can be loaded
+# ==============================================================================
+CONTENT_SECURITY_POLICY = {
+    "DIRECTIVES": {
+        "default-src": ("'self'",),
+        "script-src": ("'self'", "'unsafe-inline'", "'unsafe-eval'"),
+        "style-src": ("'self'", "'unsafe-inline'", "https://fonts.googleapis.com"),
+        "img-src": ("'self'", "data:", "https:", "blob:"),
+        "font-src": ("'self'", "data:", "https://fonts.gstatic.com"),
+        "connect-src": (
+            "'self'",
+            "http://localhost:8000",
+            "https://*.vercel.app",
+            "https://*.supabase.co",
+        ),
+        "frame-src": ("'none'",),
+        "object-src": ("'none'",),
+        "base-uri": ("'self'",),
+        "form-action": ("'self'",),
+        "frame-ancestors": ("'none'",),
+    }
+}
+
+# Upgrade insecure requests (force HTTPS in production)
+if not DEBUG:
+    CONTENT_SECURITY_POLICY["DIRECTIVES"]["upgrade-insecure-requests"] = True
+
+# X-Frame-Options (legacy browsers that don't support CSP frame-ancestors)
+# ==============================================================================
+X_FRAME_OPTIONS = "DENY"  # Prevent site from being embedded in iframes
+
+# X-Content-Type-Options
+# ==============================================================================
+# Prevent MIME-type sniffing attacks
+SECURE_CONTENT_TYPE_NOSNIFF = True  # X-Content-Type-Options: nosniff
+
+# X-XSS-Protection (legacy, but still useful for older browsers)
+# ==============================================================================
+SECURE_BROWSER_XSS_FILTER = True  # X-XSS-Protection: 1; mode=block
+
+# Referrer Policy
+# ==============================================================================
+# Control what information is sent in Referer header
+SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
+# Options:
+# - "no-referrer": Never send referrer
+# - "same-origin": Only send for same-origin requests
+# - "strict-origin": Only send origin (not full URL) for HTTPS→HTTPS
+# - "strict-origin-when-cross-origin": Full URL for same-origin, origin for cross-origin (RECOMMENDED)
+
+# Permissions Policy (formerly Feature-Policy)
+# ==============================================================================
+# Control which browser features can be used
+PERMISSIONS_POLICY = {
+    "accelerometer": [],  # Disable accelerometer
+    "camera": [],  # Disable camera access
+    "geolocation": [],  # Disable geolocation
+    "microphone": [],  # Disable microphone
+    "payment": [],  # Disable payment APIs
+    "usb": [],  # Disable USB access
+}
+
+# HTTPS/SSL Settings (PRODUCTION ONLY)
+# ==============================================================================
+# Only enforce HTTPS in production (when DEBUG=False)
+if not DEBUG:
+    # Strict-Transport-Security (HSTS)
+    # Forces browsers to only use HTTPS for the specified duration
+    SECURE_HSTS_SECONDS = 31536000  # 1 year (recommended: 63072000 for 2 years)
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True  # Apply to subdomains
+    SECURE_HSTS_PRELOAD = True  # Allow submission to HSTS preload list
+
+    # Force HTTPS redirects
+    SECURE_SSL_REDIRECT = True  # Redirect all HTTP to HTTPS
+
+    # Secure cookies
+    SESSION_COOKIE_SECURE = True  # Only send session cookie over HTTPS
+    CSRF_COOKIE_SECURE = True  # Only send CSRF cookie over HTTPS
+
+    # Additional cookie security
+    SESSION_COOKIE_HTTPONLY = True  # Prevent JavaScript access to session cookie
+    CSRF_COOKIE_HTTPONLY = True  # Prevent JavaScript access to CSRF cookie
+    SESSION_COOKIE_SAMESITE = "Lax"  # CSRF protection
+    CSRF_COOKIE_SAMESITE = "Lax"  # CSRF protection
+else:
+    # Development settings - allow HTTP
+    SECURE_SSL_REDIRECT = False
+    SESSION_COOKIE_SECURE = False
+    CSRF_COOKIE_SECURE = False
+
+# ==============================================================================
+# END SECURITY HEADERS CONFIGURATION
+# ==============================================================================

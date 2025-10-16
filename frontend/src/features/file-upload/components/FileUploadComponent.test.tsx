@@ -445,7 +445,7 @@ describe('FileUploadComponent', () => {
       const user = userEvent.setup();
       renderFileUploadComponent();
 
-      const veryLargeFile = createMockFile('huge.xlsx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 15 * 1024 * 1024); // 15MB
+      const veryLargeFile = createMockFile('huge.xlsx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 40 * 1024 * 1024); // 40MB
       const dropzone = screen.getByTestId('file-dropzone');
 
       await user.upload(dropzone, veryLargeFile);
