@@ -275,4 +275,4 @@ export const apiClient = {
 /**
  * Export for backward compatibility
  */
-export { fetchWithAuth };
+export { fetchWithAuth, getAuthToken };

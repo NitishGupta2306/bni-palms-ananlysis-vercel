@@ -33,6 +33,7 @@ import { Progress } from "@/components/ui/progress";
 import { useDropzone } from "react-dropzone";
 import { useApiError } from "../../../shared/hooks/useApiError";
 import { API_BASE_URL } from "@/config/api";
+import { getAuthToken } from "@/lib/apiClient";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 
@@ -318,6 +319,13 @@ const FileUploadComponent: React.FC<FileUploadComponentProps> = ({
 
         // Send request
         xhr.open("POST", `${API_BASE_URL}/api/upload/excel/`);
+
+        // Add authentication header
+        const token = getAuthToken();
+        if (token) {
+          xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+        }
+
         xhr.send(formData);
       });
     } catch (error: any) {
