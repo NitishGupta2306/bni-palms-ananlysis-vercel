@@ -17,6 +17,16 @@ from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 
+# Import new modular formatters
+from bni.services.excel_formatters import (
+    write_referral_matrix,
+    write_oto_matrix,
+    write_combination_matrix,
+    write_tyfcb_report,
+    write_summary_page,
+    write_inactive_members,
+)
+
 
 class AggregationService:
     """Service for aggregating multiple monthly reports."""
@@ -645,46 +655,71 @@ class AggregationService:
 
         # Calculate chapter statistics for performance highlighting
         stats = self._calculate_chapter_statistics(aggregated)
+        stats["total_months"] = len(self.reports)  # Add total_months to stats
+
+        # Get period string for display
+        period_str = self._get_period_display()
 
         wb = Workbook()
         wb.remove(wb.active)  # Remove default sheet
 
         # 1. Summary sheet (first)
         ws_summary = wb.create_sheet("Summary", 0)
-        self._write_summary_to_sheet(ws_summary, aggregated, differences, stats)
+        write_summary_page(
+            ws_summary,
+            self.chapter.name if self.chapter else "BNI",
+            period_str,
+            aggregated,
+            differences,
+            stats,
+        )
 
         # 2. Referral Matrix (with monthly breakdowns)
         ws_ref = wb.create_sheet("Referral Matrix")
-        self._write_matrix_with_monthly_breakdowns(
-            ws_ref, aggregated["referral_matrix"], "Referral Matrix", "referral", stats
+        write_referral_matrix(
+            ws_ref,
+            aggregated["referral_matrix"],
+            period_str,
+            stats,
+            self.reports,
         )
 
         # 3. One-to-One Matrix (with monthly breakdowns)
         ws_oto = wb.create_sheet("One-to-One Matrix")
-        self._write_matrix_with_monthly_breakdowns(
-            ws_oto, aggregated["oto_matrix"], "One-to-One Matrix", "oto", stats
+        write_oto_matrix(
+            ws_oto,
+            aggregated["oto_matrix"],
+            period_str,
+            stats,
+            self.reports,
         )
 
         # 4. Combination Matrix (with monthly breakdowns) - uses special 4-column format
         ws_combo = wb.create_sheet("Combination Matrix")
-        self._write_combination_matrix_with_monthly_breakdowns(
+        write_combination_matrix(
             ws_combo,
             aggregated["combination_matrix"],
-            "Combination Matrix",
+            period_str,
             stats,
+            self.reports,
         )
 
         # 5. Combined TYFCB Report (Inside and Outside)
         if aggregated["tyfcb_inside"] or aggregated["tyfcb_outside"]:
             ws_tyfcb = wb.create_sheet("TYFCB Report")
-            self._write_combined_tyfcb_to_sheet(
-                ws_tyfcb, aggregated["tyfcb_inside"], aggregated["tyfcb_outside"], stats
+            write_tyfcb_report(
+                ws_tyfcb,
+                aggregated["tyfcb_inside"],
+                aggregated["tyfcb_outside"],
+                period_str,
+                stats,
+                self.reports,
             )
 
         # 6. Member Differences (Inactive Members)
         if differences:
             ws_diff = wb.create_sheet("Inactive Members")
-            self._write_member_differences_to_sheet(ws_diff, differences)
+            write_inactive_members(ws_diff, differences, period_str)
 
         excel_buffer = BytesIO()
         wb.save(excel_buffer)

@@ -19,6 +19,14 @@ from reports.models import MonthlyReport, MemberMonthlyStats
 from analytics.models import TYFCB
 from bni.services.aggregation_service import AggregationService
 
+# Import new modular formatters
+from bni.services.excel_formatters import (
+    write_referral_matrix,
+    write_oto_matrix,
+    write_combination_matrix,
+    write_tyfcb_report,
+)
+
 
 class MonthlyReportViewSet(viewsets.ModelViewSet):
     """
@@ -327,235 +335,119 @@ class MonthlyReportViewSet(viewsets.ModelViewSet):
         - Referral Matrix
         - One-to-One Matrix
         - Combination Matrix
+        - TYFCB Report
+
+        Uses modular formatters for consistent styling across single-month and multi-month reports.
         """
         try:
             chapter = Chapter.objects.get(id=chapter_id)
             monthly_report = MonthlyReport.objects.get(id=pk, chapter=chapter)
 
+            # Import pandas for DataFrame conversion
+            import pandas as pd
+
             # Create a new workbook
             wb = openpyxl.Workbook()
             wb.remove(wb.active)  # Remove default sheet
 
-            # Header styling
-            header_fill = PatternFill(
-                start_color="366092", end_color="366092", fill_type="solid"
-            )
-            header_font = Font(bold=True, color="FFFFFF")
-            center_align = Alignment(horizontal="center", vertical="center")
+            # Prepare data for formatters - convert single month to format expected by formatters
+            # Period string for single month
+            from datetime import datetime
+            try:
+                month_date = datetime.strptime(monthly_report.month_year, "%Y-%m")
+                period_str = month_date.strftime("%m/%Y")
+            except:
+                period_str = monthly_report.month_year
 
-            # Helper function to create matrix sheet
-            def create_matrix_sheet(sheet_name, matrix_data, include_aggregates=False):
-                if (
-                    not matrix_data
-                    or "members" not in matrix_data
-                    or "matrix" not in matrix_data
-                ):
-                    return None
+            # Create a temporary list with this single report for the formatters
+            reports_list = [monthly_report]
 
-                ws = wb.create_sheet(title=sheet_name)
-                members = matrix_data["members"]
-                matrix = matrix_data["matrix"]  # This is a 2D list
+            # Calculate chapter statistics (needed for performance highlighting)
+            # Build aggregated data from this single report
+            if monthly_report.referral_matrix_data and "members" in monthly_report.referral_matrix_data:
+                members = monthly_report.referral_matrix_data["members"]
+                ref_matrix_data = monthly_report.referral_matrix_data["matrix"]
 
-                # Determine header columns
-                num_cols = len(members) + (4 if include_aggregates else 0)
+                # Convert to DataFrame
+                ref_df = pd.DataFrame(ref_matrix_data, index=members, columns=members)
 
-                # Write header row
-                ws.cell(1, 1, "From \\ To").font = header_font
-                ws.cell(1, 1).fill = header_fill
-                ws.cell(1, 1).alignment = center_align
+                # Calculate statistics
+                ref_totals = ref_df.sum(axis=1).to_dict()
+                avg_referrals = ref_df.sum(axis=1).mean() if len(members) > 0 else 0
+            else:
+                ref_df = pd.DataFrame()
+                ref_totals = {}
+                avg_referrals = 0
 
-                for col_idx, member in enumerate(members, start=2):
-                    cell = ws.cell(1, col_idx, member)
-                    cell.font = header_font
-                    cell.fill = header_fill
-                    cell.alignment = center_align
-                    ws.column_dimensions[
-                        openpyxl.utils.get_column_letter(col_idx)
-                    ].width = 15
+            if monthly_report.oto_matrix_data and "members" in monthly_report.oto_matrix_data:
+                members_oto = monthly_report.oto_matrix_data["members"]
+                oto_matrix_data = monthly_report.oto_matrix_data["matrix"]
+                oto_df = pd.DataFrame(oto_matrix_data, index=members_oto, columns=members_oto)
+                oto_totals = oto_df.sum(axis=1).to_dict()
+                avg_oto = oto_df.sum(axis=1).mean() if len(members_oto) > 0 else 0
+            else:
+                oto_df = pd.DataFrame()
+                oto_totals = {}
+                avg_oto = 0
 
-                # Add aggregate column headers for combination matrix
-                if include_aggregates:
-                    aggregate_headers = ["Neither", "OTO Only", "Referral Only", "Both"]
-                    aggregate_fill = PatternFill(
-                        start_color="FFC000", end_color="FFC000", fill_type="solid"
-                    )
-                    for idx, header in enumerate(aggregate_headers):
-                        col = len(members) + 2 + idx
-                        cell = ws.cell(1, col, header)
-                        cell.font = header_font
-                        cell.fill = aggregate_fill
-                        cell.alignment = center_align
-                        ws.column_dimensions[
-                            openpyxl.utils.get_column_letter(col)
-                        ].width = 15
+            if monthly_report.combination_matrix_data and "members" in monthly_report.combination_matrix_data:
+                members_combo = monthly_report.combination_matrix_data["members"]
+                combo_matrix_data = monthly_report.combination_matrix_data["matrix"]
+                combo_df = pd.DataFrame(combo_matrix_data, index=members_combo, columns=members_combo)
+            else:
+                combo_df = pd.DataFrame()
 
-                # Write data rows - matrix is a 2D list
-                for row_idx, from_member in enumerate(members):
-                    # Row header
-                    cell = ws.cell(row_idx + 2, 1, from_member)
-                    cell.font = Font(bold=True)
-                    cell.fill = PatternFill(
-                        start_color="D9E1F2", end_color="D9E1F2", fill_type="solid"
-                    )
-                    cell.alignment = center_align
+            # Calculate TYFCB statistics
+            tyfcb_totals = {}
+            tyfcb_inside = monthly_report.tyfcb_inside_data or {}
+            tyfcb_outside = monthly_report.tyfcb_outside_data or {}
 
-                    # Matrix values from the 2D list
-                    row_total_given = 0
-                    if row_idx < len(matrix):
-                        row_data = matrix[row_idx]
-                        for col_idx, value in enumerate(row_data):
-                            cell = ws.cell(row_idx + 2, col_idx + 2, value)
-                            cell.alignment = center_align
-                            row_total_given += (
-                                value if isinstance(value, (int, float)) else 0
-                            )
+            if tyfcb_inside or tyfcb_outside:
+                all_members = set()
+                if tyfcb_inside and "by_member" in tyfcb_inside:
+                    all_members.update(tyfcb_inside["by_member"].keys())
+                if tyfcb_outside and "by_member" in tyfcb_outside:
+                    all_members.update(tyfcb_outside["by_member"].keys())
 
-                            # Color coding for values
-                            if value > 0:
-                                cell.fill = PatternFill(
-                                    start_color="C6EFCE",
-                                    end_color="C6EFCE",
-                                    fill_type="solid",
-                                )
+                for member in all_members:
+                    inside_amt = float(tyfcb_inside.get("by_member", {}).get(member, 0))
+                    outside_amt = float(tyfcb_outside.get("by_member", {}).get(member, 0))
+                    tyfcb_totals[member] = inside_amt + outside_amt
 
-                    # Add aggregates for combination matrix
-                    if include_aggregates:
-                        # Count each type based on legend:
-                        # 0 = Neither, 1 = OTO Only, 2 = Referral Only, 3 = Both
-                        row_data = matrix[row_idx] if row_idx < len(matrix) else []
+            avg_tyfcb = sum(tyfcb_totals.values()) / len(tyfcb_totals) if tyfcb_totals else 0
 
-                        neither_count = sum(1 for v in row_data if v == 0)
-                        oto_only_count = sum(1 for v in row_data if v == 1)
-                        ref_only_count = sum(1 for v in row_data if v == 2)
-                        both_count = sum(1 for v in row_data if v == 3)
+            # Build stats dict for formatters
+            stats = {
+                "chapter_size": len(members) if monthly_report.referral_matrix_data else 0,
+                "avg_referrals": avg_referrals,
+                "avg_oto": avg_oto,
+                "avg_tyfcb": avg_tyfcb,
+                "ref_totals": ref_totals,
+                "oto_totals": oto_totals,
+                "tyfcb_totals": tyfcb_totals,
+                "total_months": 1,
+            }
 
-                        # Write aggregate values
-                        aggregate_values = [
-                            neither_count,
-                            oto_only_count,
-                            ref_only_count,
-                            both_count,
-                        ]
-                        for idx, value in enumerate(aggregate_values):
-                            col = len(members) + 2 + idx
-                            cell = ws.cell(row_idx + 2, col, value)
-                            cell.alignment = center_align
-                            cell.font = Font(bold=True)
-                            cell.fill = PatternFill(
-                                start_color="FFF2CC",
-                                end_color="FFF2CC",
-                                fill_type="solid",
-                            )
+            # Create sheets using the new formatters
+            if monthly_report.referral_matrix_data and not ref_df.empty:
+                ws_ref = wb.create_sheet("Referral Matrix")
+                write_referral_matrix(ws_ref, ref_df, period_str, stats, reports_list)
 
-                ws.column_dimensions["A"].width = 20
-                return ws
+            if monthly_report.oto_matrix_data and not oto_df.empty:
+                ws_oto = wb.create_sheet("One-to-One Matrix")
+                write_oto_matrix(ws_oto, oto_df, period_str, stats, reports_list)
 
-            # Create sheets for each matrix type
-            if monthly_report.referral_matrix_data:
-                create_matrix_sheet(
-                    "Referral Matrix", monthly_report.referral_matrix_data
-                )
+            if monthly_report.combination_matrix_data and not combo_df.empty:
+                ws_combo = wb.create_sheet("Combination Matrix")
+                write_combination_matrix(ws_combo, combo_df, period_str, stats, reports_list)
 
-            if monthly_report.oto_matrix_data:
-                create_matrix_sheet("One-to-One Matrix", monthly_report.oto_matrix_data)
-
-            if monthly_report.combination_matrix_data:
-                create_matrix_sheet(
-                    "Combination Matrix",
-                    monthly_report.combination_matrix_data,
-                    include_aggregates=True,
-                )
-
-            # Create TYFCB sheet
-            if monthly_report.tyfcb_inside_data or monthly_report.tyfcb_outside_data:
+            # Create TYFCB sheet using the new formatter
+            if tyfcb_inside or tyfcb_outside:
                 ws_tyfcb = wb.create_sheet("TYFCB Report")
-
-                # Header
-                ws_tyfcb.cell(1, 1, "TYFCB Report").font = Font(bold=True, size=14)
-                ws_tyfcb.merge_cells("A1:D1")
-
-                row = 3
-                # Inside Chapter TYFCB
-                if monthly_report.tyfcb_inside_data:
-                    inside = monthly_report.tyfcb_inside_data
-                    ws_tyfcb.cell(row, 1, "Within Chapter").font = Font(
-                        bold=True, size=12
-                    )
-                    ws_tyfcb.cell(row, 1).fill = header_fill
-                    row += 1
-                    ws_tyfcb.cell(
-                        row,
-                        1,
-                        f"Total Amount: AED {inside.get('total_amount', 0):,.2f}",
-                    ).font = Font(bold=True)
-                    ws_tyfcb.cell(
-                        row, 3, f"Total TYFCBs: {inside.get('count', 0)}"
-                    ).font = Font(bold=True)
-                    row += 2
-
-                    # By member breakdown - use data from JSON field
-                    ws_tyfcb.cell(row, 1, "Member").font = header_font
-                    ws_tyfcb.cell(row, 1).fill = header_fill
-                    ws_tyfcb.cell(row, 2, "Amount (AED)").font = header_font
-                    ws_tyfcb.cell(row, 2).fill = header_fill
-                    row += 1
-
-                    # Get by_member data and sort by amount (descending)
-                    by_member = inside.get("by_member", {})
-                    sorted_members = sorted(
-                        by_member.items(), key=lambda x: x[1], reverse=True
-                    )
-
-                    for member_name, amount in sorted_members:
-                        if amount > 0:  # Only show members with TYFCB
-                            ws_tyfcb.cell(row, 1, member_name)
-                            ws_tyfcb.cell(row, 2, f"{float(amount):,.2f}")
-                            row += 1
-
-                    row += 2
-
-                # Outside Chapter TYFCB
-                if monthly_report.tyfcb_outside_data:
-                    outside = monthly_report.tyfcb_outside_data
-                    ws_tyfcb.cell(row, 1, "Outside Chapter").font = Font(
-                        bold=True, size=12
-                    )
-                    ws_tyfcb.cell(row, 1).fill = header_fill
-                    row += 1
-                    ws_tyfcb.cell(
-                        row,
-                        1,
-                        f"Total Amount: AED {outside.get('total_amount', 0):,.2f}",
-                    ).font = Font(bold=True)
-                    ws_tyfcb.cell(
-                        row, 3, f"Total TYFCBs: {outside.get('count', 0)}"
-                    ).font = Font(bold=True)
-                    row += 2
-
-                    # By member breakdown - use data from JSON field
-                    ws_tyfcb.cell(row, 1, "Member").font = header_font
-                    ws_tyfcb.cell(row, 1).fill = header_fill
-                    ws_tyfcb.cell(row, 2, "Amount (AED)").font = header_font
-                    ws_tyfcb.cell(row, 2).fill = header_fill
-                    row += 1
-
-                    # Get by_member data and sort by amount (descending)
-                    by_member = outside.get("by_member", {})
-                    sorted_members = sorted(
-                        by_member.items(), key=lambda x: x[1], reverse=True
-                    )
-
-                    for member_name, amount in sorted_members:
-                        if amount > 0:  # Only show members with TYFCB
-                            ws_tyfcb.cell(row, 1, member_name)
-                            ws_tyfcb.cell(row, 2, f"{float(amount):,.2f}")
-                            row += 1
-
-                # Set column widths
-                ws_tyfcb.column_dimensions["A"].width = 30
-                ws_tyfcb.column_dimensions["B"].width = 20
-                ws_tyfcb.column_dimensions["C"].width = 15
-                ws_tyfcb.column_dimensions["D"].width = 15
+                # Extract by_member dicts for the formatter
+                inside_by_member = tyfcb_inside.get("by_member", {}) if tyfcb_inside else {}
+                outside_by_member = tyfcb_outside.get("by_member", {}) if tyfcb_outside else {}
+                write_tyfcb_report(ws_tyfcb, inside_by_member, outside_by_member, period_str, stats, reports_list)
 
             # If no matrices were created, add an info sheet
             if len(wb.sheetnames) == 0:
