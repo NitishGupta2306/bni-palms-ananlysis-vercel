@@ -7,7 +7,7 @@ export interface ExcelValidationOptions {
 }
 
 export const DEFAULT_VALIDATION_OPTIONS: ExcelValidationOptions = {
-  maxFileSize: 10 * 1024 * 1024, // 10MB
+  maxFileSize: 50 * 1024 * 1024, // 50MB
   allowedExtensions: ['.xls', '.xlsx'],
   maxSheets: 10,
   maxRows: 10000,
