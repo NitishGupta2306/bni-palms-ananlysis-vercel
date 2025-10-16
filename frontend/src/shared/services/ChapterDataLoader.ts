@@ -323,9 +323,7 @@ export const extractMemberNamesFromFile = async (
         lastName.length <= 50
       ) {
         // Sanitize names to remove potential harmful characters
-        const sanitizedFirstName = firstName
-          .replace(/[^\w\s\-'.]/g, "")
-          .trim();
+        const sanitizedFirstName = firstName.replace(/[^\w\s\-'.]/g, "").trim();
         const sanitizedLastName = lastName.replace(/[^\w\s\-'.]/g, "").trim();
 
         if (sanitizedFirstName && sanitizedLastName) {
