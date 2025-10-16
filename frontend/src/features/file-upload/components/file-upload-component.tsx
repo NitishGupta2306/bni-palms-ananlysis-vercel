@@ -10,12 +10,15 @@ import {
   CalendarIcon,
   ChevronRight,
   ChevronLeft,
+  ChevronDown,
   Check,
   Users,
   FileText,
   FolderUp,
   Download,
   Eye,
+  Database,
+  XCircle,
 } from "lucide-react";
 import {
   Card,
@@ -86,6 +89,7 @@ const FileUploadComponent: React.FC<FileUploadComponentProps> = ({
     message: string;
     reportId?: number;
   } | null>(null);
+  const [expandedMatrix, setExpandedMatrix] = useState<string | null>(null);
   const { handleError } = useApiError();
 
   // Extract date from filename - supports multiple formats
@@ -372,17 +376,17 @@ const FileUploadComponent: React.FC<FileUploadComponentProps> = ({
   };
 
   return (
-    <div className="space-y-6 p-4 sm:p-6">
+    <div className="space-y-4 p-4">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl sm:text-2xl font-bold">Upload Wizard</h2>
-          <p className="text-sm text-muted-foreground">
+          <h2 className="text-lg font-bold">Upload Wizard</h2>
+          <p className="text-xs text-muted-foreground">
             Upload and process reports in a few simple steps
           </p>
         </div>
         {currentStep > 1 && currentStep < 4 && (
-          <Button variant="outline" onClick={handleBack}>
+          <Button variant="outline" size="sm" onClick={handleBack}>
             <ChevronLeft className="mr-2 h-4 w-4" />
             Back
           </Button>
@@ -460,9 +464,29 @@ const FileUploadComponent: React.FC<FileUploadComponentProps> = ({
                 : "bg-muted text-muted-foreground",
             )}
           >
-            4
+            {currentStep > 4 ? <Check className="h-5 w-5" /> : 4}
           </div>
-          <span className="text-xs font-medium text-center">Confirm</span>
+          <span className="text-xs font-medium text-center">Processing</span>
+        </div>
+        <div
+          className={cn(
+            "flex-1 h-0.5 mx-2",
+            currentStep > 4 ? "bg-primary" : "bg-muted",
+          )}
+        />
+
+        <div className="flex flex-col items-center flex-1">
+          <div
+            className={cn(
+              "w-10 h-10 rounded-full flex items-center justify-center font-semibold text-sm mb-2 transition-all",
+              currentStep >= 5
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted text-muted-foreground",
+            )}
+          >
+            5
+          </div>
+          <span className="text-xs font-medium text-center">Results</span>
         </div>
       </div>
 
@@ -477,20 +501,20 @@ const FileUploadComponent: React.FC<FileUploadComponentProps> = ({
             className="space-y-4"
           >
             <Card>
-              <CardHeader>
-                <CardTitle>Choose Upload Type</CardTitle>
-                <CardDescription>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">Choose Upload Type</CardTitle>
+                <CardDescription className="text-xs">
                   What would you like to upload?
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <CardContent className="space-y-3 py-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   {/* Update Members Only */}
                   <motion.div
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     className={cn(
-                      "p-6 border-2 rounded-lg cursor-pointer transition-all",
+                      "p-4 border-2 rounded-lg cursor-pointer transition-all",
                       uploadType === "members_only"
                         ? "border-primary bg-primary/5"
                         : "border-border hover:border-primary/50",
@@ -594,25 +618,12 @@ const FileUploadComponent: React.FC<FileUploadComponentProps> = ({
             </Card>
 
             {uploadType && (
-              <Card className="bg-muted/30">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 text-sm">
-                      <CheckCircle className="h-4 w-4 text-primary" />
-                      <span className="font-medium">
-                        {uploadType === "members_only" &&
-                          "Members update selected"}
-                        {uploadType === "palms_only" && "PALMS upload selected"}
-                        {uploadType === "both" && "Both files selected"}
-                      </span>
-                    </div>
-                    <Button onClick={() => setCurrentStep(2)}>
-                      Continue
-                      <ChevronRight className="ml-2 h-4 w-4" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
+              <div className="flex justify-end">
+                <Button onClick={() => setCurrentStep(2)}>
+                  Continue
+                  <ChevronRight className="ml-2 h-4 w-4" />
+                </Button>
+              </div>
             )}
           </motion.div>
         )}
@@ -629,20 +640,38 @@ const FileUploadComponent: React.FC<FileUploadComponentProps> = ({
             <Card>
               <CardHeader>
                 <CardTitle>Select Report Month</CardTitle>
-                <CardDescription>
-                  Choose the month and year for this report
-                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="max-w-md mx-auto space-y-4">
                   <div className="space-y-2">
                     <Label>Report Month & Year</Label>
-                    <input
-                      type="month"
-                      value={monthYear}
-                      onChange={(e) => setMonthYear(e.target.value)}
-                      className="w-full h-12 px-4 rounded-md border border-input bg-background text-base"
-                    />
+                    <Select value={monthYear} onValueChange={setMonthYear}>
+                      <SelectTrigger className="h-12">
+                        <SelectValue placeholder="Select month and year" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {(() => {
+                          const months = [];
+                          const currentDate = new Date();
+                          // Generate last 12 months + next 2 months
+                          for (let i = 12; i >= -2; i--) {
+                            const date = new Date(
+                              currentDate.getFullYear(),
+                              currentDate.getMonth() - i,
+                              1,
+                            );
+                            const value = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+                            const label = format(date, "MMMM yyyy");
+                            months.push(
+                              <SelectItem key={value} value={value}>
+                                {label}
+                              </SelectItem>,
+                            );
+                          }
+                          return months;
+                        })()}
+                      </SelectContent>
+                    </Select>
                     <p className="text-xs text-muted-foreground">
                       Select the period this report covers
                     </p>
@@ -670,38 +699,19 @@ const FileUploadComponent: React.FC<FileUploadComponentProps> = ({
                       </p>
                     </div>
                   </div>
-
-                  <Alert>
-                    <Info className="h-4 w-4" />
-                    <AlertDescription className="text-sm">
-                      The current month is pre-selected. You can select any past
-                      or future month.
-                    </AlertDescription>
-                  </Alert>
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="bg-muted/30">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-sm">
-                    <CheckCircle className="h-4 w-4 text-primary" />
-                    <span className="font-medium">
-                      {format(new Date(monthYear + "-01"), "MMMM yyyy")}{" "}
-                      selected
-                    </span>
-                  </div>
-                  <Button
-                    onClick={() => setCurrentStep(3)}
-                    disabled={!canProceedFromStep2()}
-                  >
-                    Continue
-                    <ChevronRight className="ml-2 h-4 w-4" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+            <div className="flex justify-end">
+              <Button
+                onClick={() => setCurrentStep(3)}
+                disabled={!canProceedFromStep2()}
+              >
+                Continue
+                <ChevronRight className="ml-2 h-4 w-4" />
+              </Button>
+            </div>
           </motion.div>
         )}
 
@@ -717,10 +727,6 @@ const FileUploadComponent: React.FC<FileUploadComponentProps> = ({
             <Card>
               <CardHeader>
                 <CardTitle>Upload Files</CardTitle>
-                <CardDescription>
-                  Upload your files for{" "}
-                  {format(new Date(monthYear + "-01"), "MMMM yyyy")}
-                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 {/* File Drop Zone */}
@@ -860,25 +866,16 @@ const FileUploadComponent: React.FC<FileUploadComponentProps> = ({
               </CardContent>
             </Card>
 
-            <Card className="bg-muted/30">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-sm">
-                    <CheckCircle className="h-4 w-4 text-primary" />
-                    <span className="font-medium">
-                      {files.length} file(s) selected
-                    </span>
-                  </div>
-                  <Button
-                    onClick={handleUpload}
-                    disabled={!canProceedFromStep3()}
-                  >
-                    Upload & Process
-                    <ChevronRight className="ml-2 h-4 w-4" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+            <div className="flex justify-end">
+              <Button
+                onClick={handleUpload}
+                disabled={!canProceedFromStep3()}
+                size="lg"
+              >
+                Upload & Process
+                <ChevronRight className="ml-2 h-4 w-4" />
+              </Button>
+            </div>
           </motion.div>
         )}
 

@@ -532,10 +532,7 @@ const ReportWizardTab: React.FC<ReportWizardTabProps> = ({ chapterData }) => {
           >
             <Card>
               <CardHeader>
-                <CardTitle>What would you like to generate?</CardTitle>
-                <CardDescription>
-                  Choose the type of report you want to view or download
-                </CardDescription>
+                <CardTitle>Choose Report Type</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -599,24 +596,14 @@ const ReportWizardTab: React.FC<ReportWizardTabProps> = ({ chapterData }) => {
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle>
-                      Select{" "}
-                      {reportType === "single"
-                        ? "Month"
-                        : reportType === "multi"
-                          ? "Months"
-                          : "Months to Compare"}
-                    </CardTitle>
-                    <CardDescription>
-                      {reportType === "single" &&
-                        "Choose which month's data to view"}
-                      {reportType === "multi" &&
-                        "Select one or more months to aggregate"}
-                      {reportType === "compare" &&
-                        "Pick two months to compare side-by-side"}
-                    </CardDescription>
-                  </div>
+                  <CardTitle>
+                    Select{" "}
+                    {reportType === "single"
+                      ? "Month"
+                      : reportType === "multi"
+                        ? "Months"
+                        : "Months to Compare"}
+                  </CardTitle>
                   {reportType === "multi" && reports.length > 0 && (
                     <div className="flex gap-2">
                       <Button
@@ -810,42 +797,17 @@ const ReportWizardTab: React.FC<ReportWizardTabProps> = ({ chapterData }) => {
               </CardContent>
             </Card>
 
-            {/* Selection Summary & Next Button */}
+            {/* Next Button */}
             {!isLoadingReports && reports.length > 0 && (
-              <Card className="bg-muted/30">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 text-sm">
-                      <CheckCircle2 className="h-4 w-4 text-primary" />
-                      <span className="font-medium">
-                        {reportType === "single" && selectedReportId && (
-                          <>1 month selected</>
-                        )}
-                        {reportType === "multi" && (
-                          <>{selectedReportIds.length} month(s) selected</>
-                        )}
-                        {reportType === "compare" &&
-                          compareReportIds.current &&
-                          compareReportIds.previous && (
-                            <>2 months selected for comparison</>
-                          )}
-                      </span>
-                      {getReportsWithPalms().length > 0 && (
-                        <Badge variant="secondary">
-                          {getReportsWithPalms().length} with PALMS
-                        </Badge>
-                      )}
-                    </div>
-                    <Button
-                      onClick={() => setCurrentStep(3)}
-                      disabled={!canProceed()}
-                    >
-                      Continue
-                      <ChevronRight className="ml-2 h-4 w-4" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
+              <div className="flex justify-end">
+                <Button
+                  onClick={() => setCurrentStep(3)}
+                  disabled={!canProceed()}
+                >
+                  Continue
+                  <ChevronRight className="ml-2 h-4 w-4" />
+                </Button>
+              </div>
             )}
           </motion.div>
         )}
@@ -862,9 +824,6 @@ const ReportWizardTab: React.FC<ReportWizardTabProps> = ({ chapterData }) => {
             <Card>
               <CardHeader>
                 <CardTitle>Report Options</CardTitle>
-                <CardDescription>
-                  Configure additional options for your report
-                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 {/* PALMS Download Option */}
@@ -943,94 +902,53 @@ const ReportWizardTab: React.FC<ReportWizardTabProps> = ({ chapterData }) => {
                   </div>
                 )}
 
-                {/* Summary Section */}
-                <div className="pt-4 border-t">
-                  <h4 className="font-medium mb-2">Report Summary</h4>
-                  <div className="space-y-1 text-sm text-muted-foreground">
-                    <div className="flex justify-between">
-                      <span>Report Type:</span>
-                      <span className="font-medium text-foreground">
-                        {reportType === "single" && "Single Month"}
-                        {reportType === "multi" && "Multi-Period"}
-                        {reportType === "compare" && "Comparison"}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Periods Selected:</span>
-                      <span className="font-medium text-foreground">
-                        {reportType === "single" && "1"}
-                        {reportType === "multi" && selectedReportIds.length}
-                        {reportType === "compare" && "2"}
-                      </span>
-                    </div>
-                    {reportType === "single" && (
-                      <div className="flex justify-between">
-                        <span>Matrix Types:</span>
-                        <span className="font-medium text-foreground">
-                          {selectedMatrixTypes.length} selected
-                        </span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* PALMS Source Files */}
-                  {reportType === "single" && selectedReportId && (
-                    <>
-                      {(() => {
-                        const selectedReport = reports.find(
-                          (r) => r.id === selectedReportId,
-                        );
-                        return selectedReport?.uploaded_file_names &&
-                          selectedReport.uploaded_file_names.length > 0 ? (
+                {/* PALMS Source Files */}
+                {reportType === "single" && selectedReportId && (
+                  <>
+                    {(() => {
+                      const selectedReport = reports.find(
+                        (r) => r.id === selectedReportId,
+                      );
+                      return selectedReport?.uploaded_file_names &&
+                        selectedReport.uploaded_file_names.length > 0 ? (
+                        <div className="pt-4 border-t">
                           <PalmsFilesDisplay
                             files={selectedReport.uploaded_file_names}
                             monthYear={formatMonthYearShort(
                               selectedReport.month_year,
                             )}
                           />
-                        ) : null;
-                      })()}
-                    </>
-                  )}
-                  {reportType === "multi" && selectedReportIds.length > 0 && (
-                    <div className="border-t pt-3 space-y-2">
-                      {reports
-                        .filter((r) => selectedReportIds.includes(r.id))
-                        .map((report) =>
-                          report.uploaded_file_names &&
-                          report.uploaded_file_names.length > 0 ? (
-                            <PalmsFilesDisplay
-                              key={report.id}
-                              files={report.uploaded_file_names}
-                              monthYear={formatMonthYearShort(
-                                report.month_year,
-                              )}
-                            />
-                          ) : null,
-                        )}
-                    </div>
-                  )}
-                </div>
+                        </div>
+                      ) : null;
+                    })()}
+                  </>
+                )}
+                {reportType === "multi" && selectedReportIds.length > 0 && (
+                  <div className="pt-4 border-t space-y-2">
+                    {reports
+                      .filter((r) => selectedReportIds.includes(r.id))
+                      .map((report) =>
+                        report.uploaded_file_names &&
+                        report.uploaded_file_names.length > 0 ? (
+                          <PalmsFilesDisplay
+                            key={report.id}
+                            files={report.uploaded_file_names}
+                            monthYear={formatMonthYearShort(report.month_year)}
+                          />
+                        ) : null,
+                      )}
+                  </div>
+                )}
               </CardContent>
             </Card>
 
             {/* Generate Button */}
-            <Card className="bg-primary/5 border-primary/20">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="h-5 w-5 text-primary" />
-                    <span className="font-medium">
-                      Ready to generate report
-                    </span>
-                  </div>
-                  <Button onClick={handleGenerateReport} size="lg">
-                    <Download className="mr-2 h-4 w-4" />
-                    Generate Report
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+            <div className="flex justify-end">
+              <Button onClick={handleGenerateReport} size="lg">
+                <Download className="mr-2 h-4 w-4" />
+                Generate Report
+              </Button>
+            </div>
           </motion.div>
         )}
 

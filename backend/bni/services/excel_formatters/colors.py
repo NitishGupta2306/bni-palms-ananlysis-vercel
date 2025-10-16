@@ -8,10 +8,10 @@ All colors are as per specification.md to ensure consistency across reports.
 # COLOR DEFINITIONS
 # ==============================================================================
 
-# Performance highlighting colors
-COLOR_GREEN = "B6FFB6"      # Excellent performance (>= 1.75x average)
-COLOR_ORANGE = "FFD699"     # Good/Average performance (0.75x - 1.75x average)
-COLOR_RED = "FFB6B6"        # Needs attention (< 0.5x average)
+# Performance highlighting colors - Modern Minimal scheme
+COLOR_GREEN = "D1F2EB"      # Aqua mint - Excellent performance (>= 1.75x average)
+COLOR_ORANGE = "FDEBD0"     # Cream - Good/Average performance (0.75x - 1.75x average)
+COLOR_RED = "FADBD8"        # Blush - Needs attention (< 0.5x average)
 
 # Special highlighting colors
 COLOR_YELLOW = "FFE699"     # Non-zero values highlight
