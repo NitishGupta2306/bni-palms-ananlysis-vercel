@@ -45,10 +45,17 @@ def write_tyfcb_report(worksheet, tyfcb_inside: dict, tyfcb_outside: dict, perio
 
     num_months = len(reports)
     num_agg_cols = 7  # Member, Inside, Outside, Total, Refs, AvgRefs, AvgValue
-    total_columns = num_agg_cols + (num_months * 3)  # 3 cols per month
+
+    # For single-month reports, skip monthly breakdowns (would just duplicate aggregates)
+    show_monthly_breakdown = num_months > 1
+
+    if show_monthly_breakdown:
+        total_columns = num_agg_cols + (num_months * 3)  # 3 cols per month
+    else:
+        total_columns = num_agg_cols  # No monthly columns for single month
 
     # Create merged header
-    create_merged_header(worksheet, "TYFCB Report", 7, period_str, row=1)
+    create_merged_header(worksheet, "TYFCB Report", total_columns, period_str, row=1)
 
     # Freeze panes
     worksheet.freeze_panes = "B3"
@@ -110,11 +117,12 @@ def write_tyfcb_report(worksheet, tyfcb_inside: dict, tyfcb_outside: dict, perio
         "Avg Value/Referral (AED)",
     ]
 
-    # Add monthly columns
-    for idx, report in enumerate(reports, start=1):
-        headers.append(f"M{idx} - {report.month_year} Inside")
-        headers.append(f"M{idx} - {report.month_year} Outside")
-        headers.append(f"M{idx} - {report.month_year} Ref Count")
+    # Add monthly columns (only for multi-month reports)
+    if show_monthly_breakdown:
+        for idx, report in enumerate(reports, start=1):
+            headers.append(f"M{idx} - {report.month_year} Inside")
+            headers.append(f"M{idx} - {report.month_year} Outside")
+            headers.append(f"M{idx} - {report.month_year} Ref Count")
 
     # Write headers
     for col_idx, header in enumerate(headers, start=1):
@@ -232,27 +240,28 @@ def write_tyfcb_report(worksheet, tyfcb_inside: dict, tyfcb_outside: dict, perio
         cell.number_format = "#,##0.00"
         col += 1
 
-        # Monthly breakdown columns
-        for idx in range(1, len(reports) + 1):
-            # Inside for this month
-            cell = worksheet.cell(
-                row=row, column=col, value=monthly_data[member][idx]["inside"]
-            )
-            cell.number_format = "#,##0.00"
-            col += 1
+        # Monthly breakdown columns (only for multi-month reports)
+        if show_monthly_breakdown:
+            for idx in range(1, len(reports) + 1):
+                # Inside for this month
+                cell = worksheet.cell(
+                    row=row, column=col, value=monthly_data[member][idx]["inside"]
+                )
+                cell.number_format = "#,##0.00"
+                col += 1
 
-            # Outside for this month
-            cell = worksheet.cell(
-                row=row, column=col, value=monthly_data[member][idx]["outside"]
-            )
-            cell.number_format = "#,##0.00"
-            col += 1
+                # Outside for this month
+                cell = worksheet.cell(
+                    row=row, column=col, value=monthly_data[member][idx]["outside"]
+                )
+                cell.number_format = "#,##0.00"
+                col += 1
 
-            # Referral count for this month
-            worksheet.cell(
-                row=row, column=col, value=monthly_data[member][idx]["count"]
-            )
-            col += 1
+                # Referral count for this month
+                worksheet.cell(
+                    row=row, column=col, value=monthly_data[member][idx]["count"]
+                )
+                col += 1
 
         row += 1
 
@@ -290,11 +299,14 @@ def write_tyfcb_report(worksheet, tyfcb_inside: dict, tyfcb_outside: dict, perio
 
     # Calculate thick separator positions
     thick_separator_cols = [num_agg_cols]  # After "Avg Value/Referral" column
-    month_col = num_agg_cols + 1
-    for idx in range(num_months - 1):
-        month_end = month_col + 2  # After each month's "Ref Count" column
-        thick_separator_cols.append(month_end)
-        month_col += 3
+
+    # Add monthly separators only for multi-month reports
+    if show_monthly_breakdown:
+        month_col = num_agg_cols + 1
+        for idx in range(num_months - 1):
+            month_end = month_col + 2  # After each month's "Ref Count" column
+            thick_separator_cols.append(month_end)
+            month_col += 3
 
     # Apply standard borders (outer, header bottom, thick separators, thin grid)
     apply_standard_table_borders(

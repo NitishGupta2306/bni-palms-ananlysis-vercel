@@ -20,7 +20,7 @@ from .colors import (
     get_performance_color,
     count_performance_tiers,
 )
-from .border_utils import create_merged_header
+from .border_utils import create_merged_header, configure_print_settings
 
 
 def write_summary_page(worksheet, chapter_name: str, period_str: str, aggregated_data: dict,
@@ -36,6 +36,9 @@ def write_summary_page(worksheet, chapter_name: str, period_str: str, aggregated
         differences: List of inactive members
         stats: Chapter statistics dict
     """
+    # Configure print settings
+    configure_print_settings(worksheet, orientation='portrait', fit_to_page=True)
+
     # Merged header
     create_merged_header(
         worksheet,

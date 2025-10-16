@@ -8,8 +8,10 @@ import {
   Download,
   Loader2,
   ChevronRight,
+  ChevronDown,
   CheckCircle2,
   Info,
+  File,
 } from "lucide-react";
 import {
   Card,
@@ -41,6 +43,11 @@ interface MonthlyReportListItem {
   has_oto_matrix: boolean;
   has_combination_matrix: boolean;
   require_palms_sheets: boolean;
+  uploaded_file_names?: Array<{
+    original_filename: string;
+    file_type: string;
+    uploaded_at?: string;
+  }>;
 }
 
 interface ReportWizardTabProps {
@@ -49,6 +56,53 @@ interface ReportWizardTabProps {
 
 type ReportType = "single" | "multi" | "compare" | null;
 type MatrixType = "referral" | "oto" | "combination" | "tyfcb";
+
+// Component to display PALMS source files
+const PalmsFilesDisplay: React.FC<{
+  files: Array<{ original_filename: string; file_type: string }>;
+  monthYear?: string;
+}> = ({ files, monthYear }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  const palmsFiles = files.filter((f) => f.file_type === "slip_audit");
+
+  if (palmsFiles.length === 0) return null;
+
+  return (
+    <div className="border-t pt-3">
+      <div
+        className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
+        onClick={() => setIsExpanded(!isExpanded)}
+      >
+        <Badge variant="secondary" className="gap-1">
+          <File className="h-3 w-3" />
+          {palmsFiles.length} PALMS {palmsFiles.length === 1 ? "file" : "files"}
+        </Badge>
+        {monthYear && (
+          <span className="text-xs text-muted-foreground">for {monthYear}</span>
+        )}
+        <ChevronDown
+          className={`h-3 w-3 text-muted-foreground transition-transform ${
+            isExpanded ? "rotate-180" : ""
+          }`}
+        />
+      </div>
+      {isExpanded && (
+        <div className="mt-2 space-y-1 pl-2">
+          {palmsFiles.map((file, idx) => (
+            <div
+              key={idx}
+              className="text-xs text-muted-foreground flex items-center gap-1.5 py-1"
+            >
+              <File className="h-3 w-3 flex-shrink-0" />
+              <span className="truncate">{file.original_filename}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
 
 const ReportWizardTab: React.FC<ReportWizardTabProps> = ({ chapterData }) => {
   // Wizard state
@@ -918,6 +972,44 @@ const ReportWizardTab: React.FC<ReportWizardTabProps> = ({ chapterData }) => {
                       </div>
                     )}
                   </div>
+
+                  {/* PALMS Source Files */}
+                  {reportType === "single" && selectedReportId && (
+                    <>
+                      {(() => {
+                        const selectedReport = reports.find(
+                          (r) => r.id === selectedReportId,
+                        );
+                        return selectedReport?.uploaded_file_names &&
+                          selectedReport.uploaded_file_names.length > 0 ? (
+                          <PalmsFilesDisplay
+                            files={selectedReport.uploaded_file_names}
+                            monthYear={formatMonthYearShort(
+                              selectedReport.month_year,
+                            )}
+                          />
+                        ) : null;
+                      })()}
+                    </>
+                  )}
+                  {reportType === "multi" && selectedReportIds.length > 0 && (
+                    <div className="border-t pt-3 space-y-2">
+                      {reports
+                        .filter((r) => selectedReportIds.includes(r.id))
+                        .map((report) =>
+                          report.uploaded_file_names &&
+                          report.uploaded_file_names.length > 0 ? (
+                            <PalmsFilesDisplay
+                              key={report.id}
+                              files={report.uploaded_file_names}
+                              monthYear={formatMonthYearShort(
+                                report.month_year,
+                              )}
+                            />
+                          ) : null,
+                        )}
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>

@@ -45,6 +45,8 @@ from .combination_formatter import write_combination_matrix
 from .tyfcb_formatter import write_tyfcb_report
 from .summary_formatter import write_summary_page
 from .comparison_formatter import write_inactive_members
+from .executive_summary_formatter import write_executive_summary
+from .charts_formatter import write_charts_page
 
 __all__ = [
     # Colors
@@ -68,6 +70,7 @@ __all__ = [
     "add_bottom_border_to_row",
     "add_outer_table_borders",
     "apply_standard_table_borders",
+    "configure_print_settings",
     # Formatters
     "write_referral_matrix",
     "write_oto_matrix",
@@ -75,4 +78,6 @@ __all__ = [
     "write_tyfcb_report",
     "write_summary_page",
     "write_inactive_members",
+    "write_executive_summary",
+    "write_charts_page",
 ]

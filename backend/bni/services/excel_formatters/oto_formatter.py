@@ -48,8 +48,14 @@ def write_oto_matrix(worksheet, aggregated_matrix, period_str: str, stats: dict,
     num_members = len(df.columns)
     num_months = len(reports)
 
+    # For single-month reports, skip monthly breakdowns (would just duplicate aggregates)
+    show_monthly_breakdown = num_months > 1
+
     # Calculate total columns: 1 (Member col) + num_members + 2 aggregates + (2 monthly cols) * num_months
-    total_columns = 1 + num_members + 2 + (num_months * 2)
+    if show_monthly_breakdown:
+        total_columns = 1 + num_members + 2 + (num_months * 2)
+    else:
+        total_columns = 1 + num_members + 2  # No monthly columns for single month
 
     # Create merged header
     create_merged_header(worksheet, "One-to-One Matrix", total_columns, period_str, row=1)
@@ -103,38 +109,39 @@ def write_oto_matrix(worksheet, aggregated_matrix, period_str: str, stats: dict,
     agg_end_col = current_col
     current_col += 1
 
-    # Monthly column headers
-    for idx, report in enumerate(reports, start=1):
-        month_date = datetime.strptime(report.month_year, "%Y-%m")
-        month_display = month_date.strftime("%m/%Y")
+    # Monthly column headers (only for multi-month reports)
+    if show_monthly_breakdown:
+        for idx, report in enumerate(reports, start=1):
+            month_date = datetime.strptime(report.month_year, "%Y-%m")
+            month_display = month_date.strftime("%m/%Y")
 
-        cell = worksheet.cell(
-            row=2, column=current_col, value=f"M{idx}-{month_display}\nTotal"
-        )
-        cell.font = Font(bold=True, size=8)
-        cell.alignment = Alignment(
-            textRotation=90, horizontal="center", vertical="bottom", wrap_text=True
-        )
-        cell.fill = PatternFill(
-            start_color=COLOR_GRAY,
-            end_color=COLOR_GRAY,
-            fill_type="solid",
-        )
-        current_col += 1
+            cell = worksheet.cell(
+                row=2, column=current_col, value=f"M{idx}-{month_display}\nTotal"
+            )
+            cell.font = Font(bold=True, size=8)
+            cell.alignment = Alignment(
+                textRotation=90, horizontal="center", vertical="bottom", wrap_text=True
+            )
+            cell.fill = PatternFill(
+                start_color=COLOR_GRAY,
+                end_color=COLOR_GRAY,
+                fill_type="solid",
+            )
+            current_col += 1
 
-        cell = worksheet.cell(
-            row=2, column=current_col, value=f"M{idx}-{month_display}\nUnique"
-        )
-        cell.font = Font(bold=True, size=8)
-        cell.alignment = Alignment(
-            textRotation=90, horizontal="center", vertical="bottom", wrap_text=True
-        )
-        cell.fill = PatternFill(
-            start_color=COLOR_GRAY,
-            end_color=COLOR_GRAY,
-            fill_type="solid",
-        )
-        current_col += 1
+            cell = worksheet.cell(
+                row=2, column=current_col, value=f"M{idx}-{month_display}\nUnique"
+            )
+            cell.font = Font(bold=True, size=8)
+            cell.alignment = Alignment(
+                textRotation=90, horizontal="center", vertical="bottom", wrap_text=True
+            )
+            cell.fill = PatternFill(
+                start_color=COLOR_GRAY,
+                end_color=COLOR_GRAY,
+                fill_type="solid",
+            )
+            current_col += 1
 
     # Set header row height for rotated text visibility
     worksheet.row_dimensions[2].height = 60
@@ -203,54 +210,55 @@ def write_oto_matrix(worksheet, aggregated_matrix, period_str: str, stats: dict,
                 start_color=perf_color, end_color=perf_color, fill_type="solid"
             )
 
-        # Move to monthly columns (right after aggregate columns)
-        col_idx = agg_end_col + 1
+        # Monthly totals (only for multi-month reports)
+        if show_monthly_breakdown:
+            # Move to monthly columns (right after aggregate columns)
+            col_idx = agg_end_col + 1
 
-        # Monthly totals
-        for report in reports:
-            month_matrix_data = report.oto_matrix_data  # OTO matrix instead of referral
+            for report in reports:
+                month_matrix_data = report.oto_matrix_data  # OTO matrix instead of referral
 
-            # Calculate monthly totals for this member
-            if (
-                month_matrix_data
-                and "members" in month_matrix_data
-                and "matrix" in month_matrix_data
-            ):
-                members = month_matrix_data["members"]
-                matrix = month_matrix_data["matrix"]
+                # Calculate monthly totals for this member
+                if (
+                    month_matrix_data
+                    and "members" in month_matrix_data
+                    and "matrix" in month_matrix_data
+                ):
+                    members = month_matrix_data["members"]
+                    matrix = month_matrix_data["matrix"]
 
-                if row_name in members:
-                    member_idx = members.index(row_name)
-                    if member_idx < len(matrix):
-                        month_row = matrix[member_idx]
-                        month_total = sum(
-                            val
-                            for val in month_row
-                            if isinstance(val, (int, float)) and val > 0
-                        )
-                        month_unique = sum(
-                            1
-                            for val in month_row
-                            if isinstance(val, (int, float)) and val > 0
-                        )
+                    if row_name in members:
+                        member_idx = members.index(row_name)
+                        if member_idx < len(matrix):
+                            month_row = matrix[member_idx]
+                            month_total = sum(
+                                val
+                                for val in month_row
+                                if isinstance(val, (int, float)) and val > 0
+                            )
+                            month_unique = sum(
+                                1
+                                for val in month_row
+                                if isinstance(val, (int, float)) and val > 0
+                            )
 
-                        worksheet.cell(
-                            row=current_row, column=col_idx, value=month_total
-                        )
-                        worksheet.cell(
-                            row=current_row, column=col_idx + 1, value=month_unique
-                        )
+                            worksheet.cell(
+                                row=current_row, column=col_idx, value=month_total
+                            )
+                            worksheet.cell(
+                                row=current_row, column=col_idx + 1, value=month_unique
+                            )
+                        else:
+                            worksheet.cell(row=current_row, column=col_idx, value=0)
+                            worksheet.cell(row=current_row, column=col_idx + 1, value=0)
                     else:
                         worksheet.cell(row=current_row, column=col_idx, value=0)
                         worksheet.cell(row=current_row, column=col_idx + 1, value=0)
                 else:
                     worksheet.cell(row=current_row, column=col_idx, value=0)
                     worksheet.cell(row=current_row, column=col_idx + 1, value=0)
-            else:
-                worksheet.cell(row=current_row, column=col_idx, value=0)
-                worksheet.cell(row=current_row, column=col_idx + 1, value=0)
 
-            col_idx += 2  # Move to next month
+                col_idx += 2  # Move to next month
 
         current_row += 1
 
@@ -276,11 +284,14 @@ def write_oto_matrix(worksheet, aggregated_matrix, period_str: str, stats: dict,
 
     # Calculate thick separator positions
     thick_separator_cols = [agg_end_col]  # After "Unique Given" column
-    month_col = agg_end_col + 1
-    for idx in range(num_months - 1):
-        month_end = month_col + 1  # After each month's "Unique" column
-        thick_separator_cols.append(month_end)
-        month_col += 2
+
+    # Add monthly separators only for multi-month reports
+    if show_monthly_breakdown:
+        month_col = agg_end_col + 1
+        for idx in range(num_months - 1):
+            month_end = month_col + 1  # After each month's "Unique" column
+            thick_separator_cols.append(month_end)
+            month_col += 2
 
     # Apply standard borders (outer, header bottom, thick separators, thin grid)
     apply_standard_table_borders(

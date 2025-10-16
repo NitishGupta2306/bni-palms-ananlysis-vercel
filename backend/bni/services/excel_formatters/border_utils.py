@@ -249,3 +249,45 @@ def apply_standard_table_borders(worksheet, start_row: int, end_row: int, start_
 
     # 4. Thin borders to ALL cells LAST (fills in the grid)
     apply_thin_borders(worksheet, start_row, end_row, start_col, end_col)
+
+
+def configure_print_settings(worksheet, orientation='landscape', fit_to_page=True):
+    """
+    Configure worksheet for optimal printing.
+
+    Args:
+        worksheet: The worksheet to configure
+        orientation: 'landscape' or 'portrait'
+        fit_to_page: Whether to scale to fit on one page
+    """
+    # Set orientation
+    worksheet.page_setup.orientation = orientation
+
+    # Set paper size (Letter = 1, A4 = 9)
+    worksheet.page_setup.paperSize = 1
+
+    # Fit to page settings
+    if fit_to_page:
+        worksheet.page_setup.fitToPage = True
+        worksheet.page_setup.fitToHeight = 1
+        worksheet.page_setup.fitToWidth = 1
+
+    # Set print quality
+    worksheet.page_setup.horizontalDpi = 600
+    worksheet.page_setup.verticalDpi = 600
+
+    # Center on page
+    worksheet.print_options.horizontalCentered = True
+    worksheet.print_options.verticalCentered = False
+
+    # Set margins (in inches)
+    worksheet.page_margins.left = 0.5
+    worksheet.page_margins.right = 0.5
+    worksheet.page_margins.top = 0.75
+    worksheet.page_margins.bottom = 0.75
+    worksheet.page_margins.header = 0.3
+    worksheet.page_margins.footer = 0.3
+
+    # Print gridlines and headings
+    worksheet.print_options.gridLines = False  # Don't print Excel gridlines (we have borders)
+    worksheet.print_options.gridLinesSet = True

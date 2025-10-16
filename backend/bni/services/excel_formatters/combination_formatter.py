@@ -101,8 +101,14 @@ def write_combination_matrix(worksheet, aggregated_matrix, period_str: str, stat
     num_members = len(df.columns)
     num_months = len(reports)
 
+    # For single-month reports, skip monthly breakdowns (would just duplicate aggregates)
+    show_monthly_breakdown = num_months > 1
+
     # Calculate total columns: 1 (Member col) + num_members + 4 aggregates + (4 monthly cols) * num_months
-    total_columns = 1 + num_members + 4 + (num_months * 4)
+    if show_monthly_breakdown:
+        total_columns = 1 + num_members + 4 + (num_months * 4)
+    else:
+        total_columns = 1 + num_members + 4  # No monthly columns for single month
 
     # Create merged header
     create_merged_header(worksheet, "Combination Matrix", total_columns, period_str, row=1)
@@ -157,30 +163,31 @@ def write_combination_matrix(worksheet, aggregated_matrix, period_str: str, stat
 
     agg_end_col = current_col - 1
 
-    # Monthly column headers (4 columns per month for combination)
-    for idx, report in enumerate(reports, start=1):
-        month_date = datetime.strptime(report.month_year, "%Y-%m")
-        month_display = month_date.strftime("%m/%Y")
+    # Monthly column headers (4 columns per month for combination, only for multi-month reports)
+    if show_monthly_breakdown:
+        for idx, report in enumerate(reports, start=1):
+            month_date = datetime.strptime(report.month_year, "%Y-%m")
+            month_display = month_date.strftime("%m/%Y")
 
-        for combo_label in ["Both", "Ref", "OTO", "None"]:
-            cell = worksheet.cell(
-                row=2,
-                column=current_col,
-                value=f"M{idx}-{month_display}\n{combo_label}",
-            )
-            cell.font = Font(bold=True, size=7)
-            cell.alignment = Alignment(
-                textRotation=90,
-                horizontal="center",
-                vertical="bottom",
-                wrap_text=True,
-            )
-            cell.fill = PatternFill(
-                start_color=COLOR_GRAY,
-                end_color=COLOR_GRAY,
-                fill_type="solid",
-            )
-            current_col += 1
+            for combo_label in ["Both", "Ref", "OTO", "None"]:
+                cell = worksheet.cell(
+                    row=2,
+                    column=current_col,
+                    value=f"M{idx}-{month_display}\n{combo_label}",
+                )
+                cell.font = Font(bold=True, size=7)
+                cell.alignment = Alignment(
+                    textRotation=90,
+                    horizontal="center",
+                    vertical="bottom",
+                    wrap_text=True,
+                )
+                cell.fill = PatternFill(
+                    start_color=COLOR_GRAY,
+                    end_color=COLOR_GRAY,
+                    fill_type="solid",
+                )
+                current_col += 1
 
     # Set header row height for rotated text visibility
     worksheet.row_dimensions[2].height = 60
@@ -251,62 +258,63 @@ def write_combination_matrix(worksheet, aggregated_matrix, period_str: str, stat
                     start_color=perf_color, end_color=perf_color, fill_type="solid"
                 )
 
-        # Move to monthly columns (right after 4 aggregate columns)
-        col_idx = agg_end_col + 1
+        # Monthly counts (only for multi-month reports)
+        if show_monthly_breakdown:
+            # Move to monthly columns (right after 4 aggregate columns)
+            col_idx = agg_end_col + 1
 
-        # Monthly counts
-        for report in reports:
-            # Get month combination data
-            if report.referral_matrix_data and report.oto_matrix_data:
-                month_matrix_data = calculate_month_combination(
-                    report.referral_matrix_data, report.oto_matrix_data
-                )
-            else:
-                month_matrix_data = None
+            for report in reports:
+                # Get month combination data
+                if report.referral_matrix_data and report.oto_matrix_data:
+                    month_matrix_data = calculate_month_combination(
+                        report.referral_matrix_data, report.oto_matrix_data
+                    )
+                else:
+                    month_matrix_data = None
 
-            # Calculate monthly counts for this member
-            if (
-                month_matrix_data
-                and "members" in month_matrix_data
-                and "matrix" in month_matrix_data
-            ):
-                members = month_matrix_data["members"]
-                matrix = month_matrix_data["matrix"]
+                # Calculate monthly counts for this member
+                if (
+                    month_matrix_data
+                    and "members" in month_matrix_data
+                    and "matrix" in month_matrix_data
+                ):
+                    members = month_matrix_data["members"]
+                    matrix = month_matrix_data["matrix"]
 
-                if row_name in members:
-                    member_idx = members.index(row_name)
-                    if member_idx < len(matrix):
-                        month_row = matrix[member_idx]
-                        month_both = sum(1 for val in month_row if val == 3)
-                        month_ref = sum(1 for val in month_row if val == 2)
-                        month_oto = sum(1 for val in month_row if val == 1)
-                        month_none = sum(1 for val in month_row if val == 0)
+                    if row_name in members:
+                        member_idx = members.index(row_name)
+                        if member_idx < len(matrix):
+                            month_row = matrix[member_idx]
+                            month_both = sum(1 for val in month_row if val == 3)
+                            month_ref = sum(1 for val in month_row if val == 2)
+                            month_oto = sum(1 for val in month_row if val == 1)
+                            month_none = sum(1 for val in month_row if val == 0)
 
-                        worksheet.cell(
-                            row=current_row, column=col_idx, value=month_both
-                        )
-                        worksheet.cell(
-                            row=current_row, column=col_idx + 1, value=month_ref
-                        )
-                        worksheet.cell(
-                            row=current_row, column=col_idx + 2, value=month_oto
-                        )
-                        worksheet.cell(
-                            row=current_row, column=col_idx + 3, value=month_none
-                        )
+                            worksheet.cell(
+                                row=current_row, column=col_idx, value=month_both
+                            )
+                            worksheet.cell(
+                                row=current_row, column=col_idx + 1, value=month_ref
+                            )
+                            worksheet.cell(
+                                row=current_row, column=col_idx + 2, value=month_oto
+                            )
+                            worksheet.cell(
+                                row=current_row, column=col_idx + 3, value=month_none
+                            )
+                        else:
+                            for i in range(4):
+                                worksheet.cell(
+                                    row=current_row, column=col_idx + i, value=0
+                                )
                     else:
                         for i in range(4):
-                            worksheet.cell(
-                                row=current_row, column=col_idx + i, value=0
-                            )
+                            worksheet.cell(row=current_row, column=col_idx + i, value=0)
                 else:
                     for i in range(4):
                         worksheet.cell(row=current_row, column=col_idx + i, value=0)
-            else:
-                for i in range(4):
-                    worksheet.cell(row=current_row, column=col_idx + i, value=0)
 
-            col_idx += 4  # Move to next month
+                col_idx += 4  # Move to next month
 
         current_row += 1
 
@@ -352,11 +360,14 @@ def write_combination_matrix(worksheet, aggregated_matrix, period_str: str, stat
 
     # Calculate thick separator positions
     thick_separator_cols = [agg_end_col]  # After "Neither (0)" column
-    month_col = agg_end_col + 1
-    for idx in range(num_months - 1):
-        month_end = month_col + 3  # After each month's "None" column
-        thick_separator_cols.append(month_end)
-        month_col += 4
+
+    # Add monthly separators only for multi-month reports
+    if show_monthly_breakdown:
+        month_col = agg_end_col + 1
+        for idx in range(num_months - 1):
+            month_end = month_col + 3  # After each month's "None" column
+            thick_separator_cols.append(month_end)
+            month_col += 4
 
     # Apply standard borders (outer, header bottom, thick separators, thin grid)
     apply_standard_table_borders(
