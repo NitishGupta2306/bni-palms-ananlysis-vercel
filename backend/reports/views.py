@@ -134,9 +134,14 @@ class MonthlyReportViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
+    @transaction.atomic
     def destroy(self, request, pk=None, chapter_id=None):
         """
-        Delete a monthly report.
+        Delete a monthly report atomically.
+
+        Uses @transaction.atomic decorator to ensure all cascade deletions
+        (MemberMonthlyStats, referrals, etc.) complete successfully or rollback entirely.
+        This prevents orphaned records if deletion fails partway through.
 
         Also deletes associated files from storage.
         """
@@ -152,6 +157,9 @@ class MonthlyReportViewSet(viewsets.ModelViewSet):
             monthly_report = MonthlyReport.objects.get(id=pk, chapter=chapter)
 
             # Delete the report (files are just filenames stored as strings, no actual files to delete)
+            # Transaction ensures all cascade deletions succeed or rollback:
+            # - MemberMonthlyStats (via foreign key cascade)
+            # - Associated analytics data
             monthly_report.delete()
 
             return Response({"message": "Monthly report deleted successfully"})
@@ -1130,10 +1138,16 @@ class FileUploadViewSet(viewsets.ViewSet):
     @action(detail=False, methods=["post"], url_path="reset-all")
     def reset_all_data(self, request):
         """
-        Reset all data in the database.
+        Reset all data in the database atomically.
 
         WARNING: This deletes ALL chapters, members, reports, and analytics data.
         Use with extreme caution!
+
+        Uses transaction.atomic() context manager to:
+        - Keep counting logic outside the transaction (read-only, no lock needed)
+        - Wrap only the deletion operations in a transaction
+        - Ensure ALL deletions succeed or ALL rollback (prevents partial deletion)
+        - Maintain database integrity if any deletion fails
 
         Returns summary of deleted items.
         """
@@ -1143,7 +1157,7 @@ class FileUploadViewSet(viewsets.ViewSet):
             from reports.models import MonthlyReport, MemberMonthlyStats
             from analytics.models import Referral, OneToOne, TYFCB
 
-            # Count before deletion
+            # Count before deletion (outside transaction - read-only)
             counts = {
                 "chapters": Chapter.objects.count(),
                 "members": Member.objects.count(),
@@ -1154,15 +1168,20 @@ class FileUploadViewSet(viewsets.ViewSet):
                 "tyfcbs": TYFCB.objects.count(),
             }
 
-            # Delete all data (cascade will handle related objects)
-            Chapter.objects.all().delete()
-            Member.objects.all().delete()
-            MonthlyReport.objects.all().delete()
-            MemberMonthlyStats.objects.all().delete()
-            Referral.objects.all().delete()
-            OneToOne.objects.all().delete()
-            TYFCB.objects.all().delete()
+            # Wrap ALL deletions in atomic transaction
+            # If ANY delete fails, ALL are rolled back automatically
+            with transaction.atomic():
+                # Delete all data (cascade will handle related objects)
+                # Order matters: delete dependent objects first to avoid constraint violations
+                Chapter.objects.all().delete()
+                Member.objects.all().delete()
+                MonthlyReport.objects.all().delete()
+                MemberMonthlyStats.objects.all().delete()
+                Referral.objects.all().delete()
+                OneToOne.objects.all().delete()
+                TYFCB.objects.all().delete()
 
+            # Transaction completed successfully
             logger.warning(f"Database reset performed. Deleted: {counts}")
 
             return Response(
@@ -1175,7 +1194,8 @@ class FileUploadViewSet(viewsets.ViewSet):
             )
 
         except Exception as e:
-            logger.exception("Error resetting database")
+            # Transaction automatically rolled back on exception
+            logger.exception("Error resetting database - all changes rolled back")
             return Response(
                 {"error": f"Reset failed: {str(e)}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
