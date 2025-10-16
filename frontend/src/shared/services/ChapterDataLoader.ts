@@ -1,10 +1,9 @@
-import { read, utils } from "xlsx";
+import * as ExcelJS from "exceljs";
 import {
   validateExcelFile,
   sanitizeSheetData,
   ExcelSecurityError,
 } from "../../features/file-upload/utils/excelSecurity";
-import { API_BASE_URL } from "../../config/api";
 import { apiClient } from "../../lib/apiClient";
 
 export interface ChapterInfo {
@@ -231,123 +230,127 @@ export const REAL_CHAPTERS: ChapterInfo[] = [
 export const extractMemberNamesFromFile = async (
   file: File,
 ): Promise<string[]> => {
-  return new Promise((resolve, reject) => {
-    try {
-      // Validate file before processing
-      validateExcelFile(file);
-    } catch (error) {
-      reject(error);
-      return;
+  try {
+    // Validate file before processing
+    validateExcelFile(file);
+  } catch (error) {
+    throw error;
+  }
+
+  // Read file as ArrayBuffer for exceljs
+  const arrayBuffer = await file.arrayBuffer();
+
+  try {
+    // Create new workbook and load from buffer
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(arrayBuffer);
+
+    // Validate number of worksheets
+    if (workbook.worksheets.length > 10) {
+      throw new ExcelSecurityError("Too many sheets in workbook");
     }
 
-    const reader = new FileReader();
+    if (workbook.worksheets.length === 0) {
+      throw new ExcelSecurityError("No sheets found in workbook");
+    }
 
-    reader.onload = (e) => {
-      try {
-        const data = e.target?.result;
+    // Get first worksheet
+    const worksheet = workbook.worksheets[0];
 
-        if (!data) {
-          throw new ExcelSecurityError("Failed to read file data");
-        }
+    // Convert worksheet to JSON-like array
+    const jsonData: any[] = [];
+    const headers: string[] = [];
 
-        // Read with security options
-        const workbook = read(data, {
-          type: "binary",
-          // Security options to prevent vulnerabilities
-          raw: false,
-          cellDates: false,
-          cellNF: false,
-          cellHTML: false,
-        });
+    // Get headers from first row
+    const headerRow = worksheet.getRow(1);
+    headerRow.eachCell((cell, colNumber) => {
+      const value = cell.value;
+      headers[colNumber] = value ? value.toString() : "";
+    });
 
-        // Validate number of sheets
-        if (workbook.SheetNames.length > 10) {
-          throw new ExcelSecurityError("Too many sheets in workbook");
-        }
+    // Process data rows
+    worksheet.eachRow((row, rowNumber) => {
+      if (rowNumber === 1) return; // Skip header row
 
-        const sheetName = workbook.SheetNames[0];
-        if (!sheetName) {
-          throw new ExcelSecurityError("No sheets found in workbook");
-        }
-
-        const worksheet = workbook.Sheets[sheetName];
-        if (!worksheet) {
-          throw new ExcelSecurityError("Failed to read worksheet");
-        }
-
-        const jsonData = utils.sheet_to_json(worksheet);
-
-        // Sanitize the data before processing
-        const sanitizedData = sanitizeSheetData(jsonData);
-
-        const members: string[] = [];
-        sanitizedData.forEach((row: any) => {
-          let firstName = "";
-          let lastName = "";
-
-          Object.keys(row).forEach((key) => {
-            const lowerKey = key.toLowerCase();
-            if (lowerKey.includes("first") && lowerKey.includes("name")) {
-              const value = row[key];
-              firstName =
-                typeof value === "string" || typeof value === "number"
-                  ? value.toString().trim()
-                  : "";
-            } else if (lowerKey.includes("last") && lowerKey.includes("name")) {
-              const value = row[key];
-              lastName =
-                typeof value === "string" || typeof value === "number"
-                  ? value.toString().trim()
-                  : "";
-            }
-          });
-
-          // Additional validation for member names
-          if (
-            firstName &&
-            lastName &&
-            firstName.length <= 50 &&
-            lastName.length <= 50
-          ) {
-            // Sanitize names to remove potential harmful characters
-            const sanitizedFirstName = firstName
-              .replace(/[^\w\s\-'.]/g, "")
-              .trim();
-            const sanitizedLastName = lastName
-              .replace(/[^\w\s\-'.]/g, "")
-              .trim();
-
-            if (sanitizedFirstName && sanitizedLastName) {
-              members.push(`${sanitizedFirstName} ${sanitizedLastName}`);
-            }
+      const rowData: any = {};
+      row.eachCell((cell, colNumber) => {
+        const header = headers[colNumber];
+        if (header) {
+          // Get cell value (exceljs returns rich text as objects)
+          let value = cell.value;
+          if (value && typeof value === "object" && "richText" in value) {
+            value = (value as any).richText.map((t: any) => t.text).join("");
           }
-        });
-
-        // Limit number of members to prevent DoS
-        if (members.length > 1000) {
-          throw new ExcelSecurityError(
-            "Too many members in file. Maximum allowed: 1000",
-          );
+          rowData[header] = value;
         }
+      });
 
-        resolve(members);
-      } catch (error) {
-        if (error instanceof ExcelSecurityError) {
-          reject(error);
-        } else {
-          reject(
-            new ExcelSecurityError(
-              `Failed to process Excel file: ${error instanceof Error ? error.message : "Unknown error"}`,
-            ),
-          );
+      if (Object.keys(rowData).length > 0) {
+        jsonData.push(rowData);
+      }
+    });
+
+    // Sanitize the data before processing
+    const sanitizedData = sanitizeSheetData(jsonData);
+
+    const members: string[] = [];
+    sanitizedData.forEach((row: any) => {
+      let firstName = "";
+      let lastName = "";
+
+      Object.keys(row).forEach((key) => {
+        const lowerKey = key.toLowerCase();
+        if (lowerKey.includes("first") && lowerKey.includes("name")) {
+          const value = row[key];
+          firstName =
+            typeof value === "string" || typeof value === "number"
+              ? value.toString().trim()
+              : "";
+        } else if (lowerKey.includes("last") && lowerKey.includes("name")) {
+          const value = row[key];
+          lastName =
+            typeof value === "string" || typeof value === "number"
+              ? value.toString().trim()
+              : "";
+        }
+      });
+
+      // Additional validation for member names
+      if (
+        firstName &&
+        lastName &&
+        firstName.length <= 50 &&
+        lastName.length <= 50
+      ) {
+        // Sanitize names to remove potential harmful characters
+        const sanitizedFirstName = firstName
+          .replace(/[^\w\s\-'.]/g, "")
+          .trim();
+        const sanitizedLastName = lastName.replace(/[^\w\s\-'.]/g, "").trim();
+
+        if (sanitizedFirstName && sanitizedLastName) {
+          members.push(`${sanitizedFirstName} ${sanitizedLastName}`);
         }
       }
-    };
+    });
 
-    reader.onerror = () =>
-      reject(new ExcelSecurityError("Failed to read file"));
-    reader.readAsBinaryString(file);
-  });
+    // Limit number of members to prevent DoS
+    if (members.length > 1000) {
+      throw new ExcelSecurityError(
+        "Too many members in file. Maximum allowed: 1000",
+      );
+    }
+
+    return members;
+  } catch (error) {
+    if (error instanceof ExcelSecurityError) {
+      throw error;
+    } else {
+      throw new ExcelSecurityError(
+        `Failed to process Excel file: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
+    }
+  }
 };
 
 export const loadAllChapterData = async (): Promise<ChapterMemberData[]> => {
