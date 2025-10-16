@@ -751,34 +751,84 @@ class ExcelProcessorService:
                     else None
                 )
 
-                # Build uploaded file names metadata
+                # Build uploaded file names metadata and save files if required
                 uploaded_file_names = []
+
+                # Save physical files if PALMS sheets are required
+                if require_palms_sheets:
+                    import os
+                    from django.conf import settings
+                    from django.core.files.storage import default_storage
+
+                    # Create uploads directory if it doesn't exist
+                    uploads_dir = os.path.join(settings.MEDIA_ROOT, "uploads")
+                    os.makedirs(uploads_dir, exist_ok=True)
+
                 for slip_file in slip_audit_files:
                     filename = (
                         slip_file.name
                         if hasattr(slip_file, "name")
                         else "slip_audit.xls"
                     )
-                    uploaded_file_names.append(
-                        {
-                            "original_filename": filename,
-                            "file_type": "slip_audit",
-                            "uploaded_at": timezone.now().isoformat(),
-                            "week_of": week_of_date.isoformat()
-                            if week_of_date
-                            else None,
-                        }
-                    )
+
+                    file_info = {
+                        "original_filename": filename,
+                        "file_type": "slip_audit",
+                        "uploaded_at": timezone.now().isoformat(),
+                        "week_of": week_of_date.isoformat() if week_of_date else None,
+                    }
+
+                    # Save physical file if required
+                    if require_palms_sheets:
+                        import os
+                        from django.conf import settings
+
+                        # Generate unique filename with timestamp to avoid collisions
+                        timestamp = timezone.now().strftime("%Y%m%d_%H%M%S")
+                        base_name, ext = os.path.splitext(filename)
+                        saved_filename = f"{base_name}_{timestamp}{ext}"
+                        file_path = os.path.join(
+                            settings.MEDIA_ROOT, "uploads", saved_filename
+                        )
+
+                        # Save the file
+                        with open(file_path, "wb+") as destination:
+                            for chunk in slip_file.chunks():
+                                destination.write(chunk)
+
+                        file_info["saved_filename"] = saved_filename
+                        file_info["file_path"] = f"uploads/{saved_filename}"
+
+                    uploaded_file_names.append(file_info)
 
                 if member_names_file:
-                    uploaded_file_names.append(
-                        {
-                            "original_filename": member_filename,
-                            "file_type": "member_names",
-                            "uploaded_at": timezone.now().isoformat(),
-                            "week_of": None,
-                        }
-                    )
+                    file_info = {
+                        "original_filename": member_filename,
+                        "file_type": "member_names",
+                        "uploaded_at": timezone.now().isoformat(),
+                        "week_of": None,
+                    }
+
+                    # Save physical file if required
+                    if require_palms_sheets:
+                        import os
+                        from django.conf import settings
+
+                        timestamp = timezone.now().strftime("%Y%m%d_%H%M%S")
+                        base_name, ext = os.path.splitext(member_filename)
+                        saved_filename = f"{base_name}_{timestamp}{ext}"
+                        file_path = os.path.join(
+                            settings.MEDIA_ROOT, "uploads", saved_filename
+                        )
+
+                        with open(file_path, "wb+") as destination:
+                            for chunk in member_names_file.chunks():
+                                destination.write(chunk)
+
+                        file_info["saved_filename"] = saved_filename
+                        file_info["file_path"] = f"uploads/{saved_filename}"
+
+                    uploaded_file_names.append(file_info)
 
                 # Calculate audit period (week_of_date to week_of_date + 6 days)
                 audit_period_start = week_of_date

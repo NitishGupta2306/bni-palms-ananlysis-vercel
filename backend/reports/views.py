@@ -42,7 +42,7 @@ class MonthlyReportViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         """Override permissions based on action."""
-        if self.action == 'destroy':
+        if self.action == "destroy":
             # Only admins can delete reports
             return [IsAdmin()]
         return [IsChapterOrAdmin()]
@@ -626,28 +626,69 @@ class MonthlyReportViewSet(viewsets.ModelViewSet):
 
             # Create ZIP file in memory
             zip_buffer = BytesIO()
+            files_found = 0
+
             with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
                 # Add each PALMS file to the ZIP
                 for file_info in monthly_report.uploaded_file_names:
                     if file_info.get("file_type") == "slip_audit":
-                        filename = file_info.get("original_filename", "slip_audit.xls")
+                        # Use saved_filename if available (new format), otherwise fall back to original_filename
+                        saved_filename = file_info.get("saved_filename")
+                        original_filename = file_info.get(
+                            "original_filename", "slip_audit.xls"
+                        )
+                        file_path_rel = file_info.get(
+                            "file_path"
+                        )  # e.g., "uploads/filename.xls"
 
-                        # Try to read the file from media storage
-                        # Note: This assumes files are stored in MEDIA_ROOT/uploads/
-                        # Adjust path based on your actual file storage setup
                         media_root = getattr(settings, "MEDIA_ROOT", None)
-                        if media_root:
-                            file_path = os.path.join(media_root, "uploads", filename)
-                            if os.path.exists(file_path):
-                                with open(file_path, "rb") as f:
-                                    zip_file.writestr(filename, f.read())
-                        else:
-                            # If MEDIA_ROOT not configured, add a note about missing file
+                        if not media_root:
                             zip_file.writestr(
                                 "README.txt",
-                                f"File storage not configured. Original files may not be available.\n"
-                                f"Expected file: {filename}",
+                                "File storage not configured. Original files may not be available.\n",
                             )
+                            continue
+
+                        # Try using the stored file_path first (most reliable)
+                        if file_path_rel:
+                            file_path = os.path.join(media_root, file_path_rel)
+                            if os.path.exists(file_path):
+                                with open(file_path, "rb") as f:
+                                    zip_file.writestr(original_filename, f.read())
+                                files_found += 1
+                                continue
+
+                        # Fallback: try using saved_filename
+                        if saved_filename:
+                            file_path = os.path.join(
+                                media_root, "uploads", saved_filename
+                            )
+                            if os.path.exists(file_path):
+                                with open(file_path, "rb") as f:
+                                    zip_file.writestr(original_filename, f.read())
+                                files_found += 1
+                                continue
+
+                        # Last resort: try original filename (backward compatibility for old uploads)
+                        file_path = os.path.join(
+                            media_root, "uploads", original_filename
+                        )
+                        if os.path.exists(file_path):
+                            with open(file_path, "rb") as f:
+                                zip_file.writestr(original_filename, f.read())
+                            files_found += 1
+
+                # If no files were found, add an error message
+                if files_found == 0:
+                    zip_file.writestr(
+                        "ERROR.txt",
+                        "No PALMS files were found on the server.\n\n"
+                        "This could mean:\n"
+                        "1. The files were uploaded before file storage was implemented\n"
+                        "2. The files were deleted from the server\n"
+                        "3. The upload did not complete successfully\n\n"
+                        "Please re-upload the report with PALMS sheets enabled.",
+                    )
 
             zip_buffer.seek(0)
 
