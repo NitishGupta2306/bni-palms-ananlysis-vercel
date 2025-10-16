@@ -114,25 +114,17 @@ export const useMemberActions = ({
       });
       setOpenDeleteDialog(false);
 
-        // Trigger parent data refresh
-        if (onDataRefresh) {
-          onDataRefresh();
-        }
-
-        // Navigate back to members list
-        setTimeout(() => {
-          if (onBackToMembers) {
-            onBackToMembers();
-          }
-        }, 1500);
-      } else {
-        const errorData = await response.json();
-        toast({
-          title: "Error",
-          description: `Error: ${errorData.error || "Failed to delete member"}`,
-          variant: "destructive",
-        });
+      // Trigger parent data refresh
+      if (onDataRefresh) {
+        onDataRefresh();
       }
+
+      // Navigate back to members list
+      setTimeout(() => {
+        if (onBackToMembers) {
+          onBackToMembers();
+        }
+      }, 1500);
     } catch (error) {
       toast({
         title: "Error",
