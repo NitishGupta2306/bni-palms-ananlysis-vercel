@@ -5,7 +5,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { UploadResult } from '../types/admin.types';
-import { API_BASE_URL } from '@/config/api';
+import { apiClient } from '@/lib/apiClient';
 import { useInvalidateChapterData } from '@/shared/hooks/useChapterData';
 
 interface BulkUploadTabProps {
@@ -30,44 +30,22 @@ export const BulkUploadTab: React.FC<BulkUploadTabProps> = ({ onDataRefresh }) =
       const formData = new FormData();
       formData.append('file', file);
 
-      const response = await fetch(`${API_BASE_URL}/api/upload/bulk/`, {
-        method: 'POST',
-        body: formData,
+      const result = await apiClient.post<any>('/api/upload/bulk/', formData);
+
+      const details = result.details || result;
+      setUploadResult({
+        success: true,
+        message: `Successfully processed! Created ${details.chapters_created || 0} chapters and ${details.members_created || 0} members.`,
+        details: result.details || result,
       });
 
-      const contentType = response.headers.get('content-type');
+      // Invalidate React Query cache to force refetch
+      await invalidateChapterData();
 
-      let result;
-      if (contentType && contentType.includes('application/json')) {
-        result = await response.json();
-      } else {
-        const text = await response.text();
-        console.error('Non-JSON response:', text.substring(0, 500));
-        throw new Error('Server returned non-JSON response');
-      }
-
-      if (response.ok) {
-        const details = result.details || result;
-        setUploadResult({
-          success: true,
-          message: `Successfully processed! Created ${details.chapters_created || 0} chapters and ${details.members_created || 0} members.`,
-          details: result.details || result,
-        });
-
-        // Invalidate React Query cache to force refetch
-        await invalidateChapterData();
-
-        // Delay refresh callback to allow user to see the success message
-        setTimeout(() => {
-          onDataRefresh();
-        }, 1500);
-      } else {
-        setUploadResult({
-          success: false,
-          message: result.message || result.error || 'Upload failed',
-          details: result,
-        });
-      }
+      // Delay refresh callback to allow user to see the success message
+      setTimeout(() => {
+        onDataRefresh();
+      }, 1500);
     } catch (error) {
       console.error('Upload error:', error);
       setUploadResult({
@@ -104,32 +82,21 @@ export const BulkUploadTab: React.FC<BulkUploadTabProps> = ({ onDataRefresh }) =
     setResetResult(null);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/upload/reset-all/`, {
-        method: 'POST',
+      const result = await apiClient.post<any>('/api/upload/reset-all/');
+
+      setResetResult({
+        success: true,
+        message: result.message,
+        details: result.deleted,
       });
 
-      const result = await response.json();
+      // Invalidate React Query cache to force refetch
+      await invalidateChapterData();
 
-      if (response.ok) {
-        setResetResult({
-          success: true,
-          message: result.message,
-          details: result.deleted,
-        });
-
-        // Invalidate React Query cache to force refetch
-        await invalidateChapterData();
-
-        // Refresh data after successful reset
-        setTimeout(() => {
-          onDataRefresh();
-        }, 1500);
-      } else {
-        setResetResult({
-          success: false,
-          message: result.error || 'Reset failed',
-        });
-      }
+      // Refresh data after successful reset
+      setTimeout(() => {
+        onDataRefresh();
+      }, 1500);
     } catch (error) {
       console.error('Reset error:', error);
       setResetResult({

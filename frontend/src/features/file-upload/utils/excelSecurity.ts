@@ -7,7 +7,7 @@ export interface ExcelValidationOptions {
 }
 
 export const DEFAULT_VALIDATION_OPTIONS: ExcelValidationOptions = {
-  maxFileSize: 10 * 1024 * 1024, // 10MB
+  maxFileSize: 50 * 1024 * 1024, // 50MB
   allowedExtensions: ['.xls', '.xlsx'],
   maxSheets: 10,
   maxRows: 10000,
@@ -109,7 +109,7 @@ const sanitizePropertyName = (name: string): string | null => {
   }
 
   // Only allow alphanumeric characters, spaces, and common punctuation
-  const sanitized = name.replace(/[^\w\s\-_\.]/g, '').trim();
+  const sanitized = name.replace(/[^\w\s\-_.]/g, '').trim();
 
   // Limit length
   return sanitized.length > 0 && sanitized.length <= 100 ? sanitized : null;

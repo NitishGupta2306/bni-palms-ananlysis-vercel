@@ -131,3 +131,8 @@ testing/test-data/
 *.pid.lock
 .python-version
 cython_debug/
+
+# ============================================
+# Context & Documentation (Internal)
+# ============================================
+context-claude-*/

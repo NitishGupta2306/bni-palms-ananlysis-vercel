@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Download, Edit, Trash2, Plus } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
@@ -9,6 +9,8 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ChapterMemberData } from '../../../shared/services/ChapterDataLoader';
 import { useMemberManagement } from '../hooks/useMemberManagement';
+import { MemberEditDialog } from './member-edit-dialog';
+import { MemberAddDialog } from './member-add-dialog';
 
 interface MemberManagementTabProps {
   chapterData: ChapterMemberData[];
@@ -25,13 +27,20 @@ export const MemberManagementTab: React.FC<MemberManagementTabProps> = ({
     filters,
     setFilters,
     selectedMembers,
+    deletingMemberId,
+    isBulkDeleting,
+    editingMember,
+    showAddDialog,
     handleMemberSelect,
     handleSelectAll,
     handleBulkDelete,
     handleEdit,
+    handleCloseEditDialog,
+    handleAddMember,
+    handleCloseAddDialog,
     handleDelete,
     exportMemberData,
-  } = useMemberManagement(chapterData);
+  } = useMemberManagement(chapterData, onDataRefresh);
 
   const totalMembers = members.length;
   const filteredCount = filteredMembers.length;
@@ -45,7 +54,7 @@ export const MemberManagementTab: React.FC<MemberManagementTabProps> = ({
             Manage all members across all chapters. Perform bulk operations and export member data.
           </p>
         </div>
-        <Button onClick={() => alert('Add member functionality coming soon')} className="w-full sm:w-auto">
+        <Button onClick={handleAddMember} className="w-full sm:w-auto">
           <Plus className="h-4 w-4 mr-2" />
           Add Member
         </Button>
@@ -97,14 +106,26 @@ export const MemberManagementTab: React.FC<MemberManagementTabProps> = ({
                 <Button
                   variant="destructive"
                   size="sm"
-                  onClick={() => {
-                    handleBulkDelete();
-                    onDataRefresh();
-                  }}
+                  onClick={handleBulkDelete}
+                  disabled={isBulkDeleting}
                   className="flex items-center gap-2"
                 >
-                  <Trash2 className="h-4 w-4" />
-                  Delete ({selectedMembers.length})
+                  {isBulkDeleting ? (
+                    <>
+                      <motion.div
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </motion.div>
+                      Deleting...
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="h-4 w-4" />
+                      Delete ({selectedMembers.length})
+                    </>
+                  )}
                 </Button>
               )}
             </div>
@@ -141,7 +162,7 @@ export const MemberManagementTab: React.FC<MemberManagementTabProps> = ({
             ) : (
               filteredMembers.map((member, index) => (
                 <motion.tr
-                  key={`${member.chapterName}-${index}`}
+                  key={member.id}
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ duration: 0.2, delay: index * 0.03 }}
@@ -150,8 +171,9 @@ export const MemberManagementTab: React.FC<MemberManagementTabProps> = ({
                   <TableCell>
                     <input
                       type="checkbox"
-                      checked={selectedMembers.includes(`${member.chapterName}-${index}`)}
-                      onChange={(e) => handleMemberSelect(`${member.chapterName}-${index}`, e.target.checked)}
+                      checked={selectedMembers.includes(member.id)}
+                      onChange={(e) => handleMemberSelect(member.id, e.target.checked)}
+                      disabled={deletingMemberId === member.id || isBulkDeleting}
                       aria-label={`Select ${member.name}`}
                       className="cursor-pointer"
                     />
@@ -161,7 +183,9 @@ export const MemberManagementTab: React.FC<MemberManagementTabProps> = ({
                     <Badge variant="outline">{member.chapterName}</Badge>
                   </TableCell>
                   <TableCell className="text-center">
-                    <Badge variant="default">Active</Badge>
+                    <Badge variant={member.is_active !== false ? "default" : "secondary"}>
+                      {member.is_active !== false ? "Active" : "Inactive"}
+                    </Badge>
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex gap-2 justify-end">
@@ -170,6 +194,7 @@ export const MemberManagementTab: React.FC<MemberManagementTabProps> = ({
                           variant="ghost"
                           size="sm"
                           onClick={() => handleEdit(member)}
+                          disabled={deletingMemberId === member.id || isBulkDeleting}
                           aria-label={`Edit ${member.name}`}
                         >
                           <Edit className="h-4 w-4" />
@@ -181,9 +206,19 @@ export const MemberManagementTab: React.FC<MemberManagementTabProps> = ({
                           size="sm"
                           className="text-destructive hover:text-destructive hover:bg-destructive/10"
                           onClick={() => handleDelete(member)}
+                          disabled={deletingMemberId === member.id || isBulkDeleting}
                           aria-label={`Delete ${member.name}`}
                         >
-                          <Trash2 className="h-4 w-4" />
+                          {deletingMemberId === member.id ? (
+                            <motion.div
+                              animate={{ rotate: 360 }}
+                              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </motion.div>
+                          ) : (
+                            <Trash2 className="h-4 w-4" />
+                          )}
                         </Button>
                       </motion.div>
                     </div>
@@ -194,6 +229,22 @@ export const MemberManagementTab: React.FC<MemberManagementTabProps> = ({
           </TableBody>
         </Table>
       </Card>
+
+      {/* Member Edit Dialog */}
+      <MemberEditDialog
+        member={editingMember}
+        open={!!editingMember}
+        onClose={handleCloseEditDialog}
+        onSuccess={onDataRefresh}
+      />
+
+      {/* Member Add Dialog */}
+      <MemberAddDialog
+        open={showAddDialog}
+        onClose={handleCloseAddDialog}
+        onSuccess={onDataRefresh}
+        chapters={chapterData}
+      />
     </div>
   );
 };
