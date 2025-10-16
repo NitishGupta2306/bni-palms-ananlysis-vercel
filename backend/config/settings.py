@@ -194,66 +194,33 @@ CORS_ALLOW_HEADERS = [
 # - OWASP Security Headers: https://owasp.org/www-project-secure-headers/
 # - Mozilla Observatory: https://observatory.mozilla.org/
 
-# Content Security Policy (CSP)
+# Content Security Policy (CSP) - django-csp 4.0+ format
 # Prevents XSS attacks by controlling which resources can be loaded
 # ==============================================================================
-CSP_DEFAULT_SRC = ("'self'",)  # Default: only load from same origin
-
-# Script sources - allow inline scripts for React
-CSP_SCRIPT_SRC = (
-    "'self'",
-    "'unsafe-inline'",  # Required for React inline event handlers
-    "'unsafe-eval'",    # Required for React development mode
-)
-
-# Style sources - allow inline styles for styled components
-CSP_STYLE_SRC = (
-    "'self'",
-    "'unsafe-inline'",  # Required for inline styles in components
-    "https://fonts.googleapis.com",  # Google Fonts if used
-)
-
-# Image sources - allow data URIs and HTTPS images
-CSP_IMG_SRC = (
-    "'self'",
-    "data:",           # Data URIs for inline images
-    "https:",          # HTTPS images
-    "blob:",           # Blob URLs for dynamically generated images
-)
-
-# Font sources
-CSP_FONT_SRC = (
-    "'self'",
-    "data:",           # Data URIs for fonts
-    "https://fonts.gstatic.com",  # Google Fonts if used
-)
-
-# Connection sources - API endpoints
-CSP_CONNECT_SRC = (
-    "'self'",
-    "http://localhost:8000",     # Local API
-    "https://*.vercel.app",      # Vercel API
-    "https://*.supabase.co",     # Supabase database
-)
-
-# Frame sources - prevent clickjacking
-CSP_FRAME_SRC = ("'none'",)  # Don't allow any frames
-
-# Object sources - prevent plugin-based attacks
-CSP_OBJECT_SRC = ("'none'",)  # Don't allow plugins
-
-# Base URI restriction
-CSP_BASE_URI = ("'self'",)
-
-# Form action restriction
-CSP_FORM_ACTION = ("'self'",)
-
-# Frame ancestors - prevent clickjacking
-CSP_FRAME_ANCESTORS = ("'none'",)  # Don't allow site to be framed
+CONTENT_SECURITY_POLICY = {
+    "DIRECTIVES": {
+        "default-src": ("'self'",),
+        "script-src": ("'self'", "'unsafe-inline'", "'unsafe-eval'"),
+        "style-src": ("'self'", "'unsafe-inline'", "https://fonts.googleapis.com"),
+        "img-src": ("'self'", "data:", "https:", "blob:"),
+        "font-src": ("'self'", "data:", "https://fonts.gstatic.com"),
+        "connect-src": (
+            "'self'",
+            "http://localhost:8000",
+            "https://*.vercel.app",
+            "https://*.supabase.co",
+        ),
+        "frame-src": ("'none'",),
+        "object-src": ("'none'",),
+        "base-uri": ("'self'",),
+        "form-action": ("'self'",),
+        "frame-ancestors": ("'none'",),
+    }
+}
 
 # Upgrade insecure requests (force HTTPS in production)
 if not DEBUG:
-    CSP_UPGRADE_INSECURE_REQUESTS = True
+    CONTENT_SECURITY_POLICY["DIRECTIVES"]["upgrade-insecure-requests"] = True
 
 # X-Frame-Options (legacy browsers that don't support CSP frame-ancestors)
 # ==============================================================================
@@ -282,12 +249,12 @@ SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
 # ==============================================================================
 # Control which browser features can be used
 PERMISSIONS_POLICY = {
-    "accelerometer": [],        # Disable accelerometer
-    "camera": [],               # Disable camera access
-    "geolocation": [],          # Disable geolocation
-    "microphone": [],           # Disable microphone
-    "payment": [],              # Disable payment APIs
-    "usb": [],                  # Disable USB access
+    "accelerometer": [],  # Disable accelerometer
+    "camera": [],  # Disable camera access
+    "geolocation": [],  # Disable geolocation
+    "microphone": [],  # Disable microphone
+    "payment": [],  # Disable payment APIs
+    "usb": [],  # Disable USB access
 }
 
 # HTTPS/SSL Settings (PRODUCTION ONLY)
@@ -305,13 +272,13 @@ if not DEBUG:
 
     # Secure cookies
     SESSION_COOKIE_SECURE = True  # Only send session cookie over HTTPS
-    CSRF_COOKIE_SECURE = True     # Only send CSRF cookie over HTTPS
+    CSRF_COOKIE_SECURE = True  # Only send CSRF cookie over HTTPS
 
     # Additional cookie security
     SESSION_COOKIE_HTTPONLY = True  # Prevent JavaScript access to session cookie
-    CSRF_COOKIE_HTTPONLY = True     # Prevent JavaScript access to CSRF cookie
-    SESSION_COOKIE_SAMESITE = 'Lax'  # CSRF protection
-    CSRF_COOKIE_SAMESITE = 'Lax'     # CSRF protection
+    CSRF_COOKIE_HTTPONLY = True  # Prevent JavaScript access to CSRF cookie
+    SESSION_COOKIE_SAMESITE = "Lax"  # CSRF protection
+    CSRF_COOKIE_SAMESITE = "Lax"  # CSRF protection
 else:
     # Development settings - allow HTTP
     SECURE_SSL_REDIRECT = False

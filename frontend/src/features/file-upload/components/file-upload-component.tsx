@@ -11,8 +11,19 @@ import {
   ChevronRight,
   ChevronLeft,
   Check,
+  Users,
+  FileText,
+  FolderUp,
+  Download,
+  Eye,
 } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -23,11 +34,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { useDropzone } from "react-dropzone";
@@ -36,6 +42,7 @@ import { API_BASE_URL } from "@/config/api";
 import { getAuthToken } from "@/lib/apiClient";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface UploadFile {
   file: File;
@@ -51,13 +58,17 @@ interface FileUploadComponentProps {
   onUploadSuccess: () => void;
 }
 
+type UploadType = "members_only" | "palms_only" | "both" | null;
+
 const FileUploadComponent: React.FC<FileUploadComponentProps> = ({
   chapterId,
   chapterName,
   onUploadSuccess,
 }) => {
   const [currentStep, setCurrentStep] = useState(1);
+  const [uploadType, setUploadType] = useState<UploadType>(null);
   const [files, setFiles] = useState<UploadFile[]>([]);
+
   // Initialize with current month in YYYY-MM format
   const getCurrentMonth = () => {
     const now = new Date();
@@ -65,20 +76,17 @@ const FileUploadComponent: React.FC<FileUploadComponentProps> = ({
     const month = String(now.getMonth() + 1).padStart(2, "0");
     return `${year}-${month}`;
   };
+
   const [monthYear, setMonthYear] = useState(getCurrentMonth());
-  const [weekOfDate, setWeekOfDate] = useState<string>(""); // YYYY-MM-DD format
   const [requirePalmsSheets, setRequirePalmsSheets] = useState(false);
-  const [uploadOption, setUploadOption] = useState<
-    "slip_only" | "slip_and_members"
-  >("slip_only");
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadResult, setUploadResult] = useState<{
     type: "success" | "error";
     message: string;
+    reportId?: number;
   } | null>(null);
   const { handleError } = useApiError();
-  const [isMonthPopoverOpen, setIsMonthPopoverOpen] = useState(false);
 
   // Extract date from filename - supports multiple formats
   const extractDateFromFilename = (filename: string): string | undefined => {
@@ -101,64 +109,38 @@ const FileUploadComponent: React.FC<FileUploadComponentProps> = ({
     return undefined;
   };
 
-  // Extract full date from filename for week tracking
-  const extractFullDateFromFilename = (
-    filename: string,
-  ): string | undefined => {
-    // Try YYYY-MM-DD format first (e.g., slips-audit-report_2025-01-28.xls)
-    const patternYMD = /(\d{4})-(\d{2})-(\d{2})/;
-    let match = filename.match(patternYMD);
-    if (match) {
-      const [, year, month, day] = match;
-      return `${year}-${month}-${day}`;
-    }
-
-    // Try MM-DD-YYYY format (e.g., Slips_Audit_Report_08-25-2025_2-26_PM.xls)
-    const patternMDY = /(\d{2})-(\d{2})-(\d{4})/;
-    match = filename.match(patternMDY);
-    if (match) {
-      const [, month, day, year] = match;
-      return `${year}-${month}-${day}`;
-    }
-
-    return undefined;
-  };
-
   const onDrop = useCallback(
     (acceptedFiles: File[]) => {
       const newFiles = acceptedFiles.map((file) => {
-        // Try to determine file type based on name
-        const isSlipAudit =
-          file.name.toLowerCase().includes("slip") ||
-          file.name.toLowerCase().includes("audit");
+        // Determine file type based on upload type and filename
+        let fileType: "slip_audit" | "member_names" = "slip_audit";
 
-        // Extract date from filename if it's a slip audit file
-        const extractedDate = isSlipAudit
-          ? extractDateFromFilename(file.name)
-          : undefined;
-
-        // Auto-set month/year if date was extracted
-        if (extractedDate && isSlipAudit) {
-          setMonthYear(extractedDate);
+        if (uploadType === "members_only") {
+          fileType = "member_names";
+        } else if (uploadType === "both") {
+          // Try to detect based on filename
+          const isMemberNames =
+            file.name.toLowerCase().includes("member") ||
+            file.name.toLowerCase().includes("names");
+          fileType = isMemberNames ? "member_names" : "slip_audit";
         }
 
-        // Extract full date for week tracking
-        const extractedFullDate = isSlipAudit
-          ? extractFullDateFromFilename(file.name)
-          : undefined;
+        // Extract date from filename if it's a slip audit file
+        const extractedDate =
+          fileType === "slip_audit"
+            ? extractDateFromFilename(file.name)
+            : undefined;
 
-        // Auto-set week date if extracted and not already set
-        if (extractedFullDate && isSlipAudit && !weekOfDate) {
-          setWeekOfDate(extractedFullDate);
+        // Auto-set month/year if date was extracted
+        if (extractedDate && fileType === "slip_audit") {
+          setMonthYear(extractedDate);
         }
 
         return {
           file,
           name: file.name,
           size: (file.size / 1024 / 1024).toFixed(2) + " MB",
-          type: (isSlipAudit ? "slip_audit" : "member_names") as
-            | "slip_audit"
-            | "member_names",
+          type: fileType,
           extractedDate,
         };
       });
@@ -166,7 +148,7 @@ const FileUploadComponent: React.FC<FileUploadComponentProps> = ({
       setFiles((prev) => [...prev, ...newFiles]);
       setUploadResult(null);
     },
-    [weekOfDate],
+    [uploadType],
   );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -202,11 +184,33 @@ const FileUploadComponent: React.FC<FileUploadComponentProps> = ({
       return;
     }
 
+    // Validate based on upload type
     const slipAuditFiles = files.filter((f) => f.type === "slip_audit");
-    if (slipAuditFiles.length === 0) {
+    const memberFiles = files.filter((f) => f.type === "member_names");
+
+    if (uploadType === "palms_only" && slipAuditFiles.length === 0) {
       setUploadResult({
         type: "error",
-        message: "Please select at least one slip audit file",
+        message: "Please select at least one PALMS file",
+      });
+      return;
+    }
+
+    if (uploadType === "members_only" && memberFiles.length === 0) {
+      setUploadResult({
+        type: "error",
+        message: "Please select at least one member names file",
+      });
+      return;
+    }
+
+    if (
+      uploadType === "both" &&
+      (slipAuditFiles.length === 0 || memberFiles.length === 0)
+    ) {
+      setUploadResult({
+        type: "error",
+        message: "Please select both PALMS and member names files",
       });
       return;
     }
@@ -214,6 +218,7 @@ const FileUploadComponent: React.FC<FileUploadComponentProps> = ({
     setIsUploading(true);
     setUploadProgress(0);
     setUploadResult(null);
+    setCurrentStep(4); // Move to loading step
 
     try {
       const formData = new FormData();
@@ -223,19 +228,22 @@ const FileUploadComponent: React.FC<FileUploadComponentProps> = ({
         formData.append("slip_audit_files", slipFile.file);
       });
 
-      const memberNamesFile = files.find((f) => f.type === "member_names");
-      if (memberNamesFile) {
-        formData.append("member_names_file", memberNamesFile.file);
+      // Append member names file if exists
+      if (memberFiles.length > 0) {
+        formData.append("member_names_file", memberFiles[0].file);
       }
 
       formData.append("chapter_id", chapterId);
-      if (monthYear) {
-        formData.append("month_year", monthYear);
-      }
-      if (weekOfDate) {
-        formData.append("week_of_date", weekOfDate);
-      }
+      formData.append("month_year", monthYear);
       formData.append("require_palms_sheets", requirePalmsSheets.toString());
+
+      // Determine upload option based on upload type
+      const uploadOption =
+        uploadType === "members_only"
+          ? "members_only"
+          : uploadType === "both"
+            ? "slip_and_members"
+            : "slip_only";
       formData.append("upload_option", uploadOption);
 
       // Use XMLHttpRequest for progress tracking
@@ -259,18 +267,8 @@ const FileUploadComponent: React.FC<FileUploadComponentProps> = ({
               setUploadResult({
                 type: "success",
                 message: `Successfully uploaded and processed ${files.length} file(s) for ${format(new Date(monthYear + "-01"), "MMMM yyyy")}`,
+                reportId: result.report_id,
               });
-              setFiles([]);
-              setMonthYear(getCurrentMonth());
-              setWeekOfDate("");
-              setRequirePalmsSheets(false);
-
-              // Reset to step 1 after success
-              setTimeout(() => {
-                setCurrentStep(1);
-                setUploadResult(null);
-                setUploadProgress(0);
-              }, 3000);
 
               onUploadSuccess();
               resolve();
@@ -339,280 +337,482 @@ const FileUploadComponent: React.FC<FileUploadComponentProps> = ({
     }
   };
 
-  // Step indicator component
-  const StepIndicator = ({
-    step,
-    label,
-    isActive,
-    isCompleted,
-  }: {
-    step: number;
-    label: string;
-    isActive: boolean;
-    isCompleted: boolean;
-  }) => (
-    <div className="flex flex-col items-center flex-1">
-      <div
-        className={cn(
-          "w-10 h-10 rounded-full flex items-center justify-center font-semibold text-sm mb-2 transition-all duration-200",
-          isCompleted && "bg-primary text-primary-foreground",
-          isActive &&
-            !isCompleted &&
-            "bg-primary text-primary-foreground ring-4 ring-primary/20",
-          !isActive && !isCompleted && "bg-muted text-muted-foreground",
-        )}
-      >
-        {isCompleted ? <Check className="h-5 w-5" /> : step}
-      </div>
-      <span
-        className={cn(
-          "text-xs font-medium text-center",
-          isActive ? "text-foreground" : "text-muted-foreground",
-        )}
-      >
-        {label}
-      </span>
-    </div>
-  );
+  const handleBack = () => {
+    if (currentStep === 1) return;
+    if (currentStep === 4 && uploadResult?.type === "success") return; // Don't go back after success
+    setCurrentStep(currentStep - 1);
+  };
+
+  const handleStartOver = () => {
+    setCurrentStep(1);
+    setUploadType(null);
+    setFiles([]);
+    setMonthYear(getCurrentMonth());
+    setRequirePalmsSheets(false);
+    setUploadProgress(0);
+    setUploadResult(null);
+  };
+
+  const canProceedFromStep2 = () => {
+    return monthYear !== "";
+  };
+
+  const canProceedFromStep3 = () => {
+    if (files.length === 0) return false;
+
+    const slipFiles = files.filter((f) => f.type === "slip_audit");
+    const memberFiles = files.filter((f) => f.type === "member_names");
+
+    if (uploadType === "palms_only") return slipFiles.length > 0;
+    if (uploadType === "members_only") return memberFiles.length > 0;
+    if (uploadType === "both")
+      return slipFiles.length > 0 && memberFiles.length > 0;
+
+    return false;
+  };
 
   return (
-    <div className="space-y-4 max-w-2xl mx-auto">
-      {/* Step Indicators */}
-      <div className="flex items-center justify-between max-w-md mx-auto mb-6">
-        <StepIndicator
-          step={1}
-          label="Select Month"
-          isActive={currentStep === 1}
-          isCompleted={currentStep > 1}
-        />
+    <div className="space-y-6 p-4 sm:p-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-xl sm:text-2xl font-bold">Upload Wizard</h2>
+          <p className="text-sm text-muted-foreground">
+            Upload and process reports in a few simple steps
+          </p>
+        </div>
+        {currentStep > 1 && currentStep < 4 && (
+          <Button variant="outline" onClick={handleBack}>
+            <ChevronLeft className="mr-2 h-4 w-4" />
+            Back
+          </Button>
+        )}
+      </div>
+
+      {/* Step Progress Indicators */}
+      <div className="flex items-center justify-between max-w-3xl mx-auto">
+        <div className="flex flex-col items-center flex-1">
+          <div
+            className={cn(
+              "w-10 h-10 rounded-full flex items-center justify-center font-semibold text-sm mb-2 transition-all",
+              currentStep >= 1
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted text-muted-foreground",
+            )}
+          >
+            {currentStep > 1 ? <Check className="h-5 w-5" /> : 1}
+          </div>
+          <span className="text-xs font-medium text-center">Choose Type</span>
+        </div>
         <div
           className={cn(
             "flex-1 h-0.5 mx-2",
             currentStep > 1 ? "bg-primary" : "bg-muted",
           )}
         />
-        <StepIndicator
-          step={2}
-          label="Upload Files"
-          isActive={currentStep === 2}
-          isCompleted={currentStep > 2}
-        />
+
+        <div className="flex flex-col items-center flex-1">
+          <div
+            className={cn(
+              "w-10 h-10 rounded-full flex items-center justify-center font-semibold text-sm mb-2 transition-all",
+              currentStep >= 2
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted text-muted-foreground",
+            )}
+          >
+            {currentStep > 2 ? <Check className="h-5 w-5" /> : 2}
+          </div>
+          <span className="text-xs font-medium text-center">Select Month</span>
+        </div>
         <div
           className={cn(
             "flex-1 h-0.5 mx-2",
             currentStep > 2 ? "bg-primary" : "bg-muted",
           )}
         />
-        <StepIndicator
-          step={3}
-          label="Review & Submit"
-          isActive={currentStep === 3}
-          isCompleted={false}
+
+        <div className="flex flex-col items-center flex-1">
+          <div
+            className={cn(
+              "w-10 h-10 rounded-full flex items-center justify-center font-semibold text-sm mb-2 transition-all",
+              currentStep >= 3
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted text-muted-foreground",
+            )}
+          >
+            {currentStep > 3 ? <Check className="h-5 w-5" /> : 3}
+          </div>
+          <span className="text-xs font-medium text-center">Upload Files</span>
+        </div>
+        <div
+          className={cn(
+            "flex-1 h-0.5 mx-2",
+            currentStep > 3 ? "bg-primary" : "bg-muted",
+          )}
         />
+
+        <div className="flex flex-col items-center flex-1">
+          <div
+            className={cn(
+              "w-10 h-10 rounded-full flex items-center justify-center font-semibold text-sm mb-2 transition-all",
+              currentStep >= 4
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted text-muted-foreground",
+            )}
+          >
+            4
+          </div>
+          <span className="text-xs font-medium text-center">Confirm</span>
+        </div>
       </div>
 
-      {/* Step 1: Select Month */}
-      {currentStep === 1 && (
-        <Card className="border-2 border-primary/30">
-          <CardContent className="p-6">
-            <div className="space-y-5">
-              <div className="text-center space-y-1">
-                <div className="inline-flex p-2 rounded-full bg-primary/10 mb-1">
-                  <CalendarIcon className="h-6 w-6 text-primary" />
+      <AnimatePresence mode="wait">
+        {/* Step 1: Choose Upload Type */}
+        {currentStep === 1 && (
+          <motion.div
+            key="step1"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="space-y-4"
+          >
+            <Card>
+              <CardHeader>
+                <CardTitle>Choose Upload Type</CardTitle>
+                <CardDescription>
+                  What would you like to upload?
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Update Members Only */}
+                  <motion.div
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className={cn(
+                      "p-6 border-2 rounded-lg cursor-pointer transition-all",
+                      uploadType === "members_only"
+                        ? "border-primary bg-primary/5"
+                        : "border-border hover:border-primary/50",
+                    )}
+                    onClick={() => setUploadType("members_only")}
+                  >
+                    <div className="flex flex-col items-center text-center space-y-3">
+                      <div
+                        className={cn(
+                          "p-3 rounded-full",
+                          uploadType === "members_only"
+                            ? "bg-primary/10"
+                            : "bg-muted",
+                        )}
+                      >
+                        <Users className="h-8 w-8 text-primary" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-lg">
+                          Update Members
+                        </h3>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Upload member names file to update member list
+                        </p>
+                      </div>
+                      {uploadType === "members_only" && (
+                        <CheckCircle className="h-5 w-5 text-primary" />
+                      )}
+                    </div>
+                  </motion.div>
+
+                  {/* Upload PALMS Only */}
+                  <motion.div
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className={cn(
+                      "p-6 border-2 rounded-lg cursor-pointer transition-all",
+                      uploadType === "palms_only"
+                        ? "border-primary bg-primary/5"
+                        : "border-border hover:border-primary/50",
+                    )}
+                    onClick={() => setUploadType("palms_only")}
+                  >
+                    <div className="flex flex-col items-center text-center space-y-3">
+                      <div
+                        className={cn(
+                          "p-3 rounded-full",
+                          uploadType === "palms_only"
+                            ? "bg-primary/10"
+                            : "bg-muted",
+                        )}
+                      >
+                        <FileText className="h-8 w-8 text-primary" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-lg">Upload PALMS</h3>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Upload slip audit report to generate matrices
+                        </p>
+                      </div>
+                      {uploadType === "palms_only" && (
+                        <CheckCircle className="h-5 w-5 text-primary" />
+                      )}
+                    </div>
+                  </motion.div>
+
+                  {/* Upload Both */}
+                  <motion.div
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className={cn(
+                      "p-6 border-2 rounded-lg cursor-pointer transition-all",
+                      uploadType === "both"
+                        ? "border-primary bg-primary/5"
+                        : "border-border hover:border-primary/50",
+                    )}
+                    onClick={() => setUploadType("both")}
+                  >
+                    <div className="flex flex-col items-center text-center space-y-3">
+                      <div
+                        className={cn(
+                          "p-3 rounded-full",
+                          uploadType === "both" ? "bg-primary/10" : "bg-muted",
+                        )}
+                      >
+                        <FolderUp className="h-8 w-8 text-primary" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-lg">Upload Both</h3>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Upload both PALMS and member names files
+                        </p>
+                      </div>
+                      {uploadType === "both" && (
+                        <CheckCircle className="h-5 w-5 text-primary" />
+                      )}
+                    </div>
+                  </motion.div>
                 </div>
-                <h3 className="text-xl font-bold">Select Report Month</h3>
-                <p className="text-sm text-muted-foreground">
+              </CardContent>
+            </Card>
+
+            {uploadType && (
+              <Card className="bg-muted/30">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-sm">
+                      <CheckCircle className="h-4 w-4 text-primary" />
+                      <span className="font-medium">
+                        {uploadType === "members_only" &&
+                          "Members update selected"}
+                        {uploadType === "palms_only" && "PALMS upload selected"}
+                        {uploadType === "both" && "Both files selected"}
+                      </span>
+                    </div>
+                    <Button onClick={() => setCurrentStep(2)}>
+                      Continue
+                      <ChevronRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </motion.div>
+        )}
+
+        {/* Step 2: Select Month */}
+        {currentStep === 2 && (
+          <motion.div
+            key="step2"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="space-y-4"
+          >
+            <Card>
+              <CardHeader>
+                <CardTitle>Select Report Month</CardTitle>
+                <CardDescription>
                   Choose the month and year for this report
-                </p>
-              </div>
-
-              <div className="max-w-md mx-auto space-y-3">
-                <div className="space-y-2">
-                  <Label className="text-sm">Report Month & Year</Label>
-                  <input
-                    type="month"
-                    value={monthYear}
-                    onChange={(e) => setMonthYear(e.target.value)}
-                    className="w-full h-11 px-4 rounded-md border border-input bg-background text-sm"
-                  />
-                </div>
-
-                {/* Week Date Picker */}
-                <div className="space-y-2">
-                  <Label className="text-sm">
-                    Week Starting Date (Optional)
-                  </Label>
-                  <input
-                    type="date"
-                    value={weekOfDate}
-                    onChange={(e) => setWeekOfDate(e.target.value)}
-                    className="w-full h-11 px-4 rounded-md border border-input bg-background text-sm"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Will be auto-detected from filename if not set
-                  </p>
-                </div>
-
-                {/* PALMS Download Availability Toggle */}
-                <div className="flex items-center space-x-3 p-3 border rounded-lg bg-muted/30">
-                  <input
-                    type="checkbox"
-                    id="require-palms"
-                    checked={requirePalmsSheets}
-                    onChange={(e) => setRequirePalmsSheets(e.target.checked)}
-                    className="h-4 w-4 rounded border-gray-300"
-                  />
-                  <div className="flex-1">
-                    <Label
-                      htmlFor="require-palms"
-                      className="text-sm font-medium cursor-pointer"
-                    >
-                      Keep PALMS Sheets Downloadable
-                    </Label>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Allow downloading original files for audit purposes
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="max-w-md mx-auto space-y-4">
+                  <div className="space-y-2">
+                    <Label>Report Month & Year</Label>
+                    <input
+                      type="month"
+                      value={monthYear}
+                      onChange={(e) => setMonthYear(e.target.value)}
+                      className="w-full h-12 px-4 rounded-md border border-input bg-background text-base"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Select the period this report covers
                     </p>
                   </div>
+
+                  {/* PALMS Storage Option */}
+                  <div className="flex items-start space-x-3 p-4 border rounded-lg bg-muted/30">
+                    <input
+                      type="checkbox"
+                      id="store-palms"
+                      checked={requirePalmsSheets}
+                      onChange={(e) => setRequirePalmsSheets(e.target.checked)}
+                      className="h-5 w-5 rounded border-gray-300 mt-0.5"
+                    />
+                    <div className="flex-1">
+                      <label
+                        htmlFor="store-palms"
+                        className="font-medium cursor-pointer block"
+                      >
+                        Store PALMS sheets in database
+                      </label>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Keep original PALMS files available for download later.
+                        Default is No.
+                      </p>
+                    </div>
+                  </div>
+
+                  <Alert>
+                    <Info className="h-4 w-4" />
+                    <AlertDescription className="text-sm">
+                      The current month is pre-selected. You can select any past
+                      or future month.
+                    </AlertDescription>
+                  </Alert>
                 </div>
+              </CardContent>
+            </Card>
 
-                {/* Tips Section */}
-                <Alert className="bg-primary/5 border-primary/20">
-                  <Info className="h-4 w-4 text-primary" />
-                  <AlertDescription className="text-xs">
-                    <span className="font-medium text-primary">Tips:</span>{" "}
-                    Current month is pre-selected • Week date auto-detected from
-                    filenames • You can upload past reports
-                  </AlertDescription>
-                </Alert>
-              </div>
-
-              <div className="flex justify-center pt-2">
-                <Button
-                  onClick={() => setCurrentStep(2)}
-                  size="default"
-                  className="px-6"
-                >
-                  Continue to Upload
-                  <ChevronRight className="ml-2 h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Step 2: Upload Files */}
-      {currentStep === 2 && (
-        <Card className="border-2 border-primary/30">
-          <CardContent className="p-6">
-            <div className="space-y-5">
-              <div className="text-center space-y-1">
-                <div className="inline-flex p-2 rounded-full bg-primary/10 mb-1">
-                  <CloudUpload className="h-6 w-6 text-primary" />
-                </div>
-                <h3 className="text-xl font-bold">Upload Report Files</h3>
-                <p className="text-sm text-muted-foreground">
-                  Upload files for{" "}
-                  {format(new Date(monthYear + "-01"), "MMMM yyyy")}
-                </p>
-              </div>
-
-              <div className="space-y-3">
-                <div className="space-y-2">
-                  <Label className="text-sm">Upload Option</Label>
-                  <Select
-                    value={uploadOption}
-                    onValueChange={(value) =>
-                      setUploadOption(value as "slip_only" | "slip_and_members")
-                    }
+            <Card className="bg-muted/30">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-sm">
+                    <CheckCircle className="h-4 w-4 text-primary" />
+                    <span className="font-medium">
+                      {format(new Date(monthYear + "-01"), "MMMM yyyy")}{" "}
+                      selected
+                    </span>
+                  </div>
+                  <Button
+                    onClick={() => setCurrentStep(3)}
+                    disabled={!canProceedFromStep2()}
                   >
-                    <SelectTrigger className="h-10">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="slip_only">Slip Audit Only</SelectItem>
-                      <SelectItem value="slip_and_members">
-                        Slip Audit + Member Names
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
+                    Continue
+                    <ChevronRight className="ml-2 h-4 w-4" />
+                  </Button>
                 </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
 
+        {/* Step 3: Upload Files */}
+        {currentStep === 3 && (
+          <motion.div
+            key="step3"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="space-y-4"
+          >
+            <Card>
+              <CardHeader>
+                <CardTitle>Upload Files</CardTitle>
+                <CardDescription>
+                  Upload your files for{" "}
+                  {format(new Date(monthYear + "-01"), "MMMM yyyy")}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
                 {/* File Drop Zone */}
                 <div
                   {...getRootProps()}
-                  className={`
-                    p-6 text-center border-2 border-dashed rounded-lg cursor-pointer transition-all duration-200
-                    ${
-                      isDragActive
-                        ? "border-primary bg-primary/10 dark:bg-primary/20 scale-[1.01]"
-                        : "border-primary/40 hover:border-primary bg-primary/5 hover:bg-primary/10"
-                    }
-                  `}
-                  data-testid="file-dropzone"
+                  className={cn(
+                    "p-8 text-center border-2 border-dashed rounded-lg cursor-pointer transition-all",
+                    isDragActive
+                      ? "border-primary bg-primary/10 scale-[1.01]"
+                      : "border-border hover:border-primary/50 bg-muted/30",
+                  )}
                 >
                   <input {...getInputProps()} />
-                  <div className="flex flex-col items-center space-y-3">
+                  <div className="flex flex-col items-center space-y-4">
                     <div
-                      className={`p-2 rounded-full ${isDragActive ? "bg-primary/20" : "bg-primary/10"}`}
+                      className={cn(
+                        "p-4 rounded-full transition-colors",
+                        isDragActive ? "bg-primary/20" : "bg-primary/10",
+                      )}
                     >
                       <CloudUpload
-                        className={`h-8 w-8 ${isDragActive ? "text-primary" : "text-primary/80"}`}
+                        className={cn(
+                          "h-12 w-12",
+                          isDragActive ? "text-primary" : "text-primary/80",
+                        )}
                       />
                     </div>
                     <div>
-                      <h3 className="text-lg font-bold text-primary">
+                      <h3 className="text-xl font-bold">
                         {isDragActive
                           ? "Drop files here..."
-                          : "Drop PALMS Files Here"}
+                          : "Drop Files Here"}
                       </h3>
-                      <p className="text-xs text-muted-foreground mt-1">
+                      <p className="text-sm text-muted-foreground mt-2">
                         Or click to browse and select files
                       </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {uploadType === "members_only" &&
+                          "Upload member names file (.xls, .xlsx)"}
+                        {uploadType === "palms_only" &&
+                          "Upload PALMS slip audit file (.xls, .xlsx)"}
+                        {uploadType === "both" &&
+                          "Upload both PALMS and member names files (.xls, .xlsx)"}
+                      </p>
                     </div>
-                    <Badge variant="secondary" className="text-xs px-2 py-0.5">
-                      Supported: .xls, .xlsx
-                    </Badge>
+                    <Badge variant="secondary">Supported: .xls, .xlsx</Badge>
                   </div>
                 </div>
 
                 {/* Selected Files */}
                 {files.length > 0 && (
-                  <div className="space-y-2">
-                    <Label className="text-sm">
-                      Selected Files ({files.length})
-                    </Label>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <Label>Selected Files ({files.length})</Label>
+                      {files.length > 0 && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setFiles([])}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          Clear All
+                        </Button>
+                      )}
+                    </div>
                     <div className="space-y-2">
                       {files.map((file, index) => (
                         <div
                           key={index}
-                          className="flex flex-col sm:flex-row sm:items-center gap-2 p-2.5 border rounded-lg bg-muted/30"
+                          className="flex items-center gap-3 p-3 border rounded-lg bg-background"
                         >
-                          <div className="flex items-start gap-2 flex-1 min-w-0">
-                            <File className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-                            <div className="flex-1 min-w-0">
-                              <p className="font-medium truncate text-xs">
-                                {file.name}
+                          <File className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium truncate text-sm">
+                              {file.name}
+                            </p>
+                            <div className="flex items-center gap-2 mt-1">
+                              <p className="text-xs text-muted-foreground">
+                                {file.size}
                               </p>
-                              <div className="flex items-center gap-1.5 mt-0.5">
-                                <p className="text-xs text-muted-foreground">
-                                  {file.size}
-                                </p>
-                                {file.extractedDate && (
-                                  <Badge
-                                    variant="secondary"
-                                    className="text-xs h-4 px-1.5"
-                                  >
-                                    {format(
-                                      new Date(file.extractedDate + "-01"),
-                                      "MMM yyyy",
-                                    )}
-                                  </Badge>
-                                )}
-                              </div>
+                              {file.extractedDate && (
+                                <Badge variant="secondary" className="text-xs">
+                                  Auto-detected:{" "}
+                                  {format(
+                                    new Date(file.extractedDate + "-01"),
+                                    "MMM yyyy",
+                                  )}
+                                </Badge>
+                              )}
                             </div>
                           </div>
-                          <div className="flex items-center gap-1.5 flex-shrink-0">
+                          {uploadType === "both" && (
                             <Select
                               value={file.type}
                               onValueChange={(value) =>
@@ -622,27 +822,27 @@ const FileUploadComponent: React.FC<FileUploadComponentProps> = ({
                                 )
                               }
                             >
-                              <SelectTrigger className="w-[120px] h-8 text-xs">
+                              <SelectTrigger className="w-[140px] h-9">
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="slip_audit">
-                                  Slip Audit
+                                  PALMS
                                 </SelectItem>
                                 <SelectItem value="member_names">
-                                  Member Names
+                                  Members
                                 </SelectItem>
                               </SelectContent>
                             </Select>
-                            <Button
-                              onClick={() => removeFile(index)}
-                              variant="ghost"
-                              size="sm"
-                              className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 w-8 p-0"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
-                          </div>
+                          )}
+                          <Button
+                            onClick={() => removeFile(index)}
+                            variant="ghost"
+                            size="sm"
+                            className="text-destructive hover:text-destructive hover:bg-destructive/10 h-9 w-9 p-0"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </div>
                       ))}
                     </div>
@@ -650,277 +850,146 @@ const FileUploadComponent: React.FC<FileUploadComponentProps> = ({
                 )}
 
                 {files.some((f) => f.extractedDate) && (
-                  <Alert className="py-2">
-                    <Info className="h-3.5 w-3.5" />
-                    <AlertDescription className="text-xs">
-                      Date auto-detected from filename and applied to Step 1.
-                    </AlertDescription>
-                  </Alert>
-                )}
-              </div>
-
-              {/* Navigation Buttons */}
-              <div className="flex justify-between pt-2">
-                <Button
-                  variant="outline"
-                  onClick={() => setCurrentStep(1)}
-                  size="default"
-                >
-                  <ChevronLeft className="mr-2 h-4 w-4" />
-                  Back
-                </Button>
-                <Button
-                  onClick={() => {
-                    const slipFiles = files.filter(
-                      (f) => f.type === "slip_audit",
-                    );
-                    if (slipFiles.length === 0) {
-                      setUploadResult({
-                        type: "error",
-                        message: "Please select at least one slip audit file",
-                      });
-                      return;
-                    }
-                    setUploadResult(null);
-                    setCurrentStep(3);
-                  }}
-                  size="default"
-                  disabled={files.length === 0}
-                >
-                  Review & Submit
-                  <ChevronRight className="ml-2 h-4 w-4" />
-                </Button>
-              </div>
-
-              {uploadResult && uploadResult.type === "error" && (
-                <Alert className="mt-3 py-2">
-                  <AlertTriangle className="h-3.5 w-3.5" />
-                  <AlertDescription className="text-xs text-red-800 dark:text-red-200">
-                    {uploadResult.message}
-                  </AlertDescription>
-                </Alert>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Step 3: Review & Submit */}
-      {currentStep === 3 && (
-        <Card className="border-2 border-primary/30">
-          <CardContent className="p-6">
-            <div className="space-y-5">
-              <div className="text-center space-y-1">
-                <div className="inline-flex p-2 rounded-full bg-primary/10 mb-1">
-                  <CheckCircle className="h-6 w-6 text-primary" />
-                </div>
-                <h3 className="text-xl font-bold">Review & Submit</h3>
-                <p className="text-sm text-muted-foreground">
-                  Review your upload before submitting
-                </p>
-              </div>
-
-              <div className="max-w-2xl mx-auto space-y-3">
-                {/* Summary Card */}
-                <Card className="bg-muted/30">
-                  <CardContent className="p-4 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <Label className="text-muted-foreground text-xs">
-                          Report Month
-                        </Label>
-                        <p className="text-base font-semibold mt-0.5">
-                          {format(new Date(monthYear + "-01"), "MMMM yyyy")}
-                        </p>
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setCurrentStep(1)}
-                        className="h-8 text-xs"
-                      >
-                        Edit
-                      </Button>
-                    </div>
-
-                    <div className="border-t pt-3">
-                      <Label className="text-muted-foreground text-xs">
-                        Upload Option
-                      </Label>
-                      <p className="text-sm font-medium mt-0.5">
-                        {uploadOption === "slip_only"
-                          ? "Slip Audit Only"
-                          : "Slip Audit + Member Names"}
-                      </p>
-                    </div>
-
-                    {weekOfDate && (
-                      <div className="border-t pt-3">
-                        <Label className="text-muted-foreground text-xs">
-                          Audit Week Starting
-                        </Label>
-                        <p className="text-base font-semibold mt-0.5">
-                          {format(new Date(weekOfDate), "MMMM d, yyyy")}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          Week: {format(new Date(weekOfDate), "MMM d")} -{" "}
-                          {format(
-                            new Date(
-                              new Date(weekOfDate).getTime() +
-                                6 * 24 * 60 * 60 * 1000,
-                            ),
-                            "MMM d, yyyy",
-                          )}
-                        </p>
-                      </div>
-                    )}
-
-                    {requirePalmsSheets && (
-                      <div className="border-t pt-3">
-                        <div className="flex items-center gap-2">
-                          <Badge variant="default" className="h-5 text-xs">
-                            PALMS Downloadable
-                          </Badge>
-                          <p className="text-xs text-muted-foreground">
-                            Original files will be available
-                          </p>
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="border-t pt-3">
-                      <div className="flex items-center justify-between mb-2">
-                        <Label className="text-muted-foreground text-xs">
-                          Files to Upload ({files.length})
-                        </Label>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setCurrentStep(2)}
-                          className="h-8 text-xs"
-                        >
-                          Edit
-                        </Button>
-                      </div>
-                      <div className="space-y-1.5">
-                        {files.map((file, index) => (
-                          <div
-                            key={index}
-                            className="flex items-center gap-2 p-2 bg-background rounded border text-xs"
-                          >
-                            <File className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
-                            <span className="flex-1 truncate font-medium">
-                              {file.name}
-                            </span>
-                            <Badge
-                              variant={
-                                file.type === "slip_audit"
-                                  ? "default"
-                                  : "secondary"
-                              }
-                              className="text-xs h-4 px-1.5"
-                            >
-                              {file.type === "slip_audit"
-                                ? "Slip Audit"
-                                : "Member Names"}
-                            </Badge>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Processing Info */}
-                {!isUploading && (
                   <Alert>
                     <Info className="h-4 w-4" />
                     <AlertDescription className="text-sm">
-                      Files will be processed automatically. Matrices and
-                      analytics will be generated for this report period. You
-                      can view the results in the "Matrices" tab after upload
-                      completes.
+                      Date auto-detected from filename and applied to Step 2.
                     </AlertDescription>
                   </Alert>
                 )}
+              </CardContent>
+            </Card>
 
-                {/* Upload Progress */}
-                {isUploading && (
-                  <Card className="bg-muted/30">
-                    <CardContent className="p-6 space-y-3">
+            <Card className="bg-muted/30">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-sm">
+                    <CheckCircle className="h-4 w-4 text-primary" />
+                    <span className="font-medium">
+                      {files.length} file(s) selected
+                    </span>
+                  </div>
+                  <Button
+                    onClick={handleUpload}
+                    disabled={!canProceedFromStep3()}
+                  >
+                    Upload & Process
+                    <ChevronRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+
+        {/* Step 4: Loading & Confirmation */}
+        {currentStep === 4 && (
+          <motion.div
+            key="step4"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="space-y-4"
+          >
+            {/* Loading State */}
+            {isUploading && (
+              <Card>
+                <CardContent className="p-8">
+                  <div className="flex flex-col items-center space-y-6">
+                    <div className="p-4 rounded-full bg-primary/10">
+                      <Loader2 className="h-16 w-16 text-primary animate-spin" />
+                    </div>
+                    <div className="text-center space-y-2 max-w-md">
+                      <h3 className="text-2xl font-bold">Processing Upload</h3>
+                      <p className="text-muted-foreground">
+                        {uploadProgress < 95
+                          ? "Uploading files to server..."
+                          : "Processing files and generating matrices..."}
+                      </p>
+                    </div>
+                    <div className="w-full max-w-md space-y-2">
                       <div className="flex items-center justify-between text-sm">
-                        <span className="font-medium">Uploading files...</span>
+                        <span className="font-medium">Progress</span>
                         <span className="text-muted-foreground">
                           {Math.round(uploadProgress)}%
                         </span>
                       </div>
                       <Progress value={uploadProgress} className="h-3" />
-                      <p className="text-xs text-muted-foreground text-center">
-                        {uploadProgress < 95
-                          ? "Uploading files to server..."
-                          : uploadProgress < 100
-                            ? "Processing files and generating matrices..."
-                            : "Complete!"}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Success State */}
+            {!isUploading && uploadResult?.type === "success" && (
+              <Card className="bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800">
+                <CardContent className="p-8">
+                  <div className="flex flex-col items-center space-y-6">
+                    <div className="p-4 rounded-full bg-green-100 dark:bg-green-900">
+                      <CheckCircle className="h-16 w-16 text-green-600 dark:text-green-400" />
+                    </div>
+                    <div className="text-center space-y-2 max-w-md">
+                      <h3 className="text-2xl font-bold text-green-900 dark:text-green-100">
+                        Upload Successful!
+                      </h3>
+                      <p className="text-green-700 dark:text-green-300">
+                        {uploadResult.message}
                       </p>
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
+                    </div>
+                    <Alert className="max-w-md">
+                      <Info className="h-4 w-4" />
+                      <AlertDescription>
+                        Your report has been processed and matrices have been
+                        generated. You can now view the report in the Reports
+                        tab.
+                      </AlertDescription>
+                    </Alert>
+                    <div className="flex gap-3">
+                      <Button variant="outline" onClick={handleStartOver}>
+                        Upload Another
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
-              {/* Upload Result */}
-              {uploadResult && (
-                <Alert className="max-w-2xl mx-auto">
-                  {uploadResult.type === "success" ? (
-                    <CheckCircle className="h-4 w-4" />
-                  ) : (
-                    <AlertTriangle className="h-4 w-4" />
-                  )}
-                  <AlertDescription
-                    className={
-                      uploadResult.type === "success"
-                        ? "text-green-800 dark:text-green-200"
-                        : "text-red-800 dark:text-red-200"
-                    }
-                  >
-                    {uploadResult.message}
-                  </AlertDescription>
-                </Alert>
-              )}
-
-              {/* Action Buttons */}
-              <div className="flex justify-between pt-4">
-                <Button
-                  variant="outline"
-                  onClick={() => setCurrentStep(2)}
-                  size="lg"
-                  disabled={isUploading}
-                >
-                  <ChevronLeft className="mr-2 h-5 w-5" />
-                  Back
-                </Button>
-                <Button
-                  onClick={handleUpload}
-                  disabled={isUploading || files.length === 0}
-                  size="lg"
-                  className="px-8"
-                >
-                  {isUploading ? (
-                    <>
-                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                      Uploading...
-                    </>
-                  ) : (
-                    <>
-                      <CloudUpload className="mr-2 h-5 w-5" />
-                      Upload & Process
-                    </>
-                  )}
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+            {/* Error State */}
+            {!isUploading && uploadResult?.type === "error" && (
+              <Card className="bg-red-50 dark:bg-red-950 border-red-200 dark:border-red-800">
+                <CardContent className="p-8">
+                  <div className="flex flex-col items-center space-y-6">
+                    <div className="p-4 rounded-full bg-red-100 dark:bg-red-900">
+                      <AlertTriangle className="h-16 w-16 text-red-600 dark:text-red-400" />
+                    </div>
+                    <div className="text-center space-y-2 max-w-md">
+                      <h3 className="text-2xl font-bold text-red-900 dark:text-red-100">
+                        Upload Failed
+                      </h3>
+                      <p className="text-red-700 dark:text-red-300">
+                        {uploadResult.message}
+                      </p>
+                    </div>
+                    <div className="flex gap-3">
+                      <Button
+                        variant="outline"
+                        onClick={() => setCurrentStep(3)}
+                      >
+                        <ChevronLeft className="mr-2 h-4 w-4" />
+                        Try Again
+                      </Button>
+                      <Button variant="default" onClick={handleStartOver}>
+                        Start Over
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

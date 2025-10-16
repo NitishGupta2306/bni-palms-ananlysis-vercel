@@ -146,10 +146,10 @@
   - [ ] "Unique Given" column present
   - [ ] Both headers bold with gray background
 
-- [ ] **Black separator column**
-  - [ ] One column after "Unique Given" is completely black (#000000)
-  - [ ] Column width is narrow (~2 units)
-  - [ ] Extends from row 2 to last data row
+- [ ] **Thick border separator (NEW)**
+  - [ ] Thick medium-weight border on right side of "Unique Given" column
+  - [ ] Separates aggregate section from monthly data
+  - [ ] Border visible and professional-looking
 
 - [ ] **Monthly column headers**
   - [ ] For each month (M1, M2, M3...):
@@ -160,10 +160,10 @@
     - [ ] Gray background
     - [ ] Font size slightly smaller (8pt)
 
-- [ ] **Black separators between months**
-  - [ ] Black column after each month's columns
-  - [ ] Last month should NOT have separator after it
-  - [ ] All separators same width (~2 units)
+- [ ] **Thick border separators between months (NEW)**
+  - [ ] Thick border on right side of each month's last column
+  - [ ] Last month should NOT have thick border after it
+  - [ ] All borders consistent style (medium weight)
 
 ### 2.3 Data Rows (Starting Row 3)
 - [ ] **Row headers (Column A)**
@@ -263,8 +263,8 @@
   - [ ] All headers bold, gray background
   - [ ] Wrapped text, centered alignment
 
-- [ ] **Black separator after aggregates**
-  - [ ] One black column after "Neither (0)"
+- [ ] **Thick border separator after aggregates (NEW)**
+  - [ ] Thick border on right side of "Neither (0)" column
 
 ### 4.3 Monthly Columns (4 columns per month!)
 - [ ] **Each month has 4 columns**:
@@ -273,8 +273,8 @@
   - [ ] "M1-MM/YYYY\nOTO" (rotated, gray background)
   - [ ] "M1-MM/YYYY\nNone" (rotated, gray background)
 
-- [ ] **Black separators between months**
-  - [ ] Present between each month
+- [ ] **Thick border separators between months (NEW)**
+  - [ ] Present on right side of each month's last column
   - [ ] Not after last month
 
 ### 4.4 Data Verification
@@ -340,10 +340,11 @@
   - [ ] Member names bold
   - [ ] Sorted by Total TYFCB descending (highest at top)
 
-- [ ] **Performance highlighting**
+- [ ] **Performance highlighting (NEW)**
   - [ ] Member names colored Green/Orange/Red based on Total TYFCB
   - [ ] Total TYFCB column has matching color highlighting
   - [ ] Bold text in colored cells
+  - [ ] **SPECIAL**: Member names highlighted RED if Outside TYFCB > 2x Inside TYFCB (flags external referrers)
 
 - [ ] **Currency formatting**
   - [ ] All AED columns show #,##0.00 format
@@ -451,7 +452,7 @@
   - [ ] File generates successfully
   - [ ] Period shows single month: "09/2025" (not "09/2025 - 09/2025")
   - [ ] Only M1 monthly columns appear
-  - [ ] No black separator after M1 (since it's the only month)
+  - [ ] No thick border separator after M1 (since it's the only month)
   - [ ] Averages divide by 1 correctly
 
 ### 8.2 Many Months Selection
@@ -460,7 +461,7 @@
   - [ ] All months appear as columns
   - [ ] Excel doesn't become too wide (scrollable horizontally)
   - [ ] Performance is acceptable (< 30 seconds)
-  - [ ] Black separators between all months
+  - [ ] Thick border separators between all months
 
 ### 8.3 Empty Data Scenarios
 - [ ] **Member with zero referrals**
@@ -548,11 +549,11 @@
   - [ ] Yellow: #FFE699 (light yellow for non-zero values)
   - [ ] Gray: #D3D3D3 (light gray for headers)
   - [ ] Header BG: #E8F5E8 (very light green)
-  - [ ] Black: #000000 (separators)
+  - [ ] Black: #000000 (borders and text)
 
 - [ ] **Colors print well** (if testing printing):
   - [ ] Performance colors visible on grayscale printer
-  - [ ] Separators visible
+  - [ ] Border separators visible
   - [ ] Text readable
 
 ### 11.2 Formatting
@@ -562,10 +563,12 @@
   - [ ] Headers centered
   - [ ] Rotated headers readable
 
-- [ ] **Borders**
-  - [ ] Thick border under merged header
-  - [ ] Clean table appearance
-  - [ ] No random borders
+- [ ] **Borders (NEW IMPROVEMENTS)**
+  - [ ] Thin borders around all data cells (professional table appearance)
+  - [ ] Thick/medium borders separating sections (aggregate from monthly)
+  - [ ] Medium border under all section headers
+  - [ ] Clean, consistent border styling throughout
+  - [ ] No random or missing borders
 
 ### 11.3 Fonts
 - [ ] **Consistent font usage**

@@ -70,11 +70,8 @@ const ReportWizardTab: React.FC<ReportWizardTabProps> = ({ chapterData }) => {
   const [selectedMatrixTypes, setSelectedMatrixTypes] = useState<MatrixType[]>([
     "referral",
   ]); // Multiple matrix types
-  const [activeMatrixTab, setActiveMatrixTab] =
-    useState<MatrixType>("referral"); // For viewing in results
 
   // Loading states
-  const [isGenerating, setIsGenerating] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const [isDownloadingMatrices, setIsDownloadingMatrices] = useState(false);
   const [isDownloadingPalms, setIsDownloadingPalms] = useState(false);
@@ -187,6 +184,18 @@ const ReportWizardTab: React.FC<ReportWizardTabProps> = ({ chapterData }) => {
         ? prev.filter((id) => id !== reportId)
         : [...prev, reportId],
     );
+  };
+
+  const toggleMatrixType = (matrixType: MatrixType) => {
+    setSelectedMatrixTypes((prev) => {
+      if (prev.includes(matrixType)) {
+        // Don't allow deselecting if it's the only one selected
+        if (prev.length === 1) return prev;
+        return prev.filter((type) => type !== matrixType);
+      } else {
+        return [...prev, matrixType];
+      }
+    });
   };
 
   const canProceed = () => {
@@ -339,6 +348,59 @@ const ReportWizardTab: React.FC<ReportWizardTabProps> = ({ chapterData }) => {
       });
     } finally {
       setIsDownloadingPalms(false);
+    }
+  };
+
+  // Download comparison report
+  const downloadComparisonReport = async () => {
+    if (!compareReportIds.current || !compareReportIds.previous) {
+      toast({
+        title: "Invalid Selection",
+        description: "Please select two months to compare.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsDownloadingMatrices(true);
+    try {
+      const response = await fetchWithAuth(
+        `${API_BASE_URL}/api/chapters/${chapterData.chapterId}/reports/${compareReportIds.current}/compare/${compareReportIds.previous}/download-excel/`,
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to download comparison report");
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      const currentReport = reports.find(
+        (r) => r.id === compareReportIds.current,
+      );
+      const previousReport = reports.find(
+        (r) => r.id === compareReportIds.previous,
+      );
+      link.download = `${chapterData.chapterName}_Comparison_${previousReport?.month_year}_vs_${currentReport?.month_year}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      toast({
+        title: "Download Complete",
+        description: "Comparison report downloaded successfully",
+      });
+    } catch (error) {
+      console.error("Error downloading comparison report:", error);
+      toast({
+        title: "Download Failed",
+        description: "Failed to download comparison report. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDownloadingMatrices(false);
     }
   };
 
@@ -538,7 +600,7 @@ const ReportWizardTab: React.FC<ReportWizardTabProps> = ({ chapterData }) => {
                   </Alert>
                 ) : (
                   <>
-                    {/* Single Month Selector - Now allows multiple selections */}
+                    {/* Single Month Selector */}
                     {reportType === "single" && (
                       <div className="space-y-3">
                         {reports.map((report) => (
@@ -546,24 +608,13 @@ const ReportWizardTab: React.FC<ReportWizardTabProps> = ({ chapterData }) => {
                             key={report.id}
                             whileHover={{ scale: 1.01 }}
                             className={`flex items-center justify-between p-4 border-2 rounded-lg cursor-pointer transition-all ${
-                              selectedReportIds.includes(report.id)
+                              selectedReportId === report.id
                                 ? "border-primary bg-primary/5"
                                 : "border-border hover:border-primary/50"
                             }`}
-                            onClick={() => toggleReportSelection(report.id)}
+                            onClick={() => setSelectedReportId(report.id)}
                           >
                             <div className="flex items-center gap-3">
-                              <div
-                                className={`h-5 w-5 rounded border-2 flex items-center justify-center transition-all ${
-                                  selectedReportIds.includes(report.id)
-                                    ? "bg-primary border-primary"
-                                    : "border-muted-foreground"
-                                }`}
-                              >
-                                {selectedReportIds.includes(report.id) && (
-                                  <CheckCircle2 className="h-4 w-4 text-primary-foreground" />
-                                )}
-                              </div>
                               <Calendar className="h-5 w-5 text-muted-foreground" />
                               <div>
                                 <div className="font-medium">
@@ -713,10 +764,9 @@ const ReportWizardTab: React.FC<ReportWizardTabProps> = ({ chapterData }) => {
                     <div className="flex items-center gap-2 text-sm">
                       <CheckCircle2 className="h-4 w-4 text-primary" />
                       <span className="font-medium">
-                        {reportType === "single" &&
-                          selectedReportIds.length > 0 && (
-                            <>{selectedReportIds.length} month(s) selected</>
-                          )}
+                        {reportType === "single" && selectedReportId && (
+                          <>1 month selected</>
+                        )}
                         {reportType === "multi" && (
                           <>{selectedReportIds.length} month(s) selected</>
                         )}
@@ -793,47 +843,48 @@ const ReportWizardTab: React.FC<ReportWizardTabProps> = ({ chapterData }) => {
                 {reportType === "single" && (
                   <div className="space-y-3">
                     <label className="text-sm font-medium">
-                      Which matrices would you like to view?
+                      Select matrix types to include (you can select multiple)
                     </label>
-                    <div className="grid grid-cols-2 gap-3">
-                      <Button
-                        variant={
-                          activeMatrixTab === "referral" ? "default" : "outline"
-                        }
-                        onClick={() => setActiveMatrixTab("referral")}
-                        className="justify-start"
-                      >
-                        Referral Matrix
-                      </Button>
-                      <Button
-                        variant={
-                          activeMatrixTab === "oto" ? "default" : "outline"
-                        }
-                        onClick={() => setActiveMatrixTab("oto")}
-                        className="justify-start"
-                      >
-                        One-to-One Matrix
-                      </Button>
-                      <Button
-                        variant={
-                          activeMatrixTab === "combination"
-                            ? "default"
-                            : "outline"
-                        }
-                        onClick={() => setActiveMatrixTab("combination")}
-                        className="justify-start"
-                      >
-                        Combination Matrix
-                      </Button>
-                      <Button
-                        variant={
-                          activeMatrixTab === "tyfcb" ? "default" : "outline"
-                        }
-                        onClick={() => setActiveMatrixTab("tyfcb")}
-                        className="justify-start"
-                      >
-                        TYFCB Report
-                      </Button>
+                    <div className="space-y-2">
+                      {[
+                        { id: "referral", label: "Referral Matrix" },
+                        { id: "oto", label: "One-to-One Matrix" },
+                        { id: "combination", label: "Combination Matrix" },
+                        { id: "tyfcb", label: "TYFCB Report" },
+                      ].map((matrix) => (
+                        <div
+                          key={matrix.id}
+                          className={`flex items-center gap-3 p-3 border-2 rounded-lg cursor-pointer transition-all ${
+                            selectedMatrixTypes.includes(
+                              matrix.id as MatrixType,
+                            )
+                              ? "border-primary bg-primary/5"
+                              : "border-border hover:border-primary/50"
+                          }`}
+                          onClick={() =>
+                            toggleMatrixType(matrix.id as MatrixType)
+                          }
+                        >
+                          <div
+                            className={`h-5 w-5 rounded border-2 flex items-center justify-center transition-colors ${
+                              selectedMatrixTypes.includes(
+                                matrix.id as MatrixType,
+                              )
+                                ? "bg-primary border-primary"
+                                : "border-muted-foreground"
+                            }`}
+                          >
+                            {selectedMatrixTypes.includes(
+                              matrix.id as MatrixType,
+                            ) && (
+                              <CheckCircle2 className="h-4 w-4 text-white" />
+                            )}
+                          </div>
+                          <div className="flex-1">
+                            <div className="font-medium">{matrix.label}</div>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 )}
@@ -853,16 +904,16 @@ const ReportWizardTab: React.FC<ReportWizardTabProps> = ({ chapterData }) => {
                     <div className="flex justify-between">
                       <span>Periods Selected:</span>
                       <span className="font-medium text-foreground">
-                        {reportType === "single" && selectedReportIds.length}
+                        {reportType === "single" && "1"}
                         {reportType === "multi" && selectedReportIds.length}
                         {reportType === "compare" && "2"}
                       </span>
                     </div>
                     {reportType === "single" && (
                       <div className="flex justify-between">
-                        <span>View Type:</span>
-                        <span className="font-medium text-foreground capitalize">
-                          {activeMatrixTab}
+                        <span>Matrix Types:</span>
+                        <span className="font-medium text-foreground">
+                          {selectedMatrixTypes.length} selected
                         </span>
                       </div>
                     )}
@@ -918,73 +969,72 @@ const ReportWizardTab: React.FC<ReportWizardTabProps> = ({ chapterData }) => {
             </Card>
 
             {/* Results Content - Single Month */}
-            {reportType === "single" &&
-              selectedReportIds.length > 0 &&
-              selectedReport && (
-                <div className="space-y-6">
-                  {/* Download Actions */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Download Options</CardTitle>
-                    </CardHeader>
-                    <CardContent className="flex flex-wrap gap-3">
+            {reportType === "single" && selectedReportId && selectedReport && (
+              <div className="space-y-6">
+                {/* Download Actions */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Download Options</CardTitle>
+                  </CardHeader>
+                  <CardContent className="flex flex-wrap gap-3">
+                    <Button
+                      variant="outline"
+                      onClick={downloadMatrices}
+                      disabled={isDownloadingMatrices}
+                    >
+                      {isDownloadingMatrices ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Downloading...
+                        </>
+                      ) : (
+                        <>
+                          <Download className="mr-2 h-4 w-4" />
+                          Download Matrices (Excel)
+                        </>
+                      )}
+                    </Button>
+                    {includePalms && getReportsWithPalms().length > 0 && (
                       <Button
                         variant="outline"
-                        onClick={downloadMatrices}
-                        disabled={isDownloadingMatrices}
+                        onClick={downloadPalmsSheets}
+                        disabled={isDownloadingPalms}
                       >
-                        {isDownloadingMatrices ? (
+                        {isDownloadingPalms ? (
                           <>
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                             Downloading...
                           </>
                         ) : (
                           <>
-                            <Download className="mr-2 h-4 w-4" />
-                            Download Matrices (Excel)
+                            <FileText className="mr-2 h-4 w-4" />
+                            Download PALMS Sheets
                           </>
                         )}
                       </Button>
-                      {includePalms && getReportsWithPalms().length > 0 && (
-                        <Button
-                          variant="outline"
-                          onClick={downloadPalmsSheets}
-                          disabled={isDownloadingPalms}
-                        >
-                          {isDownloadingPalms ? (
-                            <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Downloading...
-                            </>
-                          ) : (
-                            <>
-                              <FileText className="mr-2 h-4 w-4" />
-                              Download PALMS Sheets
-                            </>
-                          )}
-                        </Button>
-                      )}
-                    </CardContent>
-                  </Card>
+                    )}
+                  </CardContent>
+                </Card>
 
-                  {/* Matrix Display */}
-                  {activeMatrixTab === "referral" && referralMatrix && (
-                    <MatrixDisplay
-                      matrixData={referralMatrix}
-                      title="Referral Matrix"
-                      description="Shows who has given referrals to whom. Numbers represent the count of referrals given."
-                      matrixType="referral"
-                    />
-                  )}
-                  {activeMatrixTab === "oto" && oneToOneMatrix && (
-                    <MatrixDisplay
-                      matrixData={oneToOneMatrix}
-                      title="One-to-One Matrix"
-                      description="Tracks one-to-one meetings between members. Numbers represent the count of meetings."
-                      matrixType="oto"
-                    />
-                  )}
-                  {activeMatrixTab === "combination" && combinationMatrix && (
+                {/* Matrix Display - Show all selected matrix types */}
+                {selectedMatrixTypes.includes("referral") && referralMatrix && (
+                  <MatrixDisplay
+                    matrixData={referralMatrix}
+                    title="Referral Matrix"
+                    description="Shows who has given referrals to whom. Numbers represent the count of referrals given."
+                    matrixType="referral"
+                  />
+                )}
+                {selectedMatrixTypes.includes("oto") && oneToOneMatrix && (
+                  <MatrixDisplay
+                    matrixData={oneToOneMatrix}
+                    title="One-to-One Matrix"
+                    description="Tracks one-to-one meetings between members. Numbers represent the count of meetings."
+                    matrixType="oto"
+                  />
+                )}
+                {selectedMatrixTypes.includes("combination") &&
+                  combinationMatrix && (
                     <MatrixDisplay
                       matrixData={combinationMatrix}
                       title="Combination Matrix"
@@ -992,17 +1042,17 @@ const ReportWizardTab: React.FC<ReportWizardTabProps> = ({ chapterData }) => {
                       matrixType="combination"
                     />
                   )}
-                  {activeMatrixTab === "tyfcb" && tyfcbData && (
-                    <TYFCBReport tyfcbData={tyfcbData} />
-                  )}
+                {selectedMatrixTypes.includes("tyfcb") && tyfcbData && (
+                  <TYFCBReport tyfcbData={tyfcbData} />
+                )}
 
-                  {isLoadingMatrices && (
-                    <div className="flex justify-center py-12">
-                      <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                    </div>
-                  )}
-                </div>
-              )}
+                {isLoadingMatrices && (
+                  <div className="flex justify-center py-12">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Results Content - Multi Month */}
             {reportType === "multi" && selectedReportIds.length > 0 && (
@@ -1083,9 +1133,21 @@ const ReportWizardTab: React.FC<ReportWizardTabProps> = ({ chapterData }) => {
                       </AlertDescription>
                     </Alert>
                     <div className="flex flex-wrap gap-3">
-                      <Button>
-                        <Download className="mr-2 h-4 w-4" />
-                        Download Comparison Report
+                      <Button
+                        onClick={downloadComparisonReport}
+                        disabled={isDownloadingMatrices}
+                      >
+                        {isDownloadingMatrices ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Downloading...
+                          </>
+                        ) : (
+                          <>
+                            <Download className="mr-2 h-4 w-4" />
+                            Download Comparison Report
+                          </>
+                        )}
                       </Button>
                     </div>
                     {/* Note: Full comparison view would be integrated from existing ComparisonTab */}
