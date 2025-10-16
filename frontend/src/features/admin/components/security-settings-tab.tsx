@@ -18,7 +18,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { API_BASE_URL } from "@/config/api";
+import { apiClient } from "@/lib/apiClient";
 import { useAuth } from "@/contexts/auth-context";
 
 interface Chapter {
@@ -46,47 +46,33 @@ export const SecuritySettingsTab: React.FC = () => {
     try {
       setIsLoading(true);
 
-      // Fetch all chapters
-      const chaptersResponse = await fetch(`${API_BASE_URL}/api/chapters/`);
-      if (chaptersResponse.ok) {
-        const chaptersData = await chaptersResponse.json();
-        setChapters(
-          chaptersData.map((ch: any) => ({
-            id: ch.id,
-            name: ch.name,
-            location: ch.location,
-            password: "", // Will be set individually
-          })),
-        );
-      }
-
-      // Fetch admin settings to get current passwords
-      const adminResponse = await fetch(
-        `${API_BASE_URL}/api/admin/get-settings/`,
-        {
-          headers: {
-            Authorization: `Bearer ${adminAuth?.token}`,
-          },
-        },
+      // Fetch all chapters using apiClient
+      const chaptersData = await apiClient.get<any[]>("/api/chapters/");
+      setChapters(
+        chaptersData.map((ch: any) => ({
+          id: ch.id,
+          name: ch.name,
+          location: ch.location,
+          password: "", // Will be set individually
+        })),
       );
 
-      if (adminResponse.ok) {
-        const adminData = await adminResponse.json();
-        setAdminPassword(adminData.admin_password || "");
+      // Fetch admin settings to get current passwords
+      const adminData = await apiClient.get<any>("/api/admin/get-settings/");
+      setAdminPassword(adminData.admin_password || "");
 
-        // Set chapter passwords if available
-        if (adminData.chapters) {
-          setChapters((prev) =>
-            prev.map((ch) => {
-              const chapterData = adminData.chapters.find(
-                (c: any) => c.id === ch.id,
-              );
-              return chapterData
-                ? { ...ch, password: chapterData.password }
-                : ch;
-            }),
-          );
-        }
+      // Set chapter passwords if available
+      if (adminData.chapters) {
+        setChapters((prev) =>
+          prev.map((ch) => {
+            const chapterData = adminData.chapters.find(
+              (c: any) => c.id === ch.id,
+            );
+            return chapterData
+              ? { ...ch, password: chapterData.password }
+              : ch;
+          }),
+        );
       }
     } catch (error) {
       console.error("Failed to fetch passwords:", error);
@@ -94,7 +80,7 @@ export const SecuritySettingsTab: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [adminAuth]);
+  }, []);
 
   useEffect(() => {
     fetchPasswords();
@@ -116,38 +102,22 @@ export const SecuritySettingsTab: React.FC = () => {
 
     setUpdatingId(chapterId);
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/api/chapters/${chapterId}/update_password/`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${adminAuth?.token}`,
-          },
-          body: JSON.stringify({ new_password: newPassword }),
-        },
+      const data = await apiClient.post<any>(
+        `/api/chapters/${chapterId}/update_password/`,
+        { new_password: newPassword },
       );
 
-      if (response.ok) {
-        const data = await response.json();
-        showMessage(
-          "success",
-          data.message || "Chapter password updated successfully",
-        );
+      showMessage(
+        "success",
+        data.message || "Chapter password updated successfully",
+      );
 
-        // Update local state
-        setChapters((prev) =>
-          prev.map((ch) =>
-            ch.id === chapterId ? { ...ch, password: newPassword } : ch,
-          ),
-        );
-      } else {
-        const error = await response.json();
-        showMessage(
-          "error",
-          error.error || "Failed to update chapter password",
-        );
-      }
+      // Update local state
+      setChapters((prev) =>
+        prev.map((ch) =>
+          ch.id === chapterId ? { ...ch, password: newPassword } : ch,
+        ),
+      );
     } catch (error) {
       console.error("Failed to update chapter password:", error);
       showMessage("error", "Failed to update chapter password");
@@ -164,29 +134,15 @@ export const SecuritySettingsTab: React.FC = () => {
 
     setUpdatingId("admin");
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/api/admin/update_password/`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${adminAuth?.token}`,
-          },
-          body: JSON.stringify({ new_password: newPassword }),
-        },
-      );
+      const data = await apiClient.post<any>("/api/admin/update_password/", {
+        new_password: newPassword,
+      });
 
-      if (response.ok) {
-        const data = await response.json();
-        showMessage(
-          "success",
-          data.message || "Admin password updated successfully",
-        );
-        setAdminPassword(newPassword);
-      } else {
-        const error = await response.json();
-        showMessage("error", error.error || "Failed to update admin password");
-      }
+      showMessage(
+        "success",
+        data.message || "Admin password updated successfully",
+      );
+      setAdminPassword(newPassword);
     } catch (error) {
       console.error("Failed to update admin password:", error);
       showMessage("error", "Failed to update admin password");

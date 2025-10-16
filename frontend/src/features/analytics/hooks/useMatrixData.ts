@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { MatrixData, TYFCBData } from '../types/matrix.types';
 import { MonthlyReport, loadMonthlyReports, loadMatrixData } from '../../../shared/services/ChapterDataLoader';
-import { API_BASE_URL } from '@/config/api';
+import { apiClient } from '@/lib/apiClient';
 
 interface UseMatrixDataReturn {
   monthlyReports: MonthlyReport[];
@@ -77,8 +77,7 @@ export const useMatrixData = (chapterId: string): UseMatrixDataReturn => {
 
       // Load TYFCB data
       promises.push(
-        fetch(`${API_BASE_URL}/api/chapters/${chapterId}/reports/${selectedReport.id}/tyfcb-data/`)
-          .then(response => response.json())
+        apiClient.get<TYFCBData>(`/api/chapters/${chapterId}/reports/${selectedReport.id}/tyfcb-data/`)
           .catch(() => null)
       );
 
