@@ -21,10 +21,10 @@
  * ```
  */
 
-import { API_BASE_URL } from '@/config/api';
+import { API_BASE_URL } from "@/config/api";
 
-const CHAPTER_AUTH_KEY = 'bni_chapter_auth';
-const ADMIN_AUTH_KEY = 'bni_admin_auth';
+const CHAPTER_AUTH_KEY = "bni_chapter_auth";
+const ADMIN_AUTH_KEY = "bni_admin_auth";
 
 interface ChapterAuth {
   chapterId: string;
@@ -56,7 +56,7 @@ function getAuthToken(): string | null {
         localStorage.removeItem(ADMIN_AUTH_KEY);
       }
     } catch (error) {
-      console.error('Failed to parse admin auth:', error);
+      console.error("Failed to parse admin auth:", error);
       localStorage.removeItem(ADMIN_AUTH_KEY);
     }
   }
@@ -75,7 +75,7 @@ function getAuthToken(): string | null {
         localStorage.removeItem(CHAPTER_AUTH_KEY);
       }
     } catch (error) {
-      console.error('Failed to parse chapter auth:', error);
+      console.error("Failed to parse chapter auth:", error);
       localStorage.removeItem(CHAPTER_AUTH_KEY);
     }
   }
@@ -91,8 +91,8 @@ function handleAuthError() {
   localStorage.removeItem(ADMIN_AUTH_KEY);
 
   // Redirect to landing page
-  if (window.location.pathname !== '/') {
-    window.location.href = '/';
+  if (window.location.pathname !== "/") {
+    window.location.href = "/";
   }
 }
 
@@ -103,25 +103,28 @@ export interface FetchOptions extends RequestInit {
 /**
  * Enhanced fetch wrapper with automatic JWT authentication
  */
-async function fetchWithAuth(url: string, options: FetchOptions = {}): Promise<Response> {
+async function fetchWithAuth(
+  url: string,
+  options: FetchOptions = {},
+): Promise<Response> {
   const { skipAuth = false, ...fetchOptions } = options;
 
   // Prepare headers
-  const headers: HeadersInit = {
-    ...fetchOptions.headers,
+  const headers: Record<string, string> = {
+    ...(fetchOptions.headers as Record<string, string>),
   };
 
   // Add authentication token if not skipped
   if (!skipAuth) {
     const token = getAuthToken();
     if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
+      headers["Authorization"] = `Bearer ${token}`;
     }
   }
 
   // Add default Content-Type for non-FormData requests
   if (fetchOptions.body && !(fetchOptions.body instanceof FormData)) {
-    headers['Content-Type'] = 'application/json';
+    headers["Content-Type"] = "application/json";
   }
 
   // Make the request
@@ -132,15 +135,17 @@ async function fetchWithAuth(url: string, options: FetchOptions = {}): Promise<R
 
   // Handle authentication errors
   if (response.status === 401) {
-    console.warn('Authentication failed (401). Clearing auth and redirecting to login.');
+    console.warn(
+      "Authentication failed (401). Clearing auth and redirecting to login.",
+    );
     handleAuthError();
-    throw new Error('Authentication required. Please log in again.');
+    throw new Error("Authentication required. Please log in again.");
   }
 
   // Handle forbidden errors
   if (response.status === 403) {
-    console.warn('Access forbidden (403). Insufficient permissions.');
-    throw new Error('You do not have permission to access this resource.');
+    console.warn("Access forbidden (403). Insufficient permissions.");
+    throw new Error("You do not have permission to access this resource.");
   }
 
   return response;
@@ -154,10 +159,10 @@ export const apiClient = {
    * GET request
    */
   async get<T = any>(url: string, options: FetchOptions = {}): Promise<T> {
-    const fullUrl = url.startsWith('http') ? url : `${API_BASE_URL}${url}`;
+    const fullUrl = url.startsWith("http") ? url : `${API_BASE_URL}${url}`;
     const response = await fetchWithAuth(fullUrl, {
       ...options,
-      method: 'GET',
+      method: "GET",
     });
 
     if (!response.ok) {
@@ -171,11 +176,15 @@ export const apiClient = {
   /**
    * POST request
    */
-  async post<T = any>(url: string, data?: any, options: FetchOptions = {}): Promise<T> {
-    const fullUrl = url.startsWith('http') ? url : `${API_BASE_URL}${url}`;
+  async post<T = any>(
+    url: string,
+    data?: any,
+    options: FetchOptions = {},
+  ): Promise<T> {
+    const fullUrl = url.startsWith("http") ? url : `${API_BASE_URL}${url}`;
     const response = await fetchWithAuth(fullUrl, {
       ...options,
-      method: 'POST',
+      method: "POST",
       body: data instanceof FormData ? data : JSON.stringify(data),
     });
 
@@ -190,11 +199,15 @@ export const apiClient = {
   /**
    * PUT request
    */
-  async put<T = any>(url: string, data?: any, options: FetchOptions = {}): Promise<T> {
-    const fullUrl = url.startsWith('http') ? url : `${API_BASE_URL}${url}`;
+  async put<T = any>(
+    url: string,
+    data?: any,
+    options: FetchOptions = {},
+  ): Promise<T> {
+    const fullUrl = url.startsWith("http") ? url : `${API_BASE_URL}${url}`;
     const response = await fetchWithAuth(fullUrl, {
       ...options,
-      method: 'PUT',
+      method: "PUT",
       body: data instanceof FormData ? data : JSON.stringify(data),
     });
 
@@ -209,11 +222,15 @@ export const apiClient = {
   /**
    * PATCH request
    */
-  async patch<T = any>(url: string, data?: any, options: FetchOptions = {}): Promise<T> {
-    const fullUrl = url.startsWith('http') ? url : `${API_BASE_URL}${url}`;
+  async patch<T = any>(
+    url: string,
+    data?: any,
+    options: FetchOptions = {},
+  ): Promise<T> {
+    const fullUrl = url.startsWith("http") ? url : `${API_BASE_URL}${url}`;
     const response = await fetchWithAuth(fullUrl, {
       ...options,
-      method: 'PATCH',
+      method: "PATCH",
       body: data instanceof FormData ? data : JSON.stringify(data),
     });
 
@@ -229,10 +246,10 @@ export const apiClient = {
    * DELETE request
    */
   async delete<T = any>(url: string, options: FetchOptions = {}): Promise<T> {
-    const fullUrl = url.startsWith('http') ? url : `${API_BASE_URL}${url}`;
+    const fullUrl = url.startsWith("http") ? url : `${API_BASE_URL}${url}`;
     const response = await fetchWithAuth(fullUrl, {
       ...options,
-      method: 'DELETE',
+      method: "DELETE",
     });
 
     if (!response.ok) {
@@ -241,8 +258,8 @@ export const apiClient = {
     }
 
     // DELETE might not return JSON
-    const contentType = response.headers.get('content-type');
-    if (contentType && contentType.includes('application/json')) {
+    const contentType = response.headers.get("content-type");
+    if (contentType && contentType.includes("application/json")) {
       return response.json();
     }
 
