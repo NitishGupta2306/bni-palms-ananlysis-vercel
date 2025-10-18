@@ -29,7 +29,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { ChapterMemberData } from "../../../shared/services/ChapterDataLoader";
+import { ChapterMemberData } from "@/shared/services/chapter-data-loader";
 import { API_BASE_URL } from "@/config/api";
 import { apiClient } from "@/lib/apiClient";
 

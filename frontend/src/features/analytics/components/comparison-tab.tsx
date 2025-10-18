@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { loadComparisonData, loadMonthlyReports } from '../../../shared/services/ChapterDataLoader';
+import { loadComparisonData, loadMonthlyReports } from "@/shared/services/chapter-data-loader";
 import { LoadingSkeleton } from '@/components/ui/loading-skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
 import { API_BASE_URL } from '@/config/api';

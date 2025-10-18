@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ChapterMemberData } from '../../../shared/services/ChapterDataLoader';
+import { ChapterMemberData } from "@/shared/services/chapter-data-loader";
 import { useMemberManagement } from '../hooks/useMemberManagement';
 import { MemberEditDialog } from './member-edit-dialog';
 import { MemberAddDialog } from './member-add-dialog';

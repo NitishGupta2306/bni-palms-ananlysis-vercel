@@ -3,7 +3,7 @@ import { AdminMember, MemberFilters } from "../types/admin.types";
 import {
   ChapterMemberData,
   MemberData,
-} from "../../../shared/services/ChapterDataLoader";
+} from "@/shared/services/chapter-data-loader";
 import { useToast } from "@/hooks/use-toast";
 import { apiClient } from "@/lib/apiClient";
 

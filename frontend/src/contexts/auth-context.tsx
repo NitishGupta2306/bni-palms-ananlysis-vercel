@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { API_BASE_URL } from '@/config/api';
 import { apiClient } from '@/lib/apiClient';
+import { reportError } from '@/shared/services/error-reporting';
 
 interface ChapterAuth {
   chapterId: string;
@@ -51,7 +52,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             localStorage.removeItem(CHAPTER_AUTH_KEY);
           }
         } catch (error) {
-          console.error('Failed to load chapter auth:', error);
+          reportError(error instanceof Error ? error : new Error('Failed to load chapter auth'), {
+            action: 'loadChapterAuth',
+          });
           localStorage.removeItem(CHAPTER_AUTH_KEY);
         }
       }
@@ -69,7 +72,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             localStorage.removeItem(ADMIN_AUTH_KEY);
           }
         } catch (error) {
-          console.error('Failed to load admin auth:', error);
+          reportError(error instanceof Error ? error : new Error('Failed to load admin auth'), {
+            action: 'loadAdminAuth',
+          });
           localStorage.removeItem(ADMIN_AUTH_KEY);
         }
       }
@@ -133,7 +138,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         };
       }
     } catch (error) {
-      console.error('Authentication error:', error);
+      reportError(error instanceof Error ? error : new Error('Authentication error'), {
+        action: 'authenticateChapter',
+        chapterId,
+      });
       return {
         success: false,
         error: 'Network error. Please try again.',
@@ -180,7 +188,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         };
       }
     } catch (error) {
-      console.error('Admin authentication error:', error);
+      reportError(error instanceof Error ? error : new Error('Admin authentication error'), {
+        action: 'authenticateAdmin',
+      });
       return {
         success: false,
         error: 'Network error. Please try again.',

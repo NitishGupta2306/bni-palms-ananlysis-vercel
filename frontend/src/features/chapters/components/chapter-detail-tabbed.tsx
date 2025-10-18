@@ -10,7 +10,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import { ChapterMemberData } from "../../../shared/services/ChapterDataLoader";
+import { ChapterMemberData } from "@/shared/services/chapter-data-loader";
 import ChapterInfoTab from "./tabs/chapter-info-tab";
 import FileUploadTab from "./tabs/file-upload-tab";
 import ReportWizardTab from "../../analytics/components/report-wizard-tab";

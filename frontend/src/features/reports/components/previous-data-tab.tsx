@@ -25,7 +25,7 @@ import {
   MonthlyReport,
   loadMonthlyReports,
   deleteMonthlyReport,
-} from "../../../shared/services/ChapterDataLoader";
+} from "@/shared/services/chapter-data-loader";
 
 interface PreviousDataTabProps {
   chapterData: ChapterMemberData;

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { SystemStats } from '../types/admin.types';
-import { ChapterMemberData } from '../../../shared/services/ChapterDataLoader';
+import { ChapterMemberData } from "@/shared/services/chapter-data-loader";
 import { useChapterData } from '../../../shared/hooks/useChapterData';
 
 export const useAdminData = () => {

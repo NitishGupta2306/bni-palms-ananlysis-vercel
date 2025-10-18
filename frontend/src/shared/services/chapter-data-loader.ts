@@ -1,4 +1,5 @@
 import { apiClient } from "../../lib/apiClient";
+import { reportError } from "./error-reporting";
 
 export interface ChapterInfo {
   id: string;
@@ -259,7 +260,9 @@ export const loadAllChapterData = async (): Promise<ChapterMemberData[]> => {
 
     return results;
   } catch (error) {
-    console.error("Failed to load chapter data from API:", error);
+    reportError(error instanceof Error ? error : new Error("Failed to load chapter data from API"), {
+      action: "loadAllChapterData",
+    });
 
     // Fallback to empty chapters with error indication
     return REAL_CHAPTERS.map((chapter) => ({
@@ -289,10 +292,10 @@ export const loadMonthlyReports = async (
     );
     return reports;
   } catch (error) {
-    console.error(
-      `Failed to load monthly reports for chapter ${chapterId}:`,
-      error,
-    );
+    reportError(error instanceof Error ? error : new Error(`Failed to load monthly reports for chapter ${chapterId}`), {
+      action: "loadMonthlyReports",
+      chapterId,
+    });
     throw error;
   }
 };
@@ -308,10 +311,11 @@ export const loadMemberDetail = async (
     );
     return memberDetail;
   } catch (error) {
-    console.error(
-      `Failed to load member detail for chapter ${chapterId}, report ${reportId}, member ${memberId}:`,
-      error,
-    );
+    reportError(error instanceof Error ? error : new Error(`Failed to load member detail for chapter ${chapterId}, report ${reportId}, member ${memberId}`), {
+      action: "loadMemberDetail",
+      chapterId,
+      additionalData: { reportId, memberId },
+    });
     throw error;
   }
 };
@@ -327,10 +331,11 @@ export const loadMatrixData = async (
     );
     return matrixData;
   } catch (error) {
-    console.error(
-      `Failed to load ${matrixType} for chapter ${chapterId}, report ${reportId}:`,
-      error,
-    );
+    reportError(error instanceof Error ? error : new Error(`Failed to load ${matrixType} for chapter ${chapterId}, report ${reportId}`), {
+      action: "loadMatrixData",
+      chapterId,
+      additionalData: { reportId, matrixType },
+    });
     throw error;
   }
 };
@@ -342,10 +347,11 @@ export const deleteMonthlyReport = async (
   try {
     await apiClient.delete(`/api/chapters/${chapterId}/reports/${reportId}/`);
   } catch (error) {
-    console.error(
-      `Failed to delete monthly report ${reportId} for chapter ${chapterId}:`,
-      error,
-    );
+    reportError(error instanceof Error ? error : new Error(`Failed to delete monthly report ${reportId} for chapter ${chapterId}`), {
+      action: "deleteMonthlyReport",
+      chapterId,
+      additionalData: { reportId },
+    });
     throw error;
   }
 };
@@ -382,7 +388,11 @@ export const loadComparisonData = async (
     );
     return comparisonData;
   } catch (error) {
-    console.error(`Failed to load comparison for chapter ${chapterId}:`, error);
+    reportError(error instanceof Error ? error : new Error(`Failed to load comparison for chapter ${chapterId}`), {
+      action: "loadComparisonData",
+      chapterId,
+      additionalData: { currentReportId, previousReportId },
+    });
     throw error;
   }
 };
@@ -397,7 +407,11 @@ export const loadReferralComparison = async (
       `/api/chapters/${chapterId}/reports/${currentReportId}/compare/${previousReportId}/referrals/`,
     );
   } catch (error) {
-    console.error(`Failed to load referral comparison:`, error);
+    reportError(error instanceof Error ? error : new Error(`Failed to load referral comparison`), {
+      action: "loadReferralComparison",
+      chapterId,
+      additionalData: { currentReportId, previousReportId },
+    });
     throw error;
   }
 };
@@ -412,7 +426,11 @@ export const loadOTOComparison = async (
       `/api/chapters/${chapterId}/reports/${currentReportId}/compare/${previousReportId}/one-to-ones/`,
     );
   } catch (error) {
-    console.error(`Failed to load one-to-one comparison:`, error);
+    reportError(error instanceof Error ? error : new Error(`Failed to load one-to-one comparison`), {
+      action: "loadOTOComparison",
+      chapterId,
+      additionalData: { currentReportId, previousReportId },
+    });
     throw error;
   }
 };
@@ -427,7 +445,11 @@ export const loadCombinationComparison = async (
       `/api/chapters/${chapterId}/reports/${currentReportId}/compare/${previousReportId}/combination/`,
     );
   } catch (error) {
-    console.error(`Failed to load combination comparison:`, error);
+    reportError(error instanceof Error ? error : new Error(`Failed to load combination comparison`), {
+      action: "loadCombinationComparison",
+      chapterId,
+      additionalData: { currentReportId, previousReportId },
+    });
     throw error;
   }
 };

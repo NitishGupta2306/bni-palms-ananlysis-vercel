@@ -3,7 +3,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { axe, toHaveNoViolations } from 'jest-axe';
 import ChapterDashboard from './chapter-dashboard';
-import { ChapterMemberData } from '../../../shared/services/ChapterDataLoader';
+import { ChapterMemberData } from "@/shared/services/chapter-data-loader";
 
 expect.extend(toHaveNoViolations);
 

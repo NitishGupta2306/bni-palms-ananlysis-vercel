@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ChapterMemberData } from '../../../shared/services/ChapterDataLoader';
+import { ChapterMemberData } from "@/shared/services/chapter-data-loader";
 import {
   Dialog,
   DialogContent,
@@ -14,6 +14,7 @@ import { Label } from '@/components/ui/label';
 import { Loader2 } from 'lucide-react';
 import { useNotifications } from '@/hooks/useNotifications';
 import { apiClient } from '@/lib/apiClient';
+import { reportError } from '@/shared/services/error-reporting';
 import {
   Select,
   SelectContent,
@@ -157,7 +158,11 @@ export const MemberAddDialog: React.FC<MemberAddDialogProps> = ({
       onSuccess();
       onClose();
     } catch (err: any) {
-      console.error('Failed to add member:', err);
+      reportError(err instanceof Error ? err : new Error('Failed to add member'), {
+        action: 'addMember',
+        chapterId: formData.chapter_id,
+        additionalData: { memberName: `${formData.first_name} ${formData.last_name}` },
+      });
 
       const errorMessage = err.response?.data?.error
         || err.response?.data?.message

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { MemberAnalytics } from "../types/member.types";
 import { apiClient } from "@/lib/apiClient";
+import { reportError } from "@/shared/services/error-reporting";
 
 interface UseMemberDetailProps {
   chapterId: string | number;
@@ -34,7 +35,11 @@ export const useMemberDetail = ({
       );
       setMemberAnalytics(data);
     } catch (error) {
-      console.error("Failed to load member analytics:", error);
+      reportError(error instanceof Error ? error : new Error("Failed to load member analytics"), {
+        action: "fetchMemberAnalytics",
+        chapterId: chapterId.toString(),
+        additionalData: { memberName },
+      });
       setError(
         error instanceof Error ? error.message : "Unknown error occurred",
       );

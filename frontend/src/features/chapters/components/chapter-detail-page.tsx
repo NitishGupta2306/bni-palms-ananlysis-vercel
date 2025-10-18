@@ -1,5 +1,5 @@
 import React from 'react';
-import { ChapterMemberData } from '../../../shared/services/ChapterDataLoader';
+import { ChapterMemberData } from "@/shared/services/chapter-data-loader";
 import ChapterDetailTabbed from './chapter-detail-tabbed';
 
 interface ChapterDetailPageProps {

@@ -14,8 +14,8 @@ import { SharedNavigation } from "../features/chapters/components/shared-navigat
 import {
   NavigationProvider,
   useNavigationStats,
-} from "../shared/contexts/NavigationContext";
-import { ThemeProvider } from "../shared/contexts/ThemeContext";
+} from "@/shared/contexts/navigation-context";
+import { ThemeProvider } from "@/shared/contexts/theme-context";
 import ErrorBoundary from "../shared/components/common/ErrorBoundary";
 import { ErrorToastProvider } from "../shared/components/common/ErrorToast";
 import { useNetworkStatus } from "../shared/hooks/useNetworkStatus";

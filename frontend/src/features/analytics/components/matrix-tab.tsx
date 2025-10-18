@@ -21,7 +21,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ChapterMemberData } from "../../../shared/services/ChapterDataLoader";
+import { ChapterMemberData } from "@/shared/services/chapter-data-loader";
 import { useMatrixData } from "../hooks/useMatrixData";
 import { MatrixSelector } from "./matrix-selector";
 import { MatrixDisplay } from "./matrix-display";

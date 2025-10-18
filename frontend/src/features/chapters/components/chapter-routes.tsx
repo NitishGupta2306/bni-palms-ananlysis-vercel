@@ -6,7 +6,7 @@ import {
   useParams,
   useLocation,
 } from "react-router-dom";
-import { ChapterMemberData } from "../../../shared/services/ChapterDataLoader";
+import { ChapterMemberData } from "@/shared/services/chapter-data-loader";
 import { useChapterData } from "../../../shared/hooks/useChapterData";
 import { ProtectedRoute } from "../../../components/protected-route";
 
