@@ -10,6 +10,9 @@ from rest_framework.routers import DefaultRouter
 from chapters.views import ChapterViewSet, AdminAuthViewSet
 from members.views import MemberViewSet
 from reports.views import MonthlyReportViewSet, FileUploadViewSet
+from reports.views_matrix import MonthlyReportMatrixViewSet
+from reports.views_download import MonthlyReportDownloadViewSet
+from reports.views_aggregation import MonthlyReportAggregationViewSet
 from analytics.views import MatrixViewSet, ComparisonViewSet
 
 # Main router for top-level resources
@@ -60,31 +63,37 @@ urlpatterns = [
     # Multi-month aggregation endpoints
     path(
         "chapters/<int:chapter_id>/reports/aggregate/",
-        MonthlyReportViewSet.as_view({"post": "aggregate_reports"}),
+        MonthlyReportAggregationViewSet.as_view({"post": "aggregate_reports"}),
         name="chapter-reports-aggregate",
     ),
     path(
         "chapters/<int:chapter_id>/reports/aggregate/download/",
-        MonthlyReportViewSet.as_view({"post": "download_aggregated"}),
+        MonthlyReportAggregationViewSet.as_view({"post": "download_aggregated"}),
         name="chapter-reports-aggregate-download",
     ),
     # Member detail within report
     path(
         "chapters/<int:chapter_id>/reports/<int:pk>/members/<int:member_id>/",
-        MonthlyReportViewSet.as_view({"get": "member_detail"}),
+        MonthlyReportMatrixViewSet.as_view({"get": "member_detail"}),
         name="chapter-reports-member-detail",
     ),
     # TYFCB data for report
     path(
         "chapters/<int:chapter_id>/reports/<int:pk>/tyfcb-data/",
-        MonthlyReportViewSet.as_view({"get": "tyfcb_data"}),
+        MonthlyReportMatrixViewSet.as_view({"get": "tyfcb_data"}),
         name="chapter-reports-tyfcb",
     ),
     # Download matrices as Excel
     path(
         "chapters/<int:chapter_id>/reports/<int:pk>/download-matrices/",
-        MonthlyReportViewSet.as_view({"get": "download_matrices"}),
+        MonthlyReportDownloadViewSet.as_view({"get": "download_matrices"}),
         name="chapter-reports-download-matrices",
+    ),
+    # Download PALMS sheets as ZIP
+    path(
+        "chapters/<int:chapter_id>/reports/<int:pk>/download-palms/",
+        MonthlyReportDownloadViewSet.as_view({"get": "download_palms"}),
+        name="chapter-reports-download-palms",
     ),
     # Matrix endpoints: chapters/{chapter_id}/reports/{report_id}/matrices/
     path(
