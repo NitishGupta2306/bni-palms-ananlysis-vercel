@@ -1,0 +1,92 @@
+name: Database Backup
+
+on:
+  schedule:
+    # Run daily at 2 AM UTC
+    - cron: '0 2 * * *'
+
+  workflow_dispatch:
+    inputs:
+      backup_type:
+        description: 'Type of backup to create'
+        required: true
+        default: 'full'
+        type: choice
+        options:
+          - full
+          - db
+          - media
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        working-directory: ./backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Create backup directory
+        run: mkdir -p ./backups
+
+      - name: Run database backup
+        working-directory: ./backend
+        env:
+          DJANGO_SETTINGS_MODULE: config.settings
+          SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          BACKUP_DIR: ../backups
+        run: |
+          if [ "${{ github.event.inputs.backup_type }}" == "db" ]; then
+            python manage.py backup --db
+          elif [ "${{ github.event.inputs.backup_type }}" == "media" ]; then
+            python manage.py backup --media
+          else
+            python manage.py backup --full
+          fi
+
+      - name: Cleanup old backups
+        working-directory: ./backend
+        env:
+          DJANGO_SETTINGS_MODULE: config.settings
+          SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          BACKUP_DIR: ../backups
+        run: |
+          python manage.py backup --cleanup
+
+      - name: Upload backup artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: backup-${{ github.run_number }}
+          path: ./backups/*.gz
+          retention-days: 30
+
+      - name: Upload to cloud storage (optional)
+        if: false  # Enable by setting to true and configuring cloud storage
+        run: |
+          # Example for AWS S3:
+          # aws s3 sync ./backups s3://your-backup-bucket/backups/$(date +%Y-%m-%d)/
+
+          # Example for Google Cloud Storage:
+          # gsutil -m cp -r ./backups gs://your-backup-bucket/backups/$(date +%Y-%m-%d)/
+
+          # Example for Azure Blob Storage:
+          # az storage blob upload-batch -d backups -s ./backups --account-name youraccount
+          echo "Cloud storage upload not configured"
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "Backup failed! Check the logs for details."
+          # Add notification logic here (Slack, email, etc.)
