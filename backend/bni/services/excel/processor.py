@@ -32,6 +32,10 @@ from .validators import (
     CurrencyValidator,
     MemberNamesFileValidator,
 )
+from .member_matcher import MemberMatcher
+from .data_preparers import DataPreparers
+from .record_processors import RecordProcessors
+from .helpers import ProcessorHelpers
 
 logger = logging.getLogger(__name__)
 
@@ -62,6 +66,11 @@ class ExcelProcessorService:
         self.chapter = chapter
         self.errors = []
         self.warnings = []
+
+        # Initialize helper modules
+        self.member_matcher = MemberMatcher(chapter)
+        self.data_preparers = DataPreparers()
+        self.record_processors = RecordProcessors(self.member_matcher)
 
     def process_excel_file(
         self, file_path: Union[str, Path], week_of_date: Optional[date] = None
@@ -148,62 +157,21 @@ class ExcelProcessorService:
 
     def _get_members_lookup(self) -> Dict[str, Member]:
         """Create a lookup dictionary for chapter members by normalized name. OPTIMIZED with .only() and select_related."""
-        # Only fetch required fields and prefetch chapter to minimize queries
-        members = (
-            Member.objects.filter(chapter=self.chapter, is_active=True)
-            .select_related("chapter")
-            .only("id", "first_name", "last_name", "normalized_name", "chapter_id")
-        )
-
-        lookup = {}
-
-        for member in members:
-            # Add by normalized name
-            lookup[member.normalized_name] = member
-
-            # Also add variations for fuzzy matching
-            full_name = f"{member.first_name} {member.last_name}".lower().strip()
-            lookup[full_name] = member
-
-            # Add first name only for common cases
-            if member.first_name.lower() not in lookup:
-                lookup[member.first_name.lower()] = member
-
-        return lookup
+        return self.member_matcher.get_members_lookup()
 
     def _find_member_by_name(
         self, name: str, lookup: Dict[str, Member]
     ) -> Optional[Member]:
         """Find a member by name using fuzzy matching."""
-        if not name or pd.isna(name):
-            return None
-
-        name = str(name).strip()
-        if not name:
-            return None
-
-        # Try exact normalized match first
-        normalized = Member.normalize_name(name)
-        if normalized in lookup:
-            return lookup[normalized]
-
-        # Try variations
-        variations = [
-            name.lower(),
-            " ".join(name.lower().split()),
-        ]
-
-        for variation in variations:
-            if variation in lookup:
-                return lookup[variation]
-
-        # Log unmatched names for debugging
-        self.warnings.append(f"Could not find member: '{name}'")
-        return None
+        member = self.member_matcher.find_member_by_name(name, lookup)
+        # Collect warnings from member_matcher
+        self.warnings.extend(self.member_matcher.get_warnings())
+        self.member_matcher.clear_warnings()
+        return member
 
     def _normalize_slip_type(self, slip_type: str) -> Optional[str]:
         """Normalize slip type to standard format using SlipTypeValidator."""
-        return SlipTypeValidator.normalize_slip_type(slip_type)
+        return ProcessorHelpers.normalize_slip_type(slip_type)
 
     def _process_dataframe(
         self,
@@ -335,12 +303,7 @@ class ExcelProcessorService:
 
     def _get_cell_value(self, row: pd.Series, column_index: int) -> Optional[str]:
         """Safely get cell value from row."""
-        try:
-            if column_index >= len(row) or pd.isna(row.iloc[column_index]):
-                return None
-            return str(row.iloc[column_index]).strip()
-        except (IndexError, AttributeError):
-            return None
+        return ProcessorHelpers.get_cell_value(row, column_index)
 
     def _prepare_referral(
         self,
@@ -352,20 +315,13 @@ class ExcelProcessorService:
         week_of_date: Optional[date],
     ) -> Optional[Referral]:
         """Prepare a referral object for bulk insert using ReferralValidator."""
-        is_valid, giver, receiver, warnings = ReferralValidator.validate_referral_data(
-            giver_name, receiver_name, members_lookup, row_idx
+        obj = self.data_preparers.prepare_referral(
+            row, row_idx, giver_name, receiver_name, members_lookup, week_of_date
         )
-
-        if not is_valid:
-            self.warnings.extend(warnings)
-            return None
-
-        return Referral(
-            giver=giver,
-            receiver=receiver,
-            date_given=week_of_date or timezone.now().date(),
-            week_of=week_of_date,
-        )
+        # Collect warnings from data_preparers
+        self.warnings.extend(self.data_preparers.get_warnings())
+        self.data_preparers.clear_warnings()
+        return obj
 
     def _prepare_one_to_one(
         self,
@@ -377,20 +333,13 @@ class ExcelProcessorService:
         week_of_date: Optional[date],
     ) -> Optional[OneToOne]:
         """Prepare a one-to-one object for bulk insert using OneToOneValidator."""
-        is_valid, member1, member2, warnings = OneToOneValidator.validate_one_to_one_data(
-            giver_name, receiver_name, members_lookup, row_idx
+        obj = self.data_preparers.prepare_one_to_one(
+            row, row_idx, giver_name, receiver_name, members_lookup, week_of_date
         )
-
-        if not is_valid:
-            self.warnings.extend(warnings)
-            return None
-
-        return OneToOne(
-            member1=member1,
-            member2=member2,
-            meeting_date=week_of_date or timezone.now().date(),
-            week_of=week_of_date,
-        )
+        # Collect warnings from data_preparers
+        self.warnings.extend(self.data_preparers.get_warnings())
+        self.data_preparers.clear_warnings()
+        return obj
 
     def _prepare_tyfcb(
         self,
@@ -402,34 +351,13 @@ class ExcelProcessorService:
         week_of_date: Optional[date],
     ) -> Optional[TYFCB]:
         """Prepare a TYFCB object for bulk insert using TYFCBValidator."""
-        # Extract amount
-        amount_str = self._get_cell_value(row, self.COLUMN_MAPPINGS["tyfcb_amount"])
-
-        # Validate TYFCB data
-        is_valid, receiver, giver, amount, warnings = TYFCBValidator.validate_tyfcb_data(
-            receiver_name, giver_name, amount_str, members_lookup, row_idx
+        obj = self.data_preparers.prepare_tyfcb(
+            row, row_idx, giver_name, receiver_name, members_lookup, week_of_date
         )
-
-        if not is_valid:
-            self.warnings.extend(warnings)
-            return None
-
-        # Extract detail/description
-        detail = self._get_cell_value(row, self.COLUMN_MAPPINGS["detail"])
-
-        # Determine if inside or outside chapter
-        # TYFCB is OUTSIDE if detail has a value (chapter name), INSIDE if detail is empty
-        within_chapter = not bool(detail and detail.strip())
-
-        return TYFCB(
-            receiver=receiver,
-            giver=giver,
-            amount=amount,
-            within_chapter=within_chapter,
-            date_closed=week_of_date or timezone.now().date(),
-            description=detail or "",
-            week_of=week_of_date,
-        )
+        # Collect warnings from data_preparers
+        self.warnings.extend(self.data_preparers.get_warnings())
+        self.data_preparers.clear_warnings()
+        return obj
 
     def _process_referral(
         self,
@@ -440,44 +368,16 @@ class ExcelProcessorService:
         members_lookup: Dict[str, Member],
         week_of_date: Optional[date],
     ) -> bool:
-        """Process a referral record."""
-        if not all([giver_name, receiver_name]):
-            self.warnings.append(
-                f"Row {row_idx + 1}: Referral missing giver or receiver name"
-            )
-            return False
-
-        giver = self._find_member_by_name(giver_name, members_lookup)
-        receiver = self._find_member_by_name(receiver_name, members_lookup)
-
-        if not giver:
-            self.warnings.append(
-                f"Row {row_idx + 1}: Could not find giver '{giver_name}'"
-            )
-            return False
-
-        if not receiver:
-            self.warnings.append(
-                f"Row {row_idx + 1}: Could not find receiver '{receiver_name}'"
-            )
-            return False
-
-        if giver == receiver:
-            self.warnings.append(f"Row {row_idx + 1}: Self-referral detected, skipping")
-            return False
-
-        # Create referral directly (migration applied, no unique constraint)
-        try:
-            Referral.objects.create(
-                giver=giver,
-                receiver=receiver,
-                date_given=week_of_date or timezone.now().date(),
-                week_of=week_of_date,
-            )
-            return True
-        except Exception as e:
-            self.errors.append(f"Row {row_idx + 1}: Referral creation error: {e}")
-            return False
+        """Process a referral record (DEPRECATED - use _prepare_referral with bulk_create instead)."""
+        result = self.record_processors.process_referral(
+            row, row_idx, giver_name, receiver_name, members_lookup, week_of_date
+        )
+        # Collect errors and warnings from record_processors
+        self.errors.extend(self.record_processors.get_errors())
+        self.warnings.extend(self.record_processors.get_warnings())
+        self.record_processors.clear_errors()
+        self.record_processors.clear_warnings()
+        return result
 
     def _process_one_to_one(
         self,
@@ -488,42 +388,16 @@ class ExcelProcessorService:
         members_lookup: Dict[str, Member],
         week_of_date: Optional[date],
     ) -> bool:
-        """Process a one-to-one meeting record."""
-        if not all([giver_name, receiver_name]):
-            self.warnings.append(f"Row {row_idx + 1}: One-to-one missing member names")
-            return False
-
-        member1 = self._find_member_by_name(giver_name, members_lookup)
-        member2 = self._find_member_by_name(receiver_name, members_lookup)
-
-        if not member1:
-            self.warnings.append(
-                f"Row {row_idx + 1}: Could not find member '{giver_name}'"
-            )
-            return False
-
-        if not member2:
-            self.warnings.append(
-                f"Row {row_idx + 1}: Could not find member '{receiver_name}'"
-            )
-            return False
-
-        if member1 == member2:
-            self.warnings.append(f"Row {row_idx + 1}: Self-meeting detected, skipping")
-            return False
-
-        # Create one-to-one (duplicates already cleared at start)
-        try:
-            OneToOne.objects.create(
-                member1=member1,
-                member2=member2,
-                meeting_date=week_of_date or timezone.now().date(),
-                week_of=week_of_date,
-            )
-            return True
-        except Exception as e:
-            self.errors.append(f"Row {row_idx + 1}: One-to-one creation error: {e}")
-            return False
+        """Process a one-to-one meeting record (DEPRECATED - use _prepare_one_to_one with bulk_create instead)."""
+        result = self.record_processors.process_one_to_one(
+            row, row_idx, giver_name, receiver_name, members_lookup, week_of_date
+        )
+        # Collect errors and warnings from record_processors
+        self.errors.extend(self.record_processors.get_errors())
+        self.warnings.extend(self.record_processors.get_warnings())
+        self.record_processors.clear_errors()
+        self.record_processors.clear_warnings()
+        return result
 
     def _process_tyfcb(
         self,
@@ -534,76 +408,24 @@ class ExcelProcessorService:
         members_lookup: Dict[str, Member],
         week_of_date: Optional[date],
     ) -> bool:
-        """Process a TYFCB record."""
-        if not receiver_name:
-            self.warnings.append(f"Row {row_idx + 1}: TYFCB missing receiver name")
-            return False
-
-        receiver = self._find_member_by_name(receiver_name, members_lookup)
-        if not receiver:
-            self.warnings.append(
-                f"Row {row_idx + 1}: Could not find receiver '{receiver_name}'"
-            )
-            return False
-
-        # Giver is optional for TYFCB
-        giver = None
-        if giver_name:
-            giver = self._find_member_by_name(giver_name, members_lookup)
-
-        # Extract amount
-        amount_str = self._get_cell_value(row, self.COLUMN_MAPPINGS["tyfcb_amount"])
-        amount = self._parse_currency_amount(amount_str)
-
-        if amount <= 0:
-            self.warnings.append(
-                f"Row {row_idx + 1}: Invalid TYFCB amount: {amount_str}"
-            )
-            return False
-
-        # Determine if inside or outside chapter based on Inside/Outside column
-        inside_outside = self._get_cell_value(
-            row, self.COLUMN_MAPPINGS["inside_outside"]
+        """Process a TYFCB record (DEPRECATED - use _prepare_tyfcb with bulk_create instead)."""
+        result = self.record_processors.process_tyfcb(
+            row, row_idx, giver_name, receiver_name, members_lookup, week_of_date
         )
-        within_chapter = bool(
-            inside_outside and inside_outside.lower().strip() == "inside"
-        )
-
-        # Extract detail/description
-        detail = self._get_cell_value(row, self.COLUMN_MAPPINGS["detail"])
-
-        # Create TYFCB (duplicates already cleared at start)
-        try:
-            TYFCB.objects.create(
-                receiver=receiver,
-                giver=giver,
-                amount=Decimal(str(amount)),
-                within_chapter=within_chapter,
-                date_closed=week_of_date or timezone.now().date(),
-                description=detail or "",
-                week_of=week_of_date,
-            )
-            return True
-        except Exception as e:
-            self.errors.append(f"Row {row_idx + 1}: TYFCB creation error: {e}")
-            return False
+        # Collect errors and warnings from record_processors
+        self.errors.extend(self.record_processors.get_errors())
+        self.warnings.extend(self.record_processors.get_warnings())
+        self.record_processors.clear_errors()
+        self.record_processors.clear_warnings()
+        return result
 
     def _parse_currency_amount(self, amount_str: Optional[str]) -> float:
         """Parse currency amount from string using CurrencyValidator."""
-        return CurrencyValidator.parse_currency_amount(amount_str)
+        return ProcessorHelpers.parse_currency_amount(amount_str)
 
     def _create_error_result(self, error_message: str) -> Dict:
         """Create error result dictionary."""
-        return {
-            "success": False,
-            "error": error_message,
-            "referrals_created": 0,
-            "one_to_ones_created": 0,
-            "tyfcbs_created": 0,
-            "total_processed": 0,
-            "errors": [error_message],
-            "warnings": [],
-        }
+        return ProcessorHelpers.create_error_result(error_message)
 
     def process_monthly_reports_batch(
         self,
