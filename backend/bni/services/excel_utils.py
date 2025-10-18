@@ -6,9 +6,12 @@ This module provides reusable Excel styling functions including:
 - Border management
 - Separator columns
 - Date formatting
+
+All colors are imported from Django settings (BNI_CONFIG) for consistency.
 """
 
 from datetime import datetime
+from django.conf import settings
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 from typing import List
@@ -17,14 +20,14 @@ from typing import List
 class ExcelFormatter:
     """Utility class for Excel formatting operations."""
 
-    # Color definitions (as per specification.md)
-    COLOR_GREEN = "B6FFB6"  # Excellent performance
-    COLOR_ORANGE = "FFD699"  # Good/Average performance
-    COLOR_RED = "FFB6B6"  # Needs attention
-    COLOR_YELLOW = "FFE699"  # Special highlights (non-zero values)
-    COLOR_BLACK = "000000"  # Separators
-    COLOR_GRAY = "D3D3D3"  # Headers
-    COLOR_HEADER_BG = "E8F5E8"  # Soft green for headers
+    # Import colors from centralized configuration
+    COLOR_GREEN = settings.BNI_CONFIG['COLORS']['GREEN']
+    COLOR_ORANGE = settings.BNI_CONFIG['COLORS']['ORANGE']
+    COLOR_RED = settings.BNI_CONFIG['COLORS']['RED']
+    COLOR_YELLOW = settings.BNI_CONFIG['COLORS']['YELLOW']
+    COLOR_BLACK = settings.BNI_CONFIG['COLORS']['BLACK']
+    COLOR_GRAY = settings.BNI_CONFIG['COLORS']['GRAY']
+    COLOR_HEADER_BG = settings.BNI_CONFIG['COLORS']['HEADER_BG']
 
     @staticmethod
     def create_merged_header(
