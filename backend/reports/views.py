@@ -18,7 +18,7 @@ from chapters.permissions import IsChapterOrAdmin, IsAdmin
 from members.models import Member
 from reports.models import MonthlyReport, MemberMonthlyStats
 from analytics.models import TYFCB
-from bni.services.aggregation_service import AggregationService
+from bni.services.multi_month_report_service import AggregationService
 
 # Import new modular formatters
 from bni.services.excel_formatters import (

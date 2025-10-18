@@ -23,7 +23,7 @@ from bni.services.excel_formatters import (
 # Import refactored helper modules
 from bni.services.calculations import PerformanceCalculator
 from bni.services.excel_utils import ExcelFormatter
-from bni.services.data_aggregator import DataAggregator
+from bni.services.matrix_aggregation_utils import DataAggregator
 
 
 class AggregationService:

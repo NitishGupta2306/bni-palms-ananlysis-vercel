@@ -37,11 +37,9 @@ class DataAggregator:
         for report in reports:
             if report.referral_matrix_data:
                 matrix_data = report.referral_matrix_data
+                # Modern format: {"members": [...], "matrix": [...]}
                 if "members" in matrix_data:
                     all_member_names.update(matrix_data["members"])
-                else:
-                    # Legacy format: dict keys are member names
-                    all_member_names.update(matrix_data.keys())
 
         # OPTIMIZED: Single bulk query
         normalized_names = [Member.normalize_name(name) for name in all_member_names]
@@ -63,25 +61,13 @@ class DataAggregator:
         if not source_data:
             return
 
-        # Handle new format: {'matrix': {'index': [...], 'columns': [...], 'data': {...}}}
+        # Modern format: {'matrix': {'index': [...], 'columns': [...], 'data': {...}}}
         if "matrix" in source_data:
             matrix_dict = source_data["matrix"]
             if "data" in matrix_dict:
                 for from_member, to_members in matrix_dict["data"].items():
                     if from_member not in target_matrix.index:
                         continue
-                    for to_member, value in to_members.items():
-                        if to_member not in target_matrix.columns:
-                            continue
-                        if isinstance(value, (int, float)):
-                            target_matrix.loc[from_member, to_member] += value
-
-        # Handle legacy format: {from_member: {to_member: value}}
-        else:
-            for from_member, to_members in source_data.items():
-                if from_member not in target_matrix.index:
-                    continue
-                if isinstance(to_members, dict):
                     for to_member, value in to_members.items():
                         if to_member not in target_matrix.columns:
                             continue
@@ -97,25 +83,13 @@ class DataAggregator:
             target_dict: Dict to add data to (modified in place)
             source_data: Dict containing TYFCB data
         """
-        # Handle the actual structure: {'total_amount': X, 'count': Y, 'by_member': {member: amount}}
+        # Modern structure: {'total_amount': X, 'count': Y, 'by_member': {member: amount}}
         if "by_member" in source_data:
-            # New structure from processor
             for member, amount in source_data["by_member"].items():
                 if isinstance(amount, (int, float)):
                     if member not in target_dict:
                         target_dict[member] = 0
                     target_dict[member] += float(amount)
-        else:
-            # Legacy structure (if exists): {receiver: {giver: amount}}
-            for receiver, givers in source_data.items():
-                if isinstance(givers, dict):
-                    for giver, amount in givers.items():
-                        if isinstance(amount, (int, float)):
-                            if receiver not in target_dict:
-                                target_dict[receiver] = {}
-                            if giver not in target_dict[receiver]:
-                                target_dict[receiver][giver] = 0
-                            target_dict[receiver][giver] += float(amount)
 
     @staticmethod
     def add_tyfcb_outside_data(target_dict: Dict, source_data: Dict):
@@ -126,15 +100,9 @@ class DataAggregator:
             target_dict: Dict to add data to (modified in place)
             source_data: Dict containing outside TYFCB data
         """
-        # Handle the actual structure: {'total_amount': X, 'count': Y, 'by_member': {member: amount}}
+        # Modern structure: {'total_amount': X, 'count': Y, 'by_member': {member: amount}}
         if "by_member" in source_data:
-            # New structure from processor
             for member, amount in source_data["by_member"].items():
-                if isinstance(amount, (int, float)):
-                    target_dict[member] = target_dict.get(member, 0) + float(amount)
-        else:
-            # Legacy structure: {member: amount}
-            for member, amount in source_data.items():
                 if isinstance(amount, (int, float)):
                     target_dict[member] = target_dict.get(member, 0) + float(amount)
 

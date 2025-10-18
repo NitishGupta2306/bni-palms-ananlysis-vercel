@@ -5,7 +5,7 @@ Chapter models for BNI Analytics.
 from django.db import models
 from django.utils import timezone
 from datetime import timedelta
-from .password_utils import hash_password, verify_password, is_hashed
+from .password_utils import hash_password, verify_password
 
 
 class Chapter(models.Model):
@@ -67,18 +67,11 @@ class Chapter(models.Model):
 
         Returns:
             True if password matches, False otherwise
-        """
-        # Handle legacy plain text passwords (for migration period)
-        if not is_hashed(self.password):
-            # Legacy plain text comparison
-            if raw_password == self.password:
-                # Automatically upgrade to hashed password
-                self.set_password(raw_password)
-                self.save()
-                return True
-            return False
 
-        # Modern hashed password comparison
+        Note:
+            All passwords should now be bcrypt hashed. Legacy plaintext support
+            was removed after migration period (completed 2025-10-18).
+        """
         return verify_password(raw_password, self.password)
 
 
@@ -148,16 +141,9 @@ class AdminSettings(models.Model):
 
         Returns:
             True if password matches, False otherwise
-        """
-        # Handle legacy plain text passwords (for migration period)
-        if not is_hashed(self.admin_password):
-            # Legacy plain text comparison
-            if raw_password == self.admin_password:
-                # Automatically upgrade to hashed password
-                self.set_password(raw_password)
-                self.save()
-                return True
-            return False
 
-        # Modern hashed password comparison
+        Note:
+            All passwords should now be bcrypt hashed. Legacy plaintext support
+            was removed after migration period (completed 2025-10-18).
+        """
         return verify_password(raw_password, self.admin_password)
