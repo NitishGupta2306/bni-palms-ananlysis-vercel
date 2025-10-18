@@ -1,34 +1,37 @@
 """
 Shared color constants and performance calculation logic for Excel reports.
 
-All colors are as per specification.md to ensure consistency across reports.
+All colors and thresholds are imported from Django settings (BNI_CONFIG)
+to ensure consistency across reports and allow environment-based overrides.
 """
 
+from django.conf import settings
+
 # ==============================================================================
-# COLOR DEFINITIONS
+# COLOR DEFINITIONS (imported from settings)
 # ==============================================================================
 
 # Performance highlighting colors - Modern Minimal scheme
-COLOR_GREEN = "D1F2EB"      # Aqua mint - Excellent performance (>= 1.75x average)
-COLOR_ORANGE = "FDEBD0"     # Cream - Good/Average performance (0.75x - 1.75x average)
-COLOR_RED = "FADBD8"        # Blush - Needs attention (< 0.5x average)
+COLOR_GREEN = settings.BNI_CONFIG['COLORS']['GREEN']      # Aqua mint - Excellent performance
+COLOR_ORANGE = settings.BNI_CONFIG['COLORS']['ORANGE']    # Cream - Good/Average performance
+COLOR_RED = settings.BNI_CONFIG['COLORS']['RED']          # Blush - Needs attention
 
 # Special highlighting colors
-COLOR_YELLOW = "FFE699"     # Non-zero values highlight
-COLOR_GRAY = "D3D3D3"       # Header backgrounds
-COLOR_HEADER_BG = "E8F5E8"  # Soft green for merged headers
-COLOR_BLACK = "000000"      # Separators (deprecated - use borders instead)
+COLOR_YELLOW = settings.BNI_CONFIG['COLORS']['YELLOW']    # Non-zero values highlight
+COLOR_GRAY = settings.BNI_CONFIG['COLORS']['GRAY']        # Header backgrounds
+COLOR_HEADER_BG = settings.BNI_CONFIG['COLORS']['HEADER_BG']  # Soft green for merged headers
+COLOR_BLACK = settings.BNI_CONFIG['COLORS']['BLACK']      # Separators (deprecated - use borders instead)
 
 # ==============================================================================
-# PERFORMANCE THRESHOLDS
+# PERFORMANCE THRESHOLDS (imported from settings)
 # ==============================================================================
 
-# Performance tier boundaries
-THRESHOLD_GREEN = 1.75          # >= 1.75x average = Excellent (Green)
-THRESHOLD_ORANGE_HIGH = 1.75    # < 1.75x average (upper bound for orange)
-THRESHOLD_ORANGE_LOW = 0.75     # >= 0.75x average (lower bound for orange)
-THRESHOLD_RED = 0.5             # < 0.5x average = Needs Attention (Red)
-                                 # 0.5x - 0.75x = No highlighting (neutral)
+# Performance tier boundaries (multipliers of chapter average)
+THRESHOLD_GREEN = settings.BNI_CONFIG['PERFORMANCE_THRESHOLDS']['EXCELLENT']         # >= 1.75x average = Excellent
+THRESHOLD_ORANGE_HIGH = settings.BNI_CONFIG['PERFORMANCE_THRESHOLDS']['GOOD_HIGH']   # < 1.75x average (upper bound)
+THRESHOLD_ORANGE_LOW = settings.BNI_CONFIG['PERFORMANCE_THRESHOLDS']['GOOD_LOW']     # >= 0.75x average (lower bound)
+THRESHOLD_RED = settings.BNI_CONFIG['PERFORMANCE_THRESHOLDS']['ATTENTION']           # < 0.5x average = Needs Attention
+                                                                                       # 0.5x - 0.75x = No highlighting
 
 # ==============================================================================
 # PERFORMANCE CALCULATION FUNCTIONS

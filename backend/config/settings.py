@@ -451,6 +451,52 @@ os.makedirs(BACKUP_DIR, exist_ok=True)
 # ==============================================================================
 
 # ==============================================================================
+# BNI APPLICATION CONFIGURATION
+# ==============================================================================
+
+BNI_CONFIG = {
+    # Performance tier thresholds (multipliers of chapter average)
+    'PERFORMANCE_THRESHOLDS': {
+        'EXCELLENT': float(os.environ.get('BNI_THRESHOLD_EXCELLENT', 1.75)),  # >= 1.75x average
+        'GOOD_HIGH': float(os.environ.get('BNI_THRESHOLD_GOOD_HIGH', 1.75)),  # < 1.75x average
+        'GOOD_LOW': float(os.environ.get('BNI_THRESHOLD_GOOD_LOW', 0.75)),    # >= 0.75x average
+        'ATTENTION': float(os.environ.get('BNI_THRESHOLD_ATTENTION', 0.5)),   # < 0.5x average
+    },
+
+    # Excel highlighting colors (hex codes without #)
+    'COLORS': {
+        'GREEN': os.environ.get('BNI_COLOR_GREEN', 'D1F2EB'),      # Aqua mint - Excellent performance
+        'ORANGE': os.environ.get('BNI_COLOR_ORANGE', 'FDEBD0'),    # Cream - Good/Average performance
+        'RED': os.environ.get('BNI_COLOR_RED', 'FADBD8'),          # Blush - Needs attention
+        'YELLOW': os.environ.get('BNI_COLOR_YELLOW', 'FFE699'),    # Non-zero values highlight
+        'GRAY': os.environ.get('BNI_COLOR_GRAY', 'D3D3D3'),        # Header backgrounds
+        'HEADER_BG': os.environ.get('BNI_COLOR_HEADER_BG', 'E8F5E8'),  # Soft green for merged headers
+        'BLACK': os.environ.get('BNI_COLOR_BLACK', '000000'),      # Separators
+    },
+
+    # Excel column widths (in characters)
+    'EXCEL_COLUMN_WIDTHS': {
+        'MEMBER_NAME': int(os.environ.get('BNI_COL_WIDTH_NAME', 20)),
+        'SHORT_NAME': int(os.environ.get('BNI_COL_WIDTH_SHORT', 15)),
+        'NUMERIC': int(os.environ.get('BNI_COL_WIDTH_NUMERIC', 10)),
+        'WIDE': int(os.environ.get('BNI_COL_WIDTH_WIDE', 25)),
+    },
+
+    # Timeouts (in seconds)
+    'TIMEOUTS': {
+        'EXCEL_PROCESSING': int(os.environ.get('BNI_TIMEOUT_EXCEL', 300)),  # 5 minutes
+        'API_REQUEST': int(os.environ.get('BNI_TIMEOUT_API', 30)),           # 30 seconds
+    },
+
+    # Member activity threshold (for "inactive" warning)
+    'MEMBER_ACTIVITY_THRESHOLD': float(os.environ.get('BNI_MEMBER_ACTIVITY_THRESHOLD', 0.5)),
+}
+
+# ==============================================================================
+# END BNI APPLICATION CONFIGURATION
+# ==============================================================================
+
+# ==============================================================================
 # ERROR MONITORING & LOGGING CONFIGURATION
 # ==============================================================================
 
