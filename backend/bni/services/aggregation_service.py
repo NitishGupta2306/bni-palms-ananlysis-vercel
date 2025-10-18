@@ -3,19 +3,11 @@ Aggregation service for multi-month PALMS analysis.
 Combines multiple monthly reports into aggregated matrices and member tracking.
 """
 
-import pandas as pd
-import numpy as np
-from typing import Dict, List, Set, Tuple
-from collections import defaultdict
-from datetime import datetime
+from typing import Dict, List
 from io import BytesIO
-import zipfile
 
 from reports.models import MonthlyReport
-from members.models import Member
 from openpyxl import Workbook
-from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
-from openpyxl.utils import get_column_letter
 
 # Import new modular formatters
 from bni.services.excel_formatters import (
@@ -46,21 +38,6 @@ class AggregationService:
         """
         self.reports = sorted(reports, key=lambda r: r.month_year)
         self.chapter = self.reports[0].chapter if self.reports else None
-
-        # Color definitions (as per specification.md)
-        self.COLOR_GREEN = "B6FFB6"  # Excellent performance
-        self.COLOR_ORANGE = "FFD699"  # Good/Average performance
-        self.COLOR_RED = "FFB6B6"  # Needs attention
-        self.COLOR_YELLOW = "FFE699"  # Special highlights (non-zero values)
-        self.COLOR_BLACK = "000000"  # Separators
-        self.COLOR_GRAY = "D3D3D3"  # Headers
-        self.COLOR_HEADER_BG = "E8F5E8"  # Soft green for headers
-
-        # Performance thresholds (as per specification.md)
-        self.THRESHOLD_GREEN = 1.75  # >= 1.75x average
-        self.THRESHOLD_ORANGE_HIGH = 1.75  # < 1.75x average
-        self.THRESHOLD_ORANGE_LOW = 0.75  # >= 0.75x average
-        self.THRESHOLD_RED = 0.5  # < 0.5x average
 
     # ============================================================================
     # UTILITY METHODS
