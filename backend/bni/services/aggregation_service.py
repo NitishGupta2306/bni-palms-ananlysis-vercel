@@ -28,6 +28,10 @@ from bni.services.excel_formatters import (
     write_charts_page,
 )
 
+# Import refactored helper modules
+from bni.services.calculations import PerformanceCalculator
+from bni.services.excel_utils import ExcelFormatter
+
 
 class AggregationService:
     """Service for aggregating multiple monthly reports."""
@@ -65,148 +69,32 @@ class AggregationService:
         self, worksheet, title: str, num_columns: int, row: int = 1
     ):
         """Create merged header cell spanning multiple columns."""
-        # Get period string
         period_str = self._get_period_display()
-        full_title = f"{title} - Period: {period_str}"
-
-        # Merge cells
-        end_col = get_column_letter(num_columns)
-        worksheet.merge_cells(f"A{row}:{end_col}{row}")
-
-        # Style the merged cell
-        cell = worksheet[f"A{row}"]
-        cell.value = full_title
-        cell.font = Font(bold=True, size=14)
-        cell.alignment = Alignment(horizontal="center", vertical="center")
-        cell.fill = PatternFill(
-            start_color=self.COLOR_HEADER_BG,
-            end_color=self.COLOR_HEADER_BG,
-            fill_type="solid",
-        )
-
-        # Add border
-        thick_border = Border(bottom=Side(style="thick"))
-        cell.border = thick_border
-
-        # Set fixed row height for merged header (prevents auto-resizing)
-        worksheet.row_dimensions[row].height = 30
+        ExcelFormatter.create_merged_header(worksheet, title, num_columns, row, period_str)
 
     def _get_period_display(self) -> str:
         """Get period string in MM/YYYY - MM/YYYY format."""
-        if not self.reports:
-            return ""
-
-        if len(self.reports) == 1:
-            # Single month
-            date = datetime.strptime(self.reports[0].month_year, "%Y-%m")
-            return date.strftime("%m/%Y")
-
-        # Multiple months
-        start_date = datetime.strptime(self.reports[0].month_year, "%Y-%m")
-        end_date = datetime.strptime(self.reports[-1].month_year, "%Y-%m")
-
-        return f"{start_date.strftime('%m/%Y')} - {end_date.strftime('%m/%Y')}"
+        return ExcelFormatter.get_period_display(self.reports)
 
     def _calculate_chapter_statistics(self, aggregated_data: Dict) -> Dict:
         """Calculate chapter-wide statistics for performance evaluation."""
-        ref_matrix = aggregated_data["referral_matrix"]
-        oto_matrix = aggregated_data["oto_matrix"]
-        tyfcb_inside = aggregated_data["tyfcb_inside"]
-        tyfcb_outside = aggregated_data["tyfcb_outside"]
-
-        num_members = len(ref_matrix.index)
-
-        # Calculate referral statistics
-        ref_totals = ref_matrix.sum(axis=1)  # Total given per member
-        avg_referrals = ref_totals.mean() if num_members > 0 else 0
-
-        # Calculate OTO statistics
-        oto_totals = oto_matrix.sum(axis=1)
-        avg_oto = oto_totals.mean() if num_members > 0 else 0
-
-        # Calculate TYFCB statistics
-        tyfcb_totals = {}
-        for member in ref_matrix.index:
-            inside = float(tyfcb_inside.get(member, 0)) if tyfcb_inside else 0
-            outside = float(tyfcb_outside.get(member, 0)) if tyfcb_outside else 0
-            tyfcb_totals[member] = inside + outside
-        avg_tyfcb = sum(tyfcb_totals.values()) / num_members if num_members > 0 else 0
-
-        return {
-            "chapter_size": num_members,
-            "avg_referrals": avg_referrals,
-            "avg_oto": avg_oto,
-            "avg_tyfcb": avg_tyfcb,
-            "ref_totals": ref_totals.to_dict(),
-            "oto_totals": oto_totals.to_dict(),
-            "tyfcb_totals": tyfcb_totals,
-        }
+        return PerformanceCalculator.calculate_chapter_statistics(aggregated_data)
 
     def _get_performance_color(self, value: float, average: float) -> str:
         """Determine performance color based on value and average."""
-        if average == 0:
-            return None  # No highlighting if average is 0
-
-        ratio = value / average
-
-        if ratio >= self.THRESHOLD_GREEN:
-            return self.COLOR_GREEN
-        elif ratio >= self.THRESHOLD_ORANGE_LOW:
-            return self.COLOR_ORANGE
-        elif ratio < self.THRESHOLD_RED:
-            return self.COLOR_RED
-        else:
-            return None  # No highlighting for 0.5-0.75 range
+        return PerformanceCalculator.get_performance_color(value, average)
 
     def _count_performance_tiers(
         self, values: Dict[str, float], average: float
     ) -> Dict:
         """Count how many members fall into each performance tier."""
-        if average == 0:
-            return {"green": 0, "orange": 0, "red": 0, "neutral": len(values)}
-
-        green_count = 0
-        orange_count = 0
-        red_count = 0
-        neutral_count = 0
-
-        for value in values.values():
-            ratio = value / average
-            if ratio >= self.THRESHOLD_GREEN:
-                green_count += 1
-            elif ratio >= self.THRESHOLD_ORANGE_LOW:
-                orange_count += 1
-            elif ratio < self.THRESHOLD_RED:
-                red_count += 1
-            else:
-                neutral_count += 1
-
-        total = len(values)
-        return {
-            "green": green_count,
-            "orange": orange_count,
-            "red": red_count,
-            "neutral": neutral_count,
-            "green_pct": (green_count / total * 100) if total > 0 else 0,
-            "orange_pct": (orange_count / total * 100) if total > 0 else 0,
-            "red_pct": (red_count / total * 100) if total > 0 else 0,
-        }
+        return PerformanceCalculator.count_performance_tiers(values, average)
 
     def _add_black_separator_column(
         self, worksheet, col_idx: int, start_row: int, end_row: int
     ):
         """Add a black separator column for visual distinction."""
-        col_letter = get_column_letter(col_idx)
-        for row in range(start_row, end_row + 1):
-            cell = worksheet[f"{col_letter}{row}"]
-            cell.fill = PatternFill(
-                start_color=self.COLOR_BLACK,
-                end_color=self.COLOR_BLACK,
-                fill_type="solid",
-            )
-
-        # Make column narrow
-        worksheet.column_dimensions[col_letter].width = 2
+        ExcelFormatter.add_black_separator_column(worksheet, col_idx, start_row, end_row)
 
     def _apply_thin_borders(
         self, worksheet, start_row: int, end_row: int, start_col: int, end_col: int
