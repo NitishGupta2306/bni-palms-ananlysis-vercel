@@ -1,5 +1,5 @@
 import React from 'react';
-import ErrorBoundary from '../../../shared/components/common/ErrorBoundary';
+import ErrorBoundary from '../../../shared/components/common/error-boundary';
 import { Home, AlertCircle } from 'lucide-react';
 
 interface Props {

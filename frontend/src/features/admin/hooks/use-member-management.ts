@@ -5,7 +5,7 @@ import {
   MemberData,
 } from "@/shared/services/chapter-data-loader";
 import { useToast } from "@/hooks/use-toast";
-import { apiClient } from "@/lib/apiClient";
+import { apiClient } from "@/lib/api-client";
 
 export const useMemberManagement = (
   chapterData: ChapterMemberData[],

@@ -7,7 +7,7 @@ import {
   useLocation,
 } from "react-router-dom";
 import { ChapterMemberData } from "@/shared/services/chapter-data-loader";
-import { useChapterData } from "../../../shared/hooks/useChapterData";
+import { useChapterData } from "../../../shared/hooks/use-chapter-data";
 import { ProtectedRoute } from "../../../components/protected-route";
 
 const LandingPage = lazy(() => import("../../landing/pages/landing-page"));

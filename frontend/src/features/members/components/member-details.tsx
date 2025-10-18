@@ -11,8 +11,8 @@ import {
 import { Input } from '@/components/ui/input';
 import { AlertCircle, AlertTriangle, Loader2 } from 'lucide-react';
 import { ChapterMemberData } from "@/shared/services/chapter-data-loader";
-import { useMemberDetail } from '../hooks/useMemberDetail';
-import { useMemberActions } from '../hooks/useMemberActions';
+import { useMemberDetail } from '../hooks/use-member-detail';
+import { useMemberActions } from '../hooks/use-member-actions';
 import { MemberProfileCard } from './member-profile-card';
 import { MemberStatsSection } from './member-stats-section';
 import { MissingConnectionsSection } from './missing-connections-section';

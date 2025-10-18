@@ -26,7 +26,7 @@ import { BulkUploadTab } from "./bulk-upload-tab";
 import { DataUploadTab } from "./data-upload-tab";
 import { SystemStatusTab } from "./system-status-tab";
 import { SecuritySettingsTab } from "./security-settings-tab";
-import { useAdminData } from "../hooks/useAdminData";
+import { useAdminData } from "../hooks/use-admin-data";
 
 const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();

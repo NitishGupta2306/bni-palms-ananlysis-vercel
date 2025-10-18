@@ -8,7 +8,7 @@
  *
  * Usage:
  * ```typescript
- * import { apiClient } from '@/lib/apiClient';
+ * import { apiClient } from '@/lib/api-client';
  *
  * // GET request
  * const data = await apiClient.get('/api/chapters/');

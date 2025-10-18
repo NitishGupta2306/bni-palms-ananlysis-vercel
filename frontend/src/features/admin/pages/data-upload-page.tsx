@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { DataUploadTab } from '../components/data-upload-tab';
-import { useAdminData } from '../hooks/useAdminData';
+import { useAdminData } from '../hooks/use-admin-data';
 
 const DataUploadPage: React.FC = () => {
   const {

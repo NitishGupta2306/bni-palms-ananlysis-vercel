@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { ChapterMemberData } from "@/shared/services/chapter-data-loader";
-import { useChapterManagement } from '../hooks/useChapterManagement';
+import { useChapterManagement } from '../hooks/use-chapter-management';
 
 interface ChapterManagementTabProps {
   chapterData: ChapterMemberData[];

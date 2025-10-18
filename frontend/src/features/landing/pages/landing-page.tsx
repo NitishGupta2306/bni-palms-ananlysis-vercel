@@ -11,7 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { ChapterLoginModal } from "../components/chapter-login-modal";
 import { AdminLoginModal } from "../components/admin-login-modal";
-import { apiClient } from "@/lib/apiClient";
+import { apiClient } from "@/lib/api-client";
 
 interface Chapter {
   id: number;

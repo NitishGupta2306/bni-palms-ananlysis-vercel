@@ -31,7 +31,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { ChapterMemberData } from "@/shared/services/chapter-data-loader";
 import { API_BASE_URL } from "@/config/api";
-import { apiClient } from "@/lib/apiClient";
+import { apiClient } from "@/lib/api-client";
 
 interface Member {
   id: number;

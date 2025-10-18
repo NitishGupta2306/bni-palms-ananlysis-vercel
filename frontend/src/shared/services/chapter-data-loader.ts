@@ -1,4 +1,4 @@
-import { apiClient } from "../../lib/apiClient";
+import { apiClient } from "../../lib/api-client";
 import { reportError } from "./error-reporting";
 
 export interface ChapterInfo {

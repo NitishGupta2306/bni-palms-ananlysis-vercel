@@ -16,11 +16,11 @@ import {
   useNavigationStats,
 } from "@/shared/contexts/navigation-context";
 import { ThemeProvider } from "@/shared/contexts/theme-context";
-import ErrorBoundary from "../shared/components/common/ErrorBoundary";
-import { ErrorToastProvider } from "../shared/components/common/ErrorToast";
-import { useNetworkStatus } from "../shared/hooks/useNetworkStatus";
-import { queryClient } from "../shared/lib/queryClient";
-import SplashScreen from "../components/animations/SplashScreen";
+import ErrorBoundary from "../shared/components/common/error-boundary";
+import { ErrorToastProvider } from "../shared/components/common/error-toast";
+import { useNetworkStatus } from "../shared/hooks/use-network-status";
+import { queryClient } from "../shared/lib/query-client";
+import SplashScreen from "../components/animations/splash-screen";
 import { DownloadQueueProvider } from "../contexts/download-queue-context";
 import { DownloadProgressPanel } from "../components/ui/download-progress";
 import { Toaster } from "../components/ui/toaster";

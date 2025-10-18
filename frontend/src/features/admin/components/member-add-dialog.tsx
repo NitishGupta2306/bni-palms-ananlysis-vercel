@@ -12,8 +12,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2 } from 'lucide-react';
-import { useNotifications } from '@/hooks/useNotifications';
-import { apiClient } from '@/lib/apiClient';
+import { useNotifications } from '@/hooks/use-notifications';
+import { apiClient } from '@/lib/api-client';
 import { reportError } from '@/shared/services/error-reporting';
 import {
   Select,

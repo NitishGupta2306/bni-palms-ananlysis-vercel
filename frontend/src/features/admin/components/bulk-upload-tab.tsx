@@ -5,8 +5,8 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { UploadResult } from '../types/admin.types';
-import { apiClient } from '@/lib/apiClient';
-import { useInvalidateChapterData } from '@/shared/hooks/useChapterData';
+import { apiClient } from '@/lib/api-client';
+import { useInvalidateChapterData } from '@/shared/hooks/use-chapter-data';
 
 interface BulkUploadTabProps {
   onDataRefresh: () => void;

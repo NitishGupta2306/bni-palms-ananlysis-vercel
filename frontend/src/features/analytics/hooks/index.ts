@@ -1,2 +1,2 @@
-export * from './useMatrixData';
-export * from './useMatrixVisualization';
+export * from './use-matrix-data';
+export * from './use-matrix-visualization';

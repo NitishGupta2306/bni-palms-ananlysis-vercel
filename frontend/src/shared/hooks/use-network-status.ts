@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useErrorToast } from '../components/common/ErrorToast';
+import { useErrorToast } from '../components/common/error-toast';
 
 export const useNetworkStatus = () => {
   const [isOnline, setIsOnline] = useState(navigator.onLine);

@@ -22,14 +22,14 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ChapterMemberData } from "@/shared/services/chapter-data-loader";
-import { useMatrixData } from "../hooks/useMatrixData";
+import { useMatrixData } from "../hooks/use-matrix-data";
 import { MatrixSelector } from "./matrix-selector";
 import { MatrixDisplay } from "./matrix-display";
 import { TYFCBReport } from "./tyfcb-report";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { formatMonthYearLong } from "@/lib/utils";
-import { fetchWithAuth } from "@/lib/apiClient";
+import { fetchWithAuth } from "@/lib/api-client";
 import { API_BASE_URL } from "@/config/api";
 
 interface MatrixTabProps {

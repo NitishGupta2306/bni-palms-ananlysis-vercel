@@ -1,5 +1,5 @@
 import React from 'react';
-import ErrorBoundary from '@/shared/components/common/ErrorBoundary';
+import ErrorBoundary from '@/shared/components/common/error-boundary';
 import { AlertTriangle, RefreshCw, Grid3x3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 

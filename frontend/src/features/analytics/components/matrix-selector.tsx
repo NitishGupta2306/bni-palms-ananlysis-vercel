@@ -11,8 +11,8 @@ import { Button } from "@/components/ui/button";
 import { Download, Calendar, FileText } from "lucide-react";
 import { formatDate } from "@/lib/date-utils";
 import { MonthlyReport } from "@/shared/services/chapter-data-loader";
-import { useNotifications } from "@/hooks/useNotifications";
-import { fetchWithAuth } from "@/lib/apiClient";
+import { useNotifications } from "@/hooks/use-notifications";
+import { fetchWithAuth } from "@/lib/api-client";
 import { API_BASE_URL } from "@/config/api";
 
 interface MatrixSelectorProps {

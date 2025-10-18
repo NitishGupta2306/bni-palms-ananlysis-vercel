@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { API_BASE_URL } from "@/config/api";
 import { formatMonthYearShort } from "@/lib/utils";
-import { apiClient, fetchWithAuth } from "@/lib/apiClient";
+import { apiClient, fetchWithAuth } from "@/lib/api-client";
 
 interface MonthlyReportListItem {
   id: number;
