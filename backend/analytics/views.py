@@ -14,6 +14,7 @@ from rest_framework.response import Response
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from io import BytesIO
+import logging
 
 from chapters.models import Chapter
 from chapters.permissions import IsChapterOrAdmin
@@ -21,6 +22,9 @@ from reports.models import MonthlyReport
 from members.models import Member
 from analytics.models import Referral
 from bni.services.comparison_service import ComparisonService
+from bni.exceptions import build_error_response, handle_not_found
+
+logger = logging.getLogger(__name__)
 
 
 class MatrixViewSet(viewsets.ViewSet):
@@ -99,15 +103,16 @@ class MatrixViewSet(viewsets.ViewSet):
 
             return Response(result)
 
-        except (Chapter.DoesNotExist, MonthlyReport.DoesNotExist):
-            return Response(
-                {'error': 'Chapter or monthly report not found'},
-                status=status.HTTP_404_NOT_FOUND
-            )
+        except Chapter.DoesNotExist:
+            return handle_not_found("Chapter", chapter_id)
+        except MonthlyReport.DoesNotExist:
+            return handle_not_found("MonthlyReport", report_id)
         except Exception as e:
-            return Response(
-                {'error': f'Matrix generation failed: {str(e)}'},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            logger.exception(f"Referral matrix generation failed for report {report_id}")
+            return build_error_response(
+                message=f"Matrix generation failed: {str(e)}",
+                code="matrix_generation_error",
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
     @action(detail=False, methods=['get'], url_path='one-to-one')
@@ -171,15 +176,16 @@ class MatrixViewSet(viewsets.ViewSet):
 
             return Response(result)
 
-        except (Chapter.DoesNotExist, MonthlyReport.DoesNotExist):
-            return Response(
-                {'error': 'Chapter or monthly report not found'},
-                status=status.HTTP_404_NOT_FOUND
-            )
+        except Chapter.DoesNotExist:
+            return handle_not_found("Chapter", chapter_id)
+        except MonthlyReport.DoesNotExist:
+            return handle_not_found("MonthlyReport", report_id)
         except Exception as e:
-            return Response(
-                {'error': f'Matrix generation failed: {str(e)}'},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            logger.exception(f"OTO matrix generation failed for report {report_id}")
+            return build_error_response(
+                message=f"Matrix generation failed: {str(e)}",
+                code="matrix_generation_error",
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
     @action(detail=False, methods=['get'], url_path='combination')
@@ -262,15 +268,16 @@ class MatrixViewSet(viewsets.ViewSet):
 
             return Response(result)
 
-        except (Chapter.DoesNotExist, MonthlyReport.DoesNotExist):
-            return Response(
-                {'error': 'Chapter or monthly report not found'},
-                status=status.HTTP_404_NOT_FOUND
-            )
+        except Chapter.DoesNotExist:
+            return handle_not_found("Chapter", chapter_id)
+        except MonthlyReport.DoesNotExist:
+            return handle_not_found("MonthlyReport", report_id)
         except Exception as e:
-            return Response(
-                {'error': f'Matrix generation failed: {str(e)}'},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            logger.exception(f"Combination matrix generation failed for report {report_id}")
+            return build_error_response(
+                message=f"Matrix generation failed: {str(e)}",
+                code="matrix_generation_error",
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
 
@@ -623,15 +630,18 @@ class ComparisonViewSet(viewsets.ViewSet):
             response['Content-Disposition'] = f'attachment; filename="{filename}"'
             return response
 
-        except (Chapter.DoesNotExist, MonthlyReport.DoesNotExist):
-            return Response(
-                {'error': 'Chapter or reports not found'},
-                status=status.HTTP_404_NOT_FOUND
+        except Chapter.DoesNotExist:
+            return handle_not_found("Chapter", chapter_id)
+        except MonthlyReport.DoesNotExist:
+            return build_error_response(
+                message="One or both reports not found",
+                code="not_found",
+                status_code=status.HTTP_404_NOT_FOUND
             )
         except Exception as e:
-            import traceback
-            traceback.print_exc()
-            return Response(
-                {'error': f'Failed to generate Excel: {str(e)}'},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            logger.exception(f"Failed to generate comparison Excel for reports {report_id} vs {previous_report_id}")
+            return build_error_response(
+                message=f"Failed to generate Excel: {str(e)}",
+                code="excel_generation_error",
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
             )

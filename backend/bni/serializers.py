@@ -2,6 +2,13 @@ from rest_framework import serializers
 from chapters.models import Chapter, AdminSettings
 from members.models import Member
 from analytics.models import Referral, OneToOne, TYFCB
+from bni.validators import (
+    validate_excel_file,
+    sanitize_filename,
+    name_validator,
+    phone_validator,
+)
+from django.core.validators import EmailValidator
 
 
 class ChapterSerializer(serializers.ModelSerializer):
@@ -164,27 +171,23 @@ class MemberCreateSerializer(serializers.ModelSerializer):
         return value.strip()
 
     def validate_email(self, value):
-        """Validate email format."""
+        """Validate email format using Django's EmailValidator."""
         if value and value.strip():
             value = value.strip().lower()
-            # Basic email format validation
-            import re
-            email_regex = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
-            if not re.match(email_regex, value):
-                raise serializers.ValidationError("Please enter a valid email address")
+            email_validator = EmailValidator(message="Please enter a valid email address")
+            email_validator(value)
             if len(value) > 254:
                 raise serializers.ValidationError("Email must be less than 254 characters")
         return value
 
     def validate_phone(self, value):
-        """Validate phone number format."""
+        """Validate phone number format using phone_validator."""
         if value and value.strip():
             value = value.strip()
-            # Allow only digits, spaces, hyphens, parentheses, plus, and dots
-            import re
-            phone_regex = r'^[\d\s\-\(\)\+\.]+$'
-            if not re.match(phone_regex, value):
-                raise serializers.ValidationError("Phone number can only contain digits, spaces, hyphens, parentheses, plus signs, and dots")
+            try:
+                phone_validator(value)
+            except Exception as e:
+                raise serializers.ValidationError(str(e))
             if len(value) > 20:
                 raise serializers.ValidationError("Phone number must be less than 20 characters")
         return value
@@ -248,25 +251,23 @@ class MemberUpdateSerializer(serializers.ModelSerializer):
         return value
 
     def validate_email(self, value):
-        """Validate email format."""
+        """Validate email format using Django's EmailValidator."""
         if value and value.strip():
             value = value.strip().lower()
-            import re
-            email_regex = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
-            if not re.match(email_regex, value):
-                raise serializers.ValidationError("Please enter a valid email address")
+            email_validator = EmailValidator(message="Please enter a valid email address")
+            email_validator(value)
             if len(value) > 254:
                 raise serializers.ValidationError("Email must be less than 254 characters")
         return value
 
     def validate_phone(self, value):
-        """Validate phone number format."""
+        """Validate phone number format using phone_validator."""
         if value and value.strip():
             value = value.strip()
-            import re
-            phone_regex = r'^[\d\s\-\(\)\+\.]+$'
-            if not re.match(phone_regex, value):
-                raise serializers.ValidationError("Phone number can only contain digits, spaces, hyphens, parentheses, plus signs, and dots")
+            try:
+                phone_validator(value)
+            except Exception as e:
+                raise serializers.ValidationError(str(e))
             if len(value) > 20:
                 raise serializers.ValidationError("Phone number must be less than 20 characters")
         return value
@@ -305,43 +306,12 @@ class BulkMemberUploadSerializer(serializers.Serializer):
     chapter = serializers.PrimaryKeyRelatedField(queryset=Chapter.objects.all())
 
     def validate_file(self, value):
-        """Validate uploaded file."""
-        # Check file extension
-        if not value.name.lower().endswith((".xls", ".xlsx")):
-            raise serializers.ValidationError("Only .xls and .xlsx files are supported")
-
-        # Check file size (max 50MB)
-        max_size = 50 * 1024 * 1024  # 50MB in bytes
-        if value.size > max_size:
-            raise serializers.ValidationError(f"File size exceeds maximum allowed size of 50MB. Your file is {value.size / (1024 * 1024):.2f}MB")
-
-        # Check minimum file size (should be at least 1KB)
-        min_size = 1024  # 1KB
-        if value.size < min_size:
-            raise serializers.ValidationError("File appears to be empty or corrupted. Minimum file size is 1KB")
-
-        # Basic file type validation using magic numbers (optional but recommended)
+        """Validate uploaded file using validate_excel_file."""
         try:
-            # Read first few bytes to verify it's actually an Excel file
-            value.seek(0)
-            file_header = value.read(8)
-            value.seek(0)  # Reset file pointer
-
-            # Check for Excel file signatures
-            # .xlsx files start with PK (ZIP format): 50 4B 03 04
-            # .xls files start with: D0 CF 11 E0 A1 B1 1A E1
-            is_xlsx = file_header[:4] == b'PK\x03\x04'
-            is_xls = file_header == b'\xD0\xCF\x11\xE0\xA1\xB1\x1A\xE1'
-
-            if not (is_xlsx or is_xls):
-                raise serializers.ValidationError("File does not appear to be a valid Excel file. Please upload a genuine .xls or .xlsx file")
+            validate_excel_file(value)
+            return value
         except Exception as e:
-            # If we can't read the file, let it through but log the error
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.warning(f"Could not validate file header: {str(e)}")
-
-        return value
+            raise serializers.ValidationError(str(e))
 
 
 class MatrixDataSerializer(serializers.Serializer):
