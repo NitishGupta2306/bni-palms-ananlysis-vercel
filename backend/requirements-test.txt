@@ -1,0 +1,35 @@
+# Testing dependencies for BNI PALMS Analytics
+# Install with: pip install -r requirements-test.txt
+
+# Core testing framework
+pytest==7.4.3
+pytest-django==4.7.0
+pytest-cov==4.1.0
+pytest-mock==3.12.0
+pytest-xdist==3.5.0  # Parallel test execution
+
+# Coverage reporting
+coverage==7.3.4
+
+# Factories and fixtures
+factory-boy==3.3.0
+faker==22.0.0
+
+# HTTP mocking
+responses==0.24.1
+requests-mock==1.11.0
+
+# Database testing
+pytest-postgresql==5.0.0
+
+# E2E testing
+playwright==1.40.0
+pytest-playwright==0.4.4
+
+# Performance testing
+pytest-benchmark==4.0.0
+
+# Test utilities
+freezegun==1.4.0  # Time mocking
+pytest-timeout==2.2.0  # Test timeouts
+pytest-randomly==3.15.0  # Randomize test order
