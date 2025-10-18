@@ -9,7 +9,7 @@ import pandas as pd
 import numpy as np
 from unittest.mock import Mock, patch
 
-from bni.services.data_aggregator import DataAggregator
+from bni.services.matrix_aggregation_utils import DataAggregator
 
 
 @pytest.mark.unit
@@ -232,7 +232,7 @@ class TestDataAggregator:
             mock_get_members.return_value = {mock_alice, mock_bob}
 
             # Mock Member query
-            with patch('bni.services.data_aggregator.Member') as MockMember:
+            with patch('bni.services.matrix_aggregation_utils.Member') as MockMember:
                 MockMember.normalize_name.side_effect = lambda x: x.lower().replace(" ", "")
                 MockMember.objects.filter.return_value.only.return_value = [mock_alice, mock_bob]
                 MockMember.objects.filter.return_value = [mock_bob]
@@ -262,7 +262,7 @@ class TestDataAggregator:
             mock_bob = Mock(id=2, full_name="Bob Johnson")
             mock_get_members.return_value = {mock_alice, mock_bob}
 
-            with patch('bni.services.data_aggregator.Member') as MockMember:
+            with patch('bni.services.matrix_aggregation_utils.Member') as MockMember:
                 MockMember.normalize_name.side_effect = lambda x: x.lower().replace(" ", "")
                 MockMember.objects.filter.return_value.only.return_value = [mock_alice, mock_bob]
                 MockMember.objects.filter.return_value = []
