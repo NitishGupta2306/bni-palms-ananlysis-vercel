@@ -111,7 +111,7 @@ export const MemberAddDialog: React.FC<MemberAddDialogProps> = ({
 
     // Phone validation (optional, but if provided should be reasonable format)
     if (formData.phone && formData.phone.trim()) {
-      const phoneRegex = /^[\d\s\-\(\)\+\.]+$/;
+      const phoneRegex = /^[\d\s\-().+]+$/;
       if (!phoneRegex.test(formData.phone)) {
         newErrors.phone = 'Please enter a valid phone number';
       } else if (formData.phone.length > 20) {

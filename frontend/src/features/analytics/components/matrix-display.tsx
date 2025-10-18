@@ -39,11 +39,11 @@ export const MatrixDisplay: React.FC<MatrixDisplayProps> = ({
     "member" | "total_given" | "unique_given"
   >("member");
 
-  // Extract data safely
-  const members = matrixData?.members || [];
-  const matrix = matrixData?.matrix || [];
-  const totals = matrixData?.totals;
-  const summaries = matrixData?.summaries;
+  // Extract data safely with useMemo to prevent dependency issues
+  const members = useMemo(() => matrixData?.members || [], [matrixData?.members]);
+  const matrix = useMemo(() => matrixData?.matrix || [], [matrixData?.matrix]);
+  const totals = useMemo(() => matrixData?.totals, [matrixData?.totals]);
+  const summaries = useMemo(() => matrixData?.summaries, [matrixData?.summaries]);
   const legend = matrixData?.legend;
   const hasData = matrix.some((row) => row.some((cell) => cell > 0));
 
