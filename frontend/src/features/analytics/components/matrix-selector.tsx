@@ -9,9 +9,9 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Download, Calendar, FileText } from "lucide-react";
-import { format } from "date-fns";
+import { formatDate } from "@/lib/date-utils";
 import { MonthlyReport } from "../../../shared/services/ChapterDataLoader";
-import { useToast } from "@/hooks/use-toast";
+import { useNotifications } from "@/hooks/useNotifications";
 import { fetchWithAuth } from "@/lib/apiClient";
 import { API_BASE_URL } from "@/config/api";
 
@@ -30,19 +30,17 @@ export const MatrixSelector: React.FC<MatrixSelectorProps> = ({
   onDownloadExcel,
   chapterId,
 }) => {
-  const { toast } = useToast();
+  const { success, error } = useNotifications();
 
   const handleDownloadPalms = async () => {
     if (!selectedReport || !chapterId) return;
 
     // Check if PALMS sheets are available
     if (!selectedReport.require_palms_sheets) {
-      toast({
-        title: "PALMS Sheets Not Available",
-        description:
-          "Original PALMS sheets were not marked as downloadable for this report.",
-        variant: "destructive",
-      });
+      error(
+        "PALMS Sheets Not Available",
+        "Original PALMS sheets were not marked as downloadable for this report."
+      );
       return;
     }
 
@@ -71,20 +69,10 @@ export const MatrixSelector: React.FC<MatrixSelectorProps> = ({
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
 
-      toast({
-        title: "Download Complete",
-        description: `PALMS sheets downloaded successfully`,
-        variant: "success",
-        duration: 3000,
-      });
-    } catch (error) {
-      console.error("Failed to download PALMS files:", error);
-      toast({
-        title: "Download Failed",
-        description: "Failed to download PALMS files. Please try again.",
-        variant: "destructive",
-        duration: 5000,
-      });
+      success("Download Complete", "PALMS sheets downloaded successfully");
+    } catch (err) {
+      console.error("Failed to download PALMS files:", err);
+      error("Download Failed", "Failed to download PALMS files. Please try again.");
     }
   };
 
@@ -116,12 +104,9 @@ export const MatrixSelector: React.FC<MatrixSelectorProps> = ({
           <div className="hidden lg:flex items-center gap-2 text-xs text-muted-foreground">
             <Calendar className="h-3 w-3" />
             <span>
-              {format(new Date(selectedReport.week_of_date), "MMM d")} -{" "}
+              {formatDate(selectedReport.week_of_date, "short")} -{" "}
               {selectedReport.audit_period_end &&
-                format(
-                  new Date(selectedReport.audit_period_end),
-                  "MMM d, yyyy",
-                )}
+                formatDate(selectedReport.audit_period_end, "short")}
             </span>
           </div>
         )}
