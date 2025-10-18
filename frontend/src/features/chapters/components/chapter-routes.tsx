@@ -58,7 +58,6 @@ const ChapterRoutes: React.FC<ChapterRoutesProps> = ({
   // Use React Query hook for cached data fetching
   const {
     data: chapterData = [],
-    isLoading: isLoadingChapters,
     refetch,
   } = useChapterData();
 

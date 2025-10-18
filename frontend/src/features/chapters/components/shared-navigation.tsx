@@ -5,7 +5,6 @@ import {
   Building2,
   Settings,
   Users,
-  UserPlus,
   ChevronDown,
   Shield,
   ArrowLeft,
@@ -46,27 +45,6 @@ export const SharedNavigation: React.FC<SharedNavigationProps> = ({
   const navigate = useNavigate();
   const location = useLocation();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-
-  const adminSubTabs = [
-    {
-      id: "bulk",
-      label: "Bulk Operations",
-      icon: UserPlus,
-      path: "/admin/bulk",
-    },
-    {
-      id: "chapters",
-      label: "Chapter Management",
-      icon: Building2,
-      path: "/admin/chapters",
-    },
-    {
-      id: "members",
-      label: "Member Management",
-      icon: Users,
-      path: "/admin/members",
-    },
-  ];
 
   const isAdminPage = location.pathname.startsWith("/admin");
   const currentTab = isAdminPage ? "admin" : "dashboard";

@@ -43,7 +43,6 @@ export const MemberManagementTab: React.FC<MemberManagementTabProps> = ({
   } = useMemberManagement(chapterData, onDataRefresh);
 
   const totalMembers = members.length;
-  const filteredCount = filteredMembers.length;
 
   return (
     <div className="space-y-6">
