@@ -1,60 +1,123 @@
-# Security Policy
+# Security Guide - BNI PALMS Analytics
 
-## Reporting a Vulnerability
+**Last Updated:** 2025-10-18
+**Status:** Active
 
-**Please do not report security vulnerabilities through public GitHub issues.**
+This document outlines security practices, vulnerability management, and monitoring for the BNI PALMS Analytics application.
 
-Instead, please report them privately using one of these methods:
+---
 
-1. **GitHub Security Advisories** (Preferred)
-   - Go to the [Security tab](https://github.com/NitishGupta2306/bni-palms-ananlysis-vercel/security/advisories/new)
-   - Click "Report a vulnerability"
-   - Provide detailed information
+## Security Updates
 
-2. **Email**
-   - Contact the repository owner directly
-   - Include detailed description and steps to reproduce
+### Recent Updates (2025-10-18)
 
-## What to Include
+#### Backend Dependencies
+All backend dependencies updated to latest secure versions:
 
-When reporting a vulnerability, please include:
+- Django: 4.2.7 → 4.2.17 (security fixes)
+- gunicorn: 21.2.0 → 23.0.0 (security fixes)
+- lxml: 5.1.0 → 5.3.0 (security fixes)
+- pandas: 2.1.3 → 2.2.3 (bug fixes)
+- bcrypt: 4.1.2 → 4.2.1 (security improvements)
 
-- Description of the vulnerability
-- Steps to reproduce the issue
-- Potential impact
-- Suggested fix (if you have one)
+#### Frontend Dependencies
+Used npm overrides to fix transitive dependency vulnerabilities:
 
-## Response Timeline
+- nth-check: ^2.1.1 (fixes CVE-2021-3803 - ReDoS)
+- postcss: ^8.4.31 (fixes CVE-2023-44270)
+- webpack-dev-server: ^5.2.1 (fixes source code theft)
+- svgo: ^3.0.0 (multiple security fixes)
 
-- **Initial Response**: Within 48 hours
-- **Status Update**: Within 7 days
-- **Fix Timeline**: Depends on severity
+#### New Security Tools
+- Sentry SDK - Error monitoring and alerting
+- python-json-logger - Structured logging for security auditing
+- django-redis - Secure caching layer
+- pip-audit - Automated vulnerability scanning
 
-## Supported Versions
+---
 
-We release security updates for the following:
+## CI/CD Security
 
-| Version | Supported          |
-| ------- | ------------------ |
-| production branch | ✅ Yes |
-| staging branch    | ✅ Yes |
-| main branch       | ✅ Yes |
-| older branches    | ❌ No  |
+### GitHub Actions Workflows
+- Backend & Frontend Tests - Every PR
+- Security Scanning - Trivy, npm audit, pip-audit
+- Build Verification - Production builds tested
+- Automated Deployment - Only after all checks pass
+- Daily Backups - Automated at 2 AM UTC
 
-## Security Measures
+### Required GitHub Secrets
+```
+DJANGO_SECRET_KEY
+DATABASE_URL
+SENTRY_DSN
+SENTRY_AUTH_TOKEN
+VERCEL_TOKEN
+VERCEL_ORG_ID
+VERCEL_PROJECT_ID
+```
 
-This project implements:
+---
 
-- Automated security scanning (CodeQL, Dependabot)
-- Dependency vulnerability monitoring
-- Secret scanning
-- Input validation and sanitization
-- Excel file security validation
-- CORS configuration
-- Environment-based configuration
+## Error Monitoring
 
-## Disclosure Policy
+### Sentry Setup
+1. Get DSN from https://sentry.io
+2. Add to environment:
+   ```bash
+   export SENTRY_DSN="https://...@sentry.io/..."
+   export SENTRY_ENVIRONMENT="production"
+   ```
 
-- Security issues will be disclosed after a fix is available
-- Credit will be given to reporters (if desired)
-- CVE will be requested for critical vulnerabilities
+### Features
+- Error tracking with automatic capture
+- Performance monitoring (10% sampling)
+- Release tracking by version
+- User context (no PII)
+- Breadcrumb traces
+
+---
+
+## Security Headers
+
+Implemented in `backend/config/settings.py`:
+
+- X-Frame-Options: DENY
+- X-Content-Type-Options: nosniff  
+- X-XSS-Protection: 1; mode=block
+- Strict-Transport-Security: max-age=31536000
+- Content-Security-Policy: Configured
+- Referrer-Policy: strict-origin
+
+---
+
+## Best Practices
+
+### ✅ DO
+- Keep dependencies updated weekly
+- Monitor Sentry alerts daily
+- Use environment variables for secrets
+- Enable 2FA on all accounts
+- Test backups quarterly
+
+### ❌ DON'T
+- Commit secrets to repository
+- Ignore security warnings
+- Share credentials
+- Skip security updates
+- Disable security features
+
+---
+
+## Vulnerability Disclosure
+
+Report security issues to: security@[yourdomain].com
+
+**Response Timeline:**
+- Acknowledgment: 24 hours
+- Assessment: 48 hours
+- Fix: 1-7 days
+- Disclosure: 30 days after fix
+
+---
+
+**Version:** 1.0

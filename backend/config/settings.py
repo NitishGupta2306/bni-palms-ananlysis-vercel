@@ -13,6 +13,8 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 from pathlib import Path
 import os
 from dotenv import load_dotenv
+import sentry_sdk
+from sentry_sdk.integrations.django import DjangoIntegration
 
 load_dotenv()
 
@@ -446,4 +448,43 @@ BACKUP_KEEP_MONTHLY = int(os.environ.get('BACKUP_KEEP_MONTHLY', 3))
 os.makedirs(BACKUP_DIR, exist_ok=True)
 # ==============================================================================
 # END BACKUP CONFIGURATION
+# ==============================================================================
+
+# ==============================================================================
+# ERROR MONITORING & LOGGING CONFIGURATION
+# ==============================================================================
+
+# Sentry Error Monitoring
+SENTRY_DSN = os.environ.get('SENTRY_DSN')
+SENTRY_ENVIRONMENT = os.environ.get('SENTRY_ENVIRONMENT', 'development')
+
+if SENTRY_DSN:
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        integrations=[
+            DjangoIntegration(),
+        ],
+        environment=SENTRY_ENVIRONMENT,
+        # Performance Monitoring
+        traces_sample_rate=0.1 if SENTRY_ENVIRONMENT == 'production' else 1.0,
+        # Error Sampling
+        send_default_pii=False,  # Don't send personally identifiable information
+        # Release tracking
+        release=os.environ.get('SENTRY_RELEASE', 'unknown'),
+        # Ignore common errors
+        ignore_errors=[
+            KeyboardInterrupt,
+        ],
+    )
+
+# Enhanced logging configuration with JSON formatting for production
+if not DEBUG:
+    LOGGING['formatters']['json'] = {
+        '()': 'pythonjsonlogger.jsonlogger.JsonFormatter',
+        'format': '%(asctime)s %(name)s %(levelname)s %(message)s %(pathname)s %(lineno)d'
+    }
+    LOGGING['handlers']['console']['formatter'] = 'json'
+
+# ==============================================================================
+# END ERROR MONITORING & LOGGING CONFIGURATION
 # ==============================================================================
