@@ -19,7 +19,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { apiClient } from "@/lib/apiClient";
-import { useAuth } from "@/contexts/auth-context";
 
 interface Chapter {
   id: number;
@@ -29,7 +28,6 @@ interface Chapter {
 }
 
 export const SecuritySettingsTab: React.FC = () => {
-  const { adminAuth } = useAuth();
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [adminPassword, setAdminPassword] = useState("");
   const [isLoading, setIsLoading] = useState(true);

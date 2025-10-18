@@ -9,8 +9,8 @@ import {
 import { ChapterMemberData } from "../../../shared/services/ChapterDataLoader";
 import { useChapterData } from "../../../shared/hooks/useChapterData";
 import { ProtectedRoute } from "../../../components/protected-route";
-import LandingPage from "../../landing/pages/landing-page";
 
+const LandingPage = lazy(() => import("../../landing/pages/landing-page"));
 const ChapterDetailPage = lazy(() => import("./chapter-detail-page"));
 const MemberDetails = lazy(
   () => import("../../members/components/member-details"),
@@ -58,7 +58,6 @@ const ChapterRoutes: React.FC<ChapterRoutesProps> = ({
   // Use React Query hook for cached data fetching
   const {
     data: chapterData = [],
-    isLoading: isLoadingChapters,
     refetch,
   } = useChapterData();
 

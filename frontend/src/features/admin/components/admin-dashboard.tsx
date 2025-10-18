@@ -69,12 +69,6 @@ const AdminDashboard: React.FC = () => {
     );
   }
 
-  const totalMembers = chapterData.reduce(
-    (sum, chapter) => sum + chapter.memberCount,
-    0,
-  );
-  const totalChapters = chapterData.length;
-
   return (
     <motion.div
       initial={{ opacity: 0 }}

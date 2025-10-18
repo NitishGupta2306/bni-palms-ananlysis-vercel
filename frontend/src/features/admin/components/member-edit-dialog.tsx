@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2 } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { useNotifications } from '@/hooks/useNotifications';
 import { apiClient } from '@/lib/apiClient';
 import {
   Select,
@@ -45,7 +45,7 @@ export const MemberEditDialog: React.FC<MemberEditDialogProps> = ({
   onClose,
   onSuccess,
 }) => {
-  const { toast } = useToast();
+  const { success, error } = useNotifications();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState<MemberFormData>({
     first_name: '',
@@ -103,7 +103,7 @@ export const MemberEditDialog: React.FC<MemberEditDialogProps> = ({
 
     // Phone validation (optional, but if provided should be reasonable format)
     if (formData.phone && formData.phone.trim()) {
-      const phoneRegex = /^[\d\s\-\(\)\+\.]+$/;
+      const phoneRegex = /^[\d\s\-().+]+$/;
       if (!phoneRegex.test(formData.phone)) {
         newErrors.phone = 'Please enter a valid phone number';
       } else if (formData.phone.length > 20) {
@@ -131,11 +131,7 @@ export const MemberEditDialog: React.FC<MemberEditDialogProps> = ({
     if (!member) return;
 
     if (!validateForm()) {
-      toast({
-        title: 'Validation Error',
-        description: 'Please fix the errors in the form',
-        variant: 'destructive',
-      });
+      error('Validation Error', 'Please fix the errors in the form');
       return;
     }
 
@@ -147,26 +143,18 @@ export const MemberEditDialog: React.FC<MemberEditDialogProps> = ({
         formData
       );
 
-      toast({
-        title: 'Success',
-        description: `${formData.first_name} ${formData.last_name} has been updated`,
-        variant: 'default',
-      });
+      success('Success', `${formData.first_name} ${formData.last_name} has been updated`);
 
       onSuccess();
       onClose();
-    } catch (error: any) {
-      console.error('Failed to update member:', error);
+    } catch (err: any) {
+      console.error('Failed to update member:', err);
 
-      const errorMessage = error.response?.data?.error
-        || error.response?.data?.message
+      const errorMessage = err.response?.data?.error
+        || err.response?.data?.message
         || 'Failed to update member. Please try again.';
 
-      toast({
-        title: 'Error',
-        description: errorMessage,
-        variant: 'destructive',
-      });
+      error('Error', errorMessage);
     } finally {
       setIsSubmitting(false);
     }

@@ -5,7 +5,6 @@ import {
   MemberData,
 } from "../../../shared/services/ChapterDataLoader";
 import { useToast } from "@/hooks/use-toast";
-import { API_BASE_URL } from "@/config/api";
 import { apiClient } from "@/lib/apiClient";
 
 export const useMemberManagement = (

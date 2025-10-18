@@ -9,7 +9,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { API_BASE_URL } from "@/config/api";
 import { ChapterLoginModal } from "../components/chapter-login-modal";
 import { AdminLoginModal } from "../components/admin-login-modal";
 import { apiClient } from "@/lib/apiClient";

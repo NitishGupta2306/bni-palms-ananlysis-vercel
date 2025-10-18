@@ -134,20 +134,19 @@ const ReportWizardTab: React.FC<ReportWizardTabProps> = ({ chapterData }) => {
 
   // Use existing matrix data hook for single month view
   const {
-    monthlyReports,
     selectedReport,
     referralMatrix,
     oneToOneMatrix,
     combinationMatrix,
     tyfcbData,
     isLoadingMatrices,
-    error: matrixError,
     handleReportChange,
   } = useMatrixData(chapterData.chapterId);
 
   // Load reports when component mounts
   useEffect(() => {
     loadReports();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chapterData.chapterId]);
 
   const loadReports = async () => {

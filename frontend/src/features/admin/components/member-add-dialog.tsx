@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2 } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { useNotifications } from '@/hooks/useNotifications';
 import { apiClient } from '@/lib/apiClient';
 import {
   Select,
@@ -46,7 +46,7 @@ export const MemberAddDialog: React.FC<MemberAddDialogProps> = ({
   onSuccess,
   chapters,
 }) => {
-  const { toast } = useToast();
+  const { success, error } = useNotifications();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState<MemberFormData>({
     chapter_id: '',
@@ -111,7 +111,7 @@ export const MemberAddDialog: React.FC<MemberAddDialogProps> = ({
 
     // Phone validation (optional, but if provided should be reasonable format)
     if (formData.phone && formData.phone.trim()) {
-      const phoneRegex = /^[\d\s\-\(\)\+\.]+$/;
+      const phoneRegex = /^[\d\s\-().+]+$/;
       if (!phoneRegex.test(formData.phone)) {
         newErrors.phone = 'Please enter a valid phone number';
       } else if (formData.phone.length > 20) {
@@ -137,11 +137,7 @@ export const MemberAddDialog: React.FC<MemberAddDialogProps> = ({
     e.preventDefault();
 
     if (!validateForm()) {
-      toast({
-        title: 'Validation Error',
-        description: 'Please fix the errors in the form',
-        variant: 'destructive',
-      });
+      error('Validation Error', 'Please fix the errors in the form');
       return;
     }
 
@@ -156,26 +152,18 @@ export const MemberAddDialog: React.FC<MemberAddDialogProps> = ({
         memberData
       );
 
-      toast({
-        title: 'Success',
-        description: `${formData.first_name} ${formData.last_name} has been added`,
-        variant: 'default',
-      });
+      success('Success', `${formData.first_name} ${formData.last_name} has been added`);
 
       onSuccess();
       onClose();
-    } catch (error: any) {
-      console.error('Failed to add member:', error);
+    } catch (err: any) {
+      console.error('Failed to add member:', err);
 
-      const errorMessage = error.response?.data?.error
-        || error.response?.data?.message
+      const errorMessage = err.response?.data?.error
+        || err.response?.data?.message
         || 'Failed to add member. Please try again.';
 
-      toast({
-        title: 'Error',
-        description: errorMessage,
-        variant: 'destructive',
-      });
+      error('Error', errorMessage);
     } finally {
       setIsSubmitting(false);
     }
