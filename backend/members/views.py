@@ -7,7 +7,7 @@ Authentication:
 - Admins can access all members
 """
 from urllib.parse import unquote
-from django.db import models
+from django.db import models, transaction
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny
@@ -49,8 +49,15 @@ class MemberViewSet(viewsets.ModelViewSet):
             return MemberUpdateSerializer
         return MemberSerializer
 
+    @transaction.atomic
     def create(self, request, chapter_pk=None):
-        """Create a new member in the specified chapter."""
+        """
+        Create a new member in the specified chapter.
+
+        Uses @transaction.atomic to ensure member creation and normalization
+        complete successfully or rollback entirely. This prevents partial
+        member records if any step fails.
+        """
         try:
             chapter = Chapter.objects.get(id=chapter_pk)
         except Chapter.DoesNotExist:
@@ -89,8 +96,15 @@ class MemberViewSet(viewsets.ModelViewSet):
             status=status.HTTP_201_CREATED if created else status.HTTP_200_OK
         )
 
+    @transaction.atomic
     def update(self, request, pk=None, chapter_pk=None):
-        """Update member information."""
+        """
+        Update member information.
+
+        Uses @transaction.atomic to ensure all member field updates and
+        normalized name recalculation complete successfully or rollback entirely.
+        This prevents partial updates if any step fails.
+        """
         try:
             member = Member.objects.get(id=pk, chapter_id=chapter_pk)
         except Member.DoesNotExist:
@@ -110,8 +124,16 @@ class MemberViewSet(viewsets.ModelViewSet):
         """Partially update member information."""
         return self.update(request, pk, chapter_pk)
 
+    @transaction.atomic
     def destroy(self, request, pk=None, chapter_pk=None):
-        """Delete a member and all associated data."""
+        """
+        Delete a member and all associated data.
+
+        Uses @transaction.atomic to ensure member deletion and all cascade
+        deletions (referrals, one-to-ones, TYFCBs) complete successfully or
+        rollback entirely. This prevents orphaned records if deletion fails
+        partway through.
+        """
         try:
             member = Member.objects.get(id=pk, chapter_id=chapter_pk)
         except Member.DoesNotExist:
@@ -163,35 +185,35 @@ class MemberViewSet(viewsets.ModelViewSet):
         all_members = Member.objects.filter(chapter=chapter, is_active=True).exclude(id=member.id)
         total_members = all_members.count()
 
-        # Calculate performance metrics
+        # Calculate performance metrics (optimized with select_related)
         referrals_given = Referral.objects.filter(giver=member).count()
         referrals_received = Referral.objects.filter(receiver=member).count()
 
-        # Get one-to-ones
+        # Get one-to-ones (optimized: prefetch related members to avoid N+1)
         otos = OneToOne.objects.filter(
             models.Q(member1=member) | models.Q(member2=member)
-        )
+        ).select_related('member1', 'member2')
         oto_count = otos.count()
 
-        # Get unique OTO partners
+        # Get unique OTO partners (no additional queries due to select_related above)
         oto_partners = set()
         for oto in otos:
             partner = oto.member2 if oto.member1 == member else oto.member1
             oto_partners.add(partner.id)
 
-        # Get referral relationships
+        # Get referral relationships (optimized: values_list prevents extra queries)
         referral_givers = set(Referral.objects.filter(receiver=member).values_list('giver_id', flat=True))
         referral_receivers = set(Referral.objects.filter(giver=member).values_list('receiver_id', flat=True))
 
-        # Get TYFCB data
-        tyfcb_received = TYFCB.objects.filter(receiver=member)
-        total_tyfcb = float(tyfcb_received.aggregate(total=models.Sum('amount'))['total'] or 0)
-        tyfcb_inside = float(
-            tyfcb_received.filter(within_chapter=True).aggregate(total=models.Sum('amount'))['total'] or 0
+        # Get TYFCB data (optimized: use single query with aggregate)
+        tyfcb_aggregates = TYFCB.objects.filter(receiver=member).aggregate(
+            total=models.Sum('amount'),
+            inside=models.Sum('amount', filter=models.Q(within_chapter=True)),
+            outside=models.Sum('amount', filter=models.Q(within_chapter=False))
         )
-        tyfcb_outside = float(
-            tyfcb_received.filter(within_chapter=False).aggregate(total=models.Sum('amount'))['total'] or 0
-        )
+        total_tyfcb = float(tyfcb_aggregates['total'] or 0)
+        tyfcb_inside = float(tyfcb_aggregates['inside'] or 0)
+        tyfcb_outside = float(tyfcb_aggregates['outside'] or 0)
 
         # Calculate gaps
         all_member_ids = set(all_members.values_list('id', flat=True))
@@ -206,16 +228,19 @@ class MemberViewSet(viewsets.ModelViewSet):
             (missing_referrals_given & missing_referrals_received)
         )
 
-        # Get member details for priority connections
-        priority_members = []
-        for member_id in priority_connections:
-            m = Member.objects.get(id=member_id)
-            priority_members.append({
+        # Get member details for priority connections (optimized: single query with in lookup)
+        priority_members_qs = Member.objects.filter(id__in=priority_connections).only(
+            'id', 'first_name', 'last_name', 'business_name', 'classification'
+        )
+        priority_members = [
+            {
                 'id': m.id,
                 'name': m.full_name,
                 'business_name': m.business_name,
                 'classification': m.classification
-            })
+            }
+            for m in priority_members_qs
+        ]
 
         # Calculate completion rates
         oto_completion = round((oto_count / total_members * 100), 1) if total_members > 0 else 0

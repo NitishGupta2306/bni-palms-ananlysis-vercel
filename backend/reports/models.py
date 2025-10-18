@@ -11,10 +11,10 @@ class MonthlyReport(models.Model):
     """Store complete monthly data for a chapter including Excel files and processed matrices."""
 
     chapter = models.ForeignKey(
-        Chapter, on_delete=models.CASCADE, related_name="monthly_reports"
+        Chapter, on_delete=models.CASCADE, related_name="monthly_reports", db_index=True
     )
     month_year = models.CharField(
-        max_length=7, help_text="e.g., '2024-06' for June 2024"
+        max_length=7, help_text="e.g., '2024-06' for June 2024", db_index=True
     )
 
     # File Storage (just store filename for reference, process in memory)
@@ -25,6 +25,7 @@ class MonthlyReport(models.Model):
     week_of_date = models.DateField(
         null=True,
         blank=True,
+        db_index=True,
         help_text="The week this audit represents (e.g., 2025-01-28)",
     )
     audit_period_start = models.DateField(
@@ -57,6 +58,10 @@ class MonthlyReport(models.Model):
     class Meta:
         unique_together = ["chapter", "month_year"]
         ordering = ["-month_year"]
+        indexes = [
+            # Note: report_chapter_month_idx already exists from migration 0003
+            models.Index(fields=['week_of_date'], name='report_week_idx'),
+        ]
         db_table = "chapters_monthlyreport"
 
     def __str__(self):
@@ -67,10 +72,10 @@ class MemberMonthlyStats(models.Model):
     """Individual member statistics for each monthly report."""
 
     member = models.ForeignKey(
-        Member, on_delete=models.CASCADE, related_name="monthly_stats"
+        Member, on_delete=models.CASCADE, related_name="monthly_stats", db_index=True
     )
     monthly_report = models.ForeignKey(
-        MonthlyReport, on_delete=models.CASCADE, related_name="member_stats"
+        MonthlyReport, on_delete=models.CASCADE, related_name="member_stats", db_index=True
     )
 
     # Basic Stats
@@ -105,6 +110,8 @@ class MemberMonthlyStats(models.Model):
     class Meta:
         unique_together = ["member", "monthly_report"]
         ordering = ["member__first_name"]
+        # Note: stats_member_report_idx already exists from migration 0003 (fields are member, monthly_report)
+        # No additional indexes needed since the existing index covers common query patterns
         db_table = "chapters_membermonthlystats"
 
     def __str__(self):

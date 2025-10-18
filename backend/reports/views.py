@@ -116,9 +116,6 @@ class MonthlyReportViewSet(viewsets.ModelViewSet):
                     )
                 except Exception as e:
                     # Log the error but continue processing other reports
-                    import logging
-
-                    logger = logging.getLogger(__name__)
                     logger.error(f"Error processing report {report.id}: {str(e)}")
                     continue
 
@@ -143,15 +140,8 @@ class MonthlyReportViewSet(viewsets.ModelViewSet):
         (MemberMonthlyStats, referrals, etc.) complete successfully or rollback entirely.
         This prevents orphaned records if deletion fails partway through.
 
-        Also deletes associated files from storage.
+        Authentication is handled by IsAdmin permission class.
         """
-        # Skip authentication check for now (TODO: Add proper auth later)
-        # if request.user and not request.user.is_authenticated:
-        #     return Response(
-        #         {'error': 'Authentication required'},
-        #         status=status.HTTP_401_UNAUTHORIZED
-        #     )
-
         try:
             chapter = Chapter.objects.get(id=chapter_id)
             monthly_report = MonthlyReport.objects.get(id=pk, chapter=chapter)
@@ -170,9 +160,7 @@ class MonthlyReportViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_404_NOT_FOUND,
             )
         except Exception as e:
-            import traceback
-
-            traceback.print_exc()
+            logger.exception(f"Failed to delete report {pk}")
             return Response(
                 {"error": f"Failed to delete report: {str(e)}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -617,9 +605,7 @@ class MonthlyReportViewSet(viewsets.ModelViewSet):
                 {"error": "Monthly report not found"}, status=status.HTTP_404_NOT_FOUND
             )
         except Exception as e:
-            import traceback
-
-            traceback.print_exc()
+            logger.exception(f"Failed to download PALMS files for report {pk}")
             return Response(
                 {"error": f"Failed to download PALMS files: {str(e)}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -677,9 +663,7 @@ class MonthlyReportViewSet(viewsets.ModelViewSet):
                 {"error": "Chapter not found"}, status=status.HTTP_404_NOT_FOUND
             )
         except Exception as e:
-            import traceback
-
-            traceback.print_exc()
+            logger.exception(f"Aggregation failed for chapter {chapter_id}")
             return Response(
                 {"error": f"Aggregation failed: {str(e)}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -746,9 +730,7 @@ class MonthlyReportViewSet(viewsets.ModelViewSet):
                 {"error": "Chapter not found"}, status=status.HTTP_404_NOT_FOUND
             )
         except Exception as e:
-            import traceback
-
-            traceback.print_exc()
+            logger.exception(f"Download generation failed for chapter {chapter_id}")
             return Response(
                 {"error": f"Download generation failed: {str(e)}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,

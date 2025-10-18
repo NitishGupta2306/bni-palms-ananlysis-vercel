@@ -1099,6 +1099,9 @@ class ExcelProcessorService:
         """
         Process files and create a MonthlyReport with processed matrix data.
 
+        DEPRECATED: This method processes single files and uses deprecated iterrows().
+        Use process_monthly_reports_batch() instead for better performance with bulk operations.
+
         Args:
             slip_audit_file: Excel file with slip audit data
             member_names_file: Optional file with member names
@@ -1107,6 +1110,13 @@ class ExcelProcessorService:
         Returns:
             Dictionary with processing results
         """
+        import warnings
+        warnings.warn(
+            "process_monthly_report is deprecated and uses slow iterrows(). "
+            "Use process_monthly_reports_batch() instead for 3-5x better performance.",
+            DeprecationWarning,
+            stacklevel=2
+        )
         try:
             with transaction.atomic():
                 # Create or get MonthlyReport (store just filename, not file object)

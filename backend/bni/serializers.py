@@ -1,7 +1,15 @@
+from typing import Any, Dict, Optional
 from rest_framework import serializers
 from chapters.models import Chapter, AdminSettings
 from members.models import Member
 from analytics.models import Referral, OneToOne, TYFCB
+from bni.validators import (
+    validate_excel_file,
+    sanitize_filename,
+    name_validator,
+    phone_validator,
+)
+from django.core.validators import EmailValidator
 
 
 class ChapterSerializer(serializers.ModelSerializer):
@@ -20,7 +28,8 @@ class ChapterSerializer(serializers.ModelSerializer):
             "updated_at",
         ]
 
-    def get_members_count(self, obj):
+    def get_members_count(self, obj: Chapter) -> int:
+        """Get count of active members in the chapter."""
         return obj.members.filter(is_active=True).count()
 
 
@@ -53,19 +62,24 @@ class MemberSerializer(serializers.ModelSerializer):
             "tyfcbs_received_amount",
         ]
 
-    def get_referrals_given_count(self, obj):
+    def get_referrals_given_count(self, obj: Member) -> int:
+        """Get count of referrals given by member."""
         return obj.referrals_given.count()
 
-    def get_referrals_received_count(self, obj):
+    def get_referrals_received_count(self, obj: Member) -> int:
+        """Get count of referrals received by member."""
         return obj.referrals_received.count()
 
-    def get_one_to_ones_count(self, obj):
+    def get_one_to_ones_count(self, obj: Member) -> int:
+        """Get total count of one-to-one meetings."""
         return obj.one_to_ones_as_member1.count() + obj.one_to_ones_as_member2.count()
 
-    def get_tyfcbs_received_count(self, obj):
+    def get_tyfcbs_received_count(self, obj: Member) -> int:
+        """Get count of TYFCBs received."""
         return obj.tyfcbs_received.count()
 
-    def get_tyfcbs_received_amount(self, obj):
+    def get_tyfcbs_received_amount(self, obj: Member) -> float:
+        """Get total amount of TYFCBs received."""
         return sum(tyfcb.amount for tyfcb in obj.tyfcbs_received.all())
 
 
@@ -147,62 +161,58 @@ class MemberCreateSerializer(serializers.ModelSerializer):
             "chapter",
         ]
 
-    def validate_first_name(self, value):
-        """Validate first name."""
+    def validate_first_name(self, value: str) -> str:
+        """Validate first name is not empty and within length limits."""
         if not value or not value.strip():
             raise serializers.ValidationError("First name is required")
         if len(value) > 100:
             raise serializers.ValidationError("First name must be less than 100 characters")
         return value.strip()
 
-    def validate_last_name(self, value):
-        """Validate last name."""
+    def validate_last_name(self, value: str) -> str:
+        """Validate last name is not empty and within length limits."""
         if not value or not value.strip():
             raise serializers.ValidationError("Last name is required")
         if len(value) > 100:
             raise serializers.ValidationError("Last name must be less than 100 characters")
         return value.strip()
 
-    def validate_email(self, value):
-        """Validate email format."""
+    def validate_email(self, value: Optional[str]) -> Optional[str]:
+        """Validate email format using Django's EmailValidator."""
         if value and value.strip():
             value = value.strip().lower()
-            # Basic email format validation
-            import re
-            email_regex = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
-            if not re.match(email_regex, value):
-                raise serializers.ValidationError("Please enter a valid email address")
+            email_validator = EmailValidator(message="Please enter a valid email address")
+            email_validator(value)
             if len(value) > 254:
                 raise serializers.ValidationError("Email must be less than 254 characters")
         return value
 
-    def validate_phone(self, value):
-        """Validate phone number format."""
+    def validate_phone(self, value: Optional[str]) -> Optional[str]:
+        """Validate phone number format using phone_validator."""
         if value and value.strip():
             value = value.strip()
-            # Allow only digits, spaces, hyphens, parentheses, plus, and dots
-            import re
-            phone_regex = r'^[\d\s\-\(\)\+\.]+$'
-            if not re.match(phone_regex, value):
-                raise serializers.ValidationError("Phone number can only contain digits, spaces, hyphens, parentheses, plus signs, and dots")
+            try:
+                phone_validator(value)
+            except Exception as e:
+                raise serializers.ValidationError(str(e))
             if len(value) > 20:
                 raise serializers.ValidationError("Phone number must be less than 20 characters")
         return value
 
-    def validate_business_name(self, value):
-        """Validate business name."""
+    def validate_business_name(self, value: Optional[str]) -> Optional[str]:
+        """Validate business name length."""
         if value and len(value) > 200:
             raise serializers.ValidationError("Business name must be less than 200 characters")
         return value.strip() if value else value
 
-    def validate_classification(self, value):
-        """Validate classification."""
+    def validate_classification(self, value: Optional[str]) -> Optional[str]:
+        """Validate classification length."""
         if value and len(value) > 100:
             raise serializers.ValidationError("Classification must be less than 100 characters")
         return value.strip() if value else value
 
-    def create(self, validated_data):
-        # Ensure normalized_name is set
+    def create(self, validated_data: Dict[str, Any]) -> Member:
+        """Create member with normalized name."""
         member = Member(**validated_data)
         member.normalized_name = Member.normalize_name(
             f"{member.first_name} {member.last_name}"
@@ -227,8 +237,8 @@ class MemberUpdateSerializer(serializers.ModelSerializer):
             "is_active",
         ]
 
-    def validate_first_name(self, value):
-        """Validate first name."""
+    def validate_first_name(self, value: Optional[str]) -> Optional[str]:
+        """Validate first name is not empty when provided."""
         if value is not None:
             if not value.strip():
                 raise serializers.ValidationError("First name cannot be empty")
@@ -237,8 +247,8 @@ class MemberUpdateSerializer(serializers.ModelSerializer):
             return value.strip()
         return value
 
-    def validate_last_name(self, value):
-        """Validate last name."""
+    def validate_last_name(self, value: Optional[str]) -> Optional[str]:
+        """Validate last name is not empty when provided."""
         if value is not None:
             if not value.strip():
                 raise serializers.ValidationError("Last name cannot be empty")
@@ -247,48 +257,45 @@ class MemberUpdateSerializer(serializers.ModelSerializer):
             return value.strip()
         return value
 
-    def validate_email(self, value):
-        """Validate email format."""
+    def validate_email(self, value: Optional[str]) -> Optional[str]:
+        """Validate email format using Django's EmailValidator."""
         if value and value.strip():
             value = value.strip().lower()
-            import re
-            email_regex = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
-            if not re.match(email_regex, value):
-                raise serializers.ValidationError("Please enter a valid email address")
+            email_validator = EmailValidator(message="Please enter a valid email address")
+            email_validator(value)
             if len(value) > 254:
                 raise serializers.ValidationError("Email must be less than 254 characters")
         return value
 
-    def validate_phone(self, value):
-        """Validate phone number format."""
+    def validate_phone(self, value: Optional[str]) -> Optional[str]:
+        """Validate phone number format using phone_validator."""
         if value and value.strip():
             value = value.strip()
-            import re
-            phone_regex = r'^[\d\s\-\(\)\+\.]+$'
-            if not re.match(phone_regex, value):
-                raise serializers.ValidationError("Phone number can only contain digits, spaces, hyphens, parentheses, plus signs, and dots")
+            try:
+                phone_validator(value)
+            except Exception as e:
+                raise serializers.ValidationError(str(e))
             if len(value) > 20:
                 raise serializers.ValidationError("Phone number must be less than 20 characters")
         return value
 
-    def validate_business_name(self, value):
-        """Validate business name."""
+    def validate_business_name(self, value: Optional[str]) -> Optional[str]:
+        """Validate business name length."""
         if value and len(value) > 200:
             raise serializers.ValidationError("Business name must be less than 200 characters")
         return value.strip() if value else value
 
-    def validate_classification(self, value):
-        """Validate classification."""
+    def validate_classification(self, value: Optional[str]) -> Optional[str]:
+        """Validate classification length."""
         if value and len(value) > 100:
             raise serializers.ValidationError("Classification must be less than 100 characters")
         return value.strip() if value else value
 
-    def update(self, instance, validated_data):
-        # Update fields
+    def update(self, instance: Member, validated_data: Dict[str, Any]) -> Member:
+        """Update member instance with normalized name recalculation."""
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
 
-        # Update normalized_name if name fields changed
         if "first_name" in validated_data or "last_name" in validated_data:
             instance.normalized_name = Member.normalize_name(
                 f"{instance.first_name} {instance.last_name}"
@@ -304,44 +311,13 @@ class BulkMemberUploadSerializer(serializers.Serializer):
     file = serializers.FileField()
     chapter = serializers.PrimaryKeyRelatedField(queryset=Chapter.objects.all())
 
-    def validate_file(self, value):
-        """Validate uploaded file."""
-        # Check file extension
-        if not value.name.lower().endswith((".xls", ".xlsx")):
-            raise serializers.ValidationError("Only .xls and .xlsx files are supported")
-
-        # Check file size (max 50MB)
-        max_size = 50 * 1024 * 1024  # 50MB in bytes
-        if value.size > max_size:
-            raise serializers.ValidationError(f"File size exceeds maximum allowed size of 50MB. Your file is {value.size / (1024 * 1024):.2f}MB")
-
-        # Check minimum file size (should be at least 1KB)
-        min_size = 1024  # 1KB
-        if value.size < min_size:
-            raise serializers.ValidationError("File appears to be empty or corrupted. Minimum file size is 1KB")
-
-        # Basic file type validation using magic numbers (optional but recommended)
+    def validate_file(self, value: Any) -> Any:
+        """Validate uploaded Excel file using centralized validator."""
         try:
-            # Read first few bytes to verify it's actually an Excel file
-            value.seek(0)
-            file_header = value.read(8)
-            value.seek(0)  # Reset file pointer
-
-            # Check for Excel file signatures
-            # .xlsx files start with PK (ZIP format): 50 4B 03 04
-            # .xls files start with: D0 CF 11 E0 A1 B1 1A E1
-            is_xlsx = file_header[:4] == b'PK\x03\x04'
-            is_xls = file_header == b'\xD0\xCF\x11\xE0\xA1\xB1\x1A\xE1'
-
-            if not (is_xlsx or is_xls):
-                raise serializers.ValidationError("File does not appear to be a valid Excel file. Please upload a genuine .xls or .xlsx file")
+            validate_excel_file(value)
+            return value
         except Exception as e:
-            # If we can't read the file, let it through but log the error
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.warning(f"Could not validate file header: {str(e)}")
-
-        return value
+            raise serializers.ValidationError(str(e))
 
 
 class MatrixDataSerializer(serializers.Serializer):
@@ -437,7 +413,8 @@ class ChapterPublicSerializer(serializers.ModelSerializer):
         model = Chapter
         fields = ["id", "name", "location", "member_count"]
 
-    def get_member_count(self, obj):
+    def get_member_count(self, obj: Chapter) -> int:
+        """Get count of active members for public display."""
         return obj.members.filter(is_active=True).count()
 
 

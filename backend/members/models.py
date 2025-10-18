@@ -7,7 +7,7 @@ from chapters.models import Chapter
 
 class Member(models.Model):
     """A chapter member."""
-    chapter = models.ForeignKey(Chapter, on_delete=models.CASCADE, related_name='members')
+    chapter = models.ForeignKey(Chapter, on_delete=models.CASCADE, related_name='members', db_index=True)
     first_name = models.CharField(max_length=50)
     last_name = models.CharField(max_length=50)
     normalized_name = models.CharField(max_length=100, db_index=True)
@@ -15,7 +15,7 @@ class Member(models.Model):
     classification = models.CharField(max_length=100, blank=True)
     email = models.EmailField(blank=True)
     phone = models.CharField(max_length=20, blank=True)
-    is_active = models.BooleanField(default=True)
+    is_active = models.BooleanField(default=True, db_index=True)
     joined_date = models.DateField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -23,6 +23,10 @@ class Member(models.Model):
     class Meta:
         ordering = ['first_name', 'last_name']
         unique_together = ['chapter', 'normalized_name']
+        indexes = [
+            # Note: member_chapter_active_idx already exists from migration 0002
+            models.Index(fields=['chapter', 'normalized_name'], name='member_chapter_name_idx'),
+        ]
         db_table = 'chapters_member'
 
     def __str__(self):
