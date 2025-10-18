@@ -425,3 +425,25 @@ os.makedirs(BASE_DIR / 'logs', exist_ok=True)
 # ==============================================================================
 # END LOGGING CONFIGURATION
 # ==============================================================================
+
+# ==============================================================================
+# BACKUP CONFIGURATION
+# ==============================================================================
+# Backup directory - where backup files are stored
+BACKUP_DIR = os.environ.get('BACKUP_DIR', str(BASE_DIR / 'backups'))
+
+# Backup retention policy
+# Keep all backups from the last X days
+BACKUP_KEEP_DAILY = int(os.environ.get('BACKUP_KEEP_DAILY', 7))
+
+# Keep weekly backups for last X weeks (Sundays only)
+BACKUP_KEEP_WEEKLY = int(os.environ.get('BACKUP_KEEP_WEEKLY', 4))
+
+# Keep monthly backups for last X months (1st of month only)
+BACKUP_KEEP_MONTHLY = int(os.environ.get('BACKUP_KEEP_MONTHLY', 3))
+
+# Create backup directory if it doesn't exist
+os.makedirs(BACKUP_DIR, exist_ok=True)
+# ==============================================================================
+# END BACKUP CONFIGURATION
+# ==============================================================================
