@@ -23,6 +23,15 @@ from analytics.models import Referral, OneToOne, TYFCB
 from bni.services.chapter_service import ChapterService
 from bni.services.member_service import MemberService
 from .parser import parse_bni_xml_excel
+from .validators import (
+    FileFormatValidator,
+    SlipTypeValidator,
+    ReferralValidator,
+    OneToOneValidator,
+    TYFCBValidator,
+    CurrencyValidator,
+    MemberNamesFileValidator,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -125,14 +134,10 @@ class ExcelProcessorService:
                 else:
                     df = pd.read_excel(file_path, dtype=str)
 
-            # Basic validation
-            if df.empty:
-                self.errors.append("Excel file is empty")
-                return None
-
-            # Ensure we have enough columns
-            if df.shape[1] < 3:
-                self.errors.append("Excel file must have at least 3 columns")
+            # Validate file structure using FileFormatValidator
+            is_valid, errors = FileFormatValidator.validate_file_structure(df)
+            if not is_valid:
+                self.errors.extend(errors)
                 return None
 
             return df
@@ -197,17 +202,8 @@ class ExcelProcessorService:
         return None
 
     def _normalize_slip_type(self, slip_type: str) -> Optional[str]:
-        """Normalize slip type to standard format."""
-        if not slip_type or pd.isna(slip_type):
-            return None
-
-        slip_type = str(slip_type).lower().strip()
-
-        for standard_type, variations in self.SLIP_TYPES.items():
-            if any(variation in slip_type for variation in variations):
-                return standard_type
-
-        return None
+        """Normalize slip type to standard format using SlipTypeValidator."""
+        return SlipTypeValidator.normalize_slip_type(slip_type)
 
     def _process_dataframe(
         self,
@@ -228,30 +224,10 @@ class ExcelProcessorService:
         one_to_ones_to_create = []
         tyfcbs_to_create = []
 
-        # Validate file format by checking column names
-        # The parse_bni_xml_excel function already uses row 0 as headers
+        # File format already validated in _read_excel_file via FileFormatValidator
+        # Just log the columns for debugging
         if len(df) > 0 and hasattr(df, "columns"):
-            cols_str = " ".join([str(c).lower() for c in df.columns])
-
-            # Reject old format (has title like "Slips Audit Report")
-            if "slip" in df.columns[0].lower() or "audit" in df.columns[0].lower():
-                error_msg = "OLD format files are not supported. Please use files without metadata rows."
-                logger.error(error_msg)
-                self.errors.append(error_msg)
-                results["success"] = False
-                results["error"] = error_msg
-                return results
-
-            # Validate new format has expected columns
-            if "from" not in cols_str or "slip type" not in cols_str:
-                error_msg = f"Invalid file format. Expected columns 'From' and 'Slip Type', got: {list(df.columns)}"
-                logger.error(error_msg)
-                self.errors.append(error_msg)
-                results["success"] = False
-                results["error"] = error_msg
-                return results
-
-            logger.info(f"Validated NEW format with columns: {list(df.columns)}")
+            logger.info(f"Processing file with columns: {list(df.columns)}")
 
         # OPTIMIZED: Vectorized processing instead of iterrows() (10x faster)
         # Pre-extract all columns at once using vectorized operations
@@ -375,30 +351,13 @@ class ExcelProcessorService:
         members_lookup: Dict[str, Member],
         week_of_date: Optional[date],
     ) -> Optional[Referral]:
-        """Prepare a referral object for bulk insert."""
-        if not all([giver_name, receiver_name]):
-            self.warnings.append(
-                f"Row {row_idx + 1}: Referral missing giver or receiver name"
-            )
-            return None
+        """Prepare a referral object for bulk insert using ReferralValidator."""
+        is_valid, giver, receiver, warnings = ReferralValidator.validate_referral_data(
+            giver_name, receiver_name, members_lookup, row_idx
+        )
 
-        giver = self._find_member_by_name(giver_name, members_lookup)
-        receiver = self._find_member_by_name(receiver_name, members_lookup)
-
-        if not giver:
-            self.warnings.append(
-                f"Row {row_idx + 1}: Could not find giver '{giver_name}'"
-            )
-            return None
-
-        if not receiver:
-            self.warnings.append(
-                f"Row {row_idx + 1}: Could not find receiver '{receiver_name}'"
-            )
-            return None
-
-        if giver == receiver:
-            self.warnings.append(f"Row {row_idx + 1}: Self-referral detected, skipping")
+        if not is_valid:
+            self.warnings.extend(warnings)
             return None
 
         return Referral(
@@ -417,28 +376,13 @@ class ExcelProcessorService:
         members_lookup: Dict[str, Member],
         week_of_date: Optional[date],
     ) -> Optional[OneToOne]:
-        """Prepare a one-to-one object for bulk insert."""
-        if not all([giver_name, receiver_name]):
-            self.warnings.append(f"Row {row_idx + 1}: One-to-one missing member names")
-            return None
+        """Prepare a one-to-one object for bulk insert using OneToOneValidator."""
+        is_valid, member1, member2, warnings = OneToOneValidator.validate_one_to_one_data(
+            giver_name, receiver_name, members_lookup, row_idx
+        )
 
-        member1 = self._find_member_by_name(giver_name, members_lookup)
-        member2 = self._find_member_by_name(receiver_name, members_lookup)
-
-        if not member1:
-            self.warnings.append(
-                f"Row {row_idx + 1}: Could not find member '{giver_name}'"
-            )
-            return None
-
-        if not member2:
-            self.warnings.append(
-                f"Row {row_idx + 1}: Could not find member '{receiver_name}'"
-            )
-            return None
-
-        if member1 == member2:
-            self.warnings.append(f"Row {row_idx + 1}: Self-meeting detected, skipping")
+        if not is_valid:
+            self.warnings.extend(warnings)
             return None
 
         return OneToOne(
@@ -457,30 +401,17 @@ class ExcelProcessorService:
         members_lookup: Dict[str, Member],
         week_of_date: Optional[date],
     ) -> Optional[TYFCB]:
-        """Prepare a TYFCB object for bulk insert."""
-        if not receiver_name:
-            self.warnings.append(f"Row {row_idx + 1}: TYFCB missing receiver name")
-            return None
-
-        receiver = self._find_member_by_name(receiver_name, members_lookup)
-        if not receiver:
-            self.warnings.append(
-                f"Row {row_idx + 1}: Could not find receiver '{receiver_name}'"
-            )
-            return None
-
-        giver = None
-        if giver_name:
-            giver = self._find_member_by_name(giver_name, members_lookup)
-
+        """Prepare a TYFCB object for bulk insert using TYFCBValidator."""
         # Extract amount
         amount_str = self._get_cell_value(row, self.COLUMN_MAPPINGS["tyfcb_amount"])
-        amount = self._parse_currency_amount(amount_str)
 
-        if amount <= 0:
-            self.warnings.append(
-                f"Row {row_idx + 1}: Invalid TYFCB amount: {amount_str}"
-            )
+        # Validate TYFCB data
+        is_valid, receiver, giver, amount, warnings = TYFCBValidator.validate_tyfcb_data(
+            receiver_name, giver_name, amount_str, members_lookup, row_idx
+        )
+
+        if not is_valid:
+            self.warnings.extend(warnings)
             return None
 
         # Extract detail/description
@@ -493,7 +424,7 @@ class ExcelProcessorService:
         return TYFCB(
             receiver=receiver,
             giver=giver,
-            amount=Decimal(str(amount)),
+            amount=amount,
             within_chapter=within_chapter,
             date_closed=week_of_date or timezone.now().date(),
             description=detail or "",
@@ -658,16 +589,8 @@ class ExcelProcessorService:
             return False
 
     def _parse_currency_amount(self, amount_str: Optional[str]) -> float:
-        """Parse currency amount from string."""
-        if not amount_str or pd.isna(amount_str):
-            return 0.0
-
-        try:
-            # Remove currency symbols and commas
-            cleaned = str(amount_str).replace("$", "").replace(",", "").strip()
-            return float(cleaned) if cleaned else 0.0
-        except (ValueError, TypeError):
-            return 0.0
+        """Parse currency amount from string using CurrencyValidator."""
+        return CurrencyValidator.parse_currency_amount(amount_str)
 
     def _create_error_result(self, error_message: str) -> Dict:
         """Create error result dictionary."""
@@ -955,11 +878,10 @@ class ExcelProcessorService:
                 finally:
                     os.unlink(temp_file.name)
 
-        # VECTORIZED: Clean and filter data using pandas operations
-        if (
-            "First Name" not in member_df.columns
-            or "Last Name" not in member_df.columns
-        ):
+        # Validate member names file has required columns
+        is_valid, error = MemberNamesFileValidator.validate_has_required_columns(member_df)
+        if not is_valid:
+            logger.error(f"Member names file validation failed: {error}")
             return {"created": 0, "updated": 0}
 
         # Clean data vectorized
