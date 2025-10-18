@@ -12,3 +12,4 @@ whitenoise==6.6.0
 supabase>=2.0,<3.0
 bcrypt==4.1.2
 django-csp==3.8
+django-ratelimit==4.1.0
