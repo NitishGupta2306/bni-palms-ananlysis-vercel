@@ -415,23 +415,44 @@ class AggregationService:
         """
         Get list of members who became inactive during the period.
 
+        OPTIMIZED: Uses bulk queries instead of individual queries for each member.
+
         Returns:
             List of dicts with member info and when they became inactive
         """
         if not self.reports:
             return []
 
-        # Get members from each report
+        # OPTIMIZED: Build name-to-ID mapping with single bulk query
+        all_member_names = set()
+        for report in self.reports:
+            if report.referral_matrix_data:
+                if "members" in report.referral_matrix_data:
+                    all_member_names.update(report.referral_matrix_data["members"])
+                else:
+                    all_member_names.update(report.referral_matrix_data.keys())
+
+        normalized_names = [Member.normalize_name(name) for name in all_member_names]
+        name_to_member = {
+            m.full_name: m
+            for m in Member.objects.filter(
+                chapter=self.chapter,
+                normalized_name__in=normalized_names
+            ).only('id', 'first_name', 'last_name', 'business_name', 'classification')
+        }
+
+        # Get members from each report using the mapping
         members_by_month = {}
         for report in self.reports:
             member_ids = set()
-            # Extract member IDs from matrix data
             if report.referral_matrix_data:
-                for member_name in report.referral_matrix_data.keys():
-                    member = Member.objects.filter(
-                        chapter=self.chapter,
-                        normalized_name=Member.normalize_name(member_name),
-                    ).first()
+                member_names = (
+                    report.referral_matrix_data.get("members", [])
+                    if "members" in report.referral_matrix_data
+                    else report.referral_matrix_data.keys()
+                )
+                for member_name in member_names:
+                    member = name_to_member.get(member_name)
                     if member:
                         member_ids.add(member.id)
             members_by_month[report.month_year] = member_ids
@@ -442,21 +463,31 @@ class AggregationService:
             set().union(*members_by_month.values()) if members_by_month else set()
         )
 
+        # OPTIMIZED: Bulk fetch all potentially inactive members
+        inactive_member_ids = []
+        latest_month = self.reports[-1].month_year
         for member_id in all_member_ids:
             last_active_month = None
             for month_year in sorted(members_by_month.keys()):
                 if member_id in members_by_month[month_year]:
                     last_active_month = month_year
 
-            # Check if member is not in the latest report
-            latest_month = self.reports[-1].month_year
             if member_id not in members_by_month.get(latest_month, set()):
-                member = Member.objects.get(id=member_id)
+                inactive_member_ids.append((member_id, last_active_month))
+
+        # Bulk fetch all inactive members
+        if inactive_member_ids:
+            id_to_month = {mid: month for mid, month in inactive_member_ids}
+            inactive_member_objs = Member.objects.filter(
+                id__in=[mid for mid, _ in inactive_member_ids]
+            ).only('id', 'first_name', 'last_name', 'business_name', 'classification')
+
+            for member in inactive_member_objs:
                 inactive_members.append(
                     {
                         "member_id": member.id,
                         "member_name": member.full_name,
-                        "last_active_month": last_active_month,
+                        "last_active_month": id_to_month[member.id],
                         "business_name": member.business_name,
                         "classification": member.classification,
                     }
@@ -479,7 +510,11 @@ class AggregationService:
         return excel_buffer
 
     def _get_all_members(self) -> Set[Member]:
-        """Get all unique members across all reports."""
+        """
+        Get all unique members across all reports.
+
+        OPTIMIZED: Uses single bulk query with __in lookup instead of N queries.
+        """
         all_member_names = set()
 
         for report in self.reports:
@@ -491,14 +526,12 @@ class AggregationService:
                     # Legacy format: {member_name: {...}}
                     all_member_names.update(report.referral_matrix_data.keys())
 
-        # Convert names to Member objects
-        members = []
-        for name in all_member_names:
-            member = Member.objects.filter(
-                chapter=self.chapter, normalized_name=Member.normalize_name(name)
-            ).first()
-            if member:
-                members.append(member)
+        # Convert names to Member objects (OPTIMIZED: single bulk query)
+        normalized_names = [Member.normalize_name(name) for name in all_member_names]
+        members = Member.objects.filter(
+            chapter=self.chapter,
+            normalized_name__in=normalized_names
+        ).only('id', 'first_name', 'last_name', 'normalized_name')
 
         return set(members)
 
