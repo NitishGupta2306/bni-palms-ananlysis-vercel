@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { reportError } from '@/shared/services/error-reporting';
 
 export interface DownloadTask {
   id: string;
@@ -96,7 +97,10 @@ export const DownloadQueueProvider: React.FC<DownloadQueueProviderProps> = ({ ch
           setTasks((prev) => prev.filter((task) => task.id !== id));
         }, 10000);
       } catch (error) {
-        console.error('Download failed:', error);
+        reportError(error instanceof Error ? error : new Error('Download failed'), {
+          action: 'downloadFile',
+          additionalData: { filename },
+        });
 
         // Mark as error
         setTasks((prev) =>

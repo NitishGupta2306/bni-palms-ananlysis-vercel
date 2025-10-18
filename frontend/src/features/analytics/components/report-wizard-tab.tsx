@@ -27,12 +27,13 @@ import { useToast } from "@/hooks/use-toast";
 import { formatMonthYearShort } from "@/lib/utils";
 import { apiClient, fetchWithAuth } from "@/lib/apiClient";
 import { API_BASE_URL } from "@/config/api";
+import { reportError } from "@/shared/services/error-reporting";
 
 // Import existing components we'll reuse
 import { MatrixDisplay } from "./matrix-display";
 import { TYFCBReport } from "./tyfcb-report";
 import { useMatrixData } from "../hooks/useMatrixData";
-import { ChapterMemberData } from "../../../shared/services/ChapterDataLoader";
+import { ChapterMemberData } from "@/shared/services/chapter-data-loader";
 
 interface MonthlyReportListItem {
   id: number;
@@ -168,7 +169,10 @@ const ReportWizardTab: React.FC<ReportWizardTabProps> = ({ chapterData }) => {
         }
       }
     } catch (error) {
-      console.error("Failed to load reports:", error);
+      reportError(error instanceof Error ? error : new Error("Failed to load reports"), {
+        action: "loadReports",
+        chapterId: chapterData.chapterId,
+      });
       toast({
         title: "Error",
         description: "Failed to load reports. Please try again.",
@@ -336,7 +340,11 @@ const ReportWizardTab: React.FC<ReportWizardTabProps> = ({ chapterData }) => {
         });
       }
     } catch (error) {
-      console.error("Error downloading matrices:", error);
+      reportError(error instanceof Error ? error : new Error("Error downloading matrices"), {
+        action: "downloadMatrices",
+        chapterId: chapterData.chapterId,
+        additionalData: { reportType, selectedReportId, selectedReportIds },
+      });
       toast({
         title: "Download Failed",
         description: "Failed to download matrices. Please try again.",
@@ -393,7 +401,11 @@ const ReportWizardTab: React.FC<ReportWizardTabProps> = ({ chapterData }) => {
         description: `Downloaded PALMS sheets for ${reportsWithPalms.length} report(s)`,
       });
     } catch (error) {
-      console.error("Error downloading PALMS sheets:", error);
+      reportError(error instanceof Error ? error : new Error("Error downloading PALMS sheets"), {
+        action: "downloadPalmsSheets",
+        chapterId: chapterData.chapterId,
+        additionalData: { reportIds: reportsWithPalms.map(r => r.id) },
+      });
       toast({
         title: "Download Failed",
         description: "Failed to download PALMS sheets. Please try again.",
@@ -446,7 +458,14 @@ const ReportWizardTab: React.FC<ReportWizardTabProps> = ({ chapterData }) => {
         description: "Comparison report downloaded successfully",
       });
     } catch (error) {
-      console.error("Error downloading comparison report:", error);
+      reportError(error instanceof Error ? error : new Error("Error downloading comparison report"), {
+        action: "downloadComparisonReport",
+        chapterId: chapterData.chapterId,
+        additionalData: {
+          currentReportId: compareReportIds.current,
+          previousReportId: compareReportIds.previous,
+        },
+      });
       toast({
         title: "Download Failed",
         description: "Failed to download comparison report. Please try again.",

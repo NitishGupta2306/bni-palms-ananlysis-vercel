@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { loadAllChapterData, ChapterMemberData } from '../services/ChapterDataLoader';
+import { loadAllChapterData, ChapterMemberData } from "@/shared/services/chapter-data-loader";
 
 // Query key for chapter data - used for cache invalidation
 export const CHAPTER_DATA_QUERY_KEY = ['chapters', 'dashboard'];

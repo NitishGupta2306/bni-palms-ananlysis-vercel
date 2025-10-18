@@ -85,7 +85,10 @@ class Chapter(models.Model):
 class AdminSettings(models.Model):
     """Singleton model for admin authentication settings."""
 
-    admin_password = models.CharField(max_length=255, default="admin123")  # Increased for bcrypt hash (60 chars)
+    admin_password = models.CharField(
+        max_length=255,
+        help_text="Bcrypt hashed admin password. Set via management command or admin panel."
+    )  # Increased for bcrypt hash (60 chars)
     failed_admin_attempts = models.IntegerField(default=0)
     admin_lockout_until = models.DateTimeField(null=True, blank=True)
 

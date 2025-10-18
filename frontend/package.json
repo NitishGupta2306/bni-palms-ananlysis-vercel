@@ -50,6 +50,25 @@
     "extends": [
       "react-app",
       "react-app/jest"
+    ],
+    "rules": {
+      "no-console": [
+        "warn",
+        {
+          "allow": []
+        }
+      ]
+    },
+    "overrides": [
+      {
+        "files": [
+          "src/shared/services/error-reporting.ts",
+          "src/lib/sentry.ts"
+        ],
+        "rules": {
+          "no-console": "off"
+        }
+      }
     ]
   },
   "browserslist": {

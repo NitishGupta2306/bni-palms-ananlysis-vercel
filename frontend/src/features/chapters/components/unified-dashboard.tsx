@@ -27,13 +27,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ChapterMemberData } from "../../../shared/services/ChapterDataLoader";
+import { ChapterMemberData } from "@/shared/services/chapter-data-loader";
 import ChapterInfoTab from "./tabs/chapter-info-tab";
 import FileUploadTab from "./tabs/file-upload-tab";
 import ComparisonTab from "../../analytics/components/comparison-tab";
 import MatrixPreviewTab from "./tabs/matrix-preview-tab";
 import MultiMonthTab from "../../analytics/components/multi-month-tab";
-import { useNavigationStats } from "../../../shared/contexts/NavigationContext";
+import { useNavigationStats } from "@/shared/contexts/navigation-context";
 
 interface UnifiedDashboardProps {
   chapterData: ChapterMemberData[];

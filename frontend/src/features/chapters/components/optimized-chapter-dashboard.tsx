@@ -26,7 +26,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
-import { ChapterMemberData } from '../../../shared/services/ChapterDataLoader';
+import { ChapterMemberData } from "@/shared/services/chapter-data-loader";
 import PreviousDataTab from '../../reports/components/previous-data-tab';
 import MatrixTab from '../../analytics/components/matrix-tab';
 import ComparisonTab from '../../analytics/components/comparison-tab';

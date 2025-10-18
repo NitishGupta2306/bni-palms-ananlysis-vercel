@@ -8,7 +8,7 @@ import { screen, waitFor, within } from '@testing-library/react';
 import { renderWithProviders, createMockExcelFile } from '../../../testing/fixtures/testHelpers';
 import { testDataFactory, TEST_SCENARIOS } from '../../../testing/fixtures/testDataFactory';
 // import MembersTab from './members-tab';
-import * as ChapterDataLoader from '../../../shared/services/ChapterDataLoader';
+import * as ChapterDataLoader from "@/shared/services/chapter-data-loader";
 
 // Mock the ChapterDataLoader module
 jest.mock('../../../shared/services/ChapterDataLoader');

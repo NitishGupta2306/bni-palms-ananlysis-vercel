@@ -1,6 +1,6 @@
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { ChapterMemberData } from '../../../../shared/services/ChapterDataLoader';
+import { ChapterMemberData } from "@/shared/services/chapter-data-loader";
 import MatrixTab from '../../../analytics/components/matrix-tab';
 
 interface MatrixPreviewTabProps {

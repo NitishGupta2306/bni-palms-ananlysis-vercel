@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { AlertCircle, AlertTriangle, Loader2 } from 'lucide-react';
-import { ChapterMemberData } from '../../../shared/services/ChapterDataLoader';
+import { ChapterMemberData } from "@/shared/services/chapter-data-loader";
 import { useMemberDetail } from '../hooks/useMemberDetail';
 import { useMemberActions } from '../hooks/useMemberActions';
 import { MemberProfileCard } from './member-profile-card';

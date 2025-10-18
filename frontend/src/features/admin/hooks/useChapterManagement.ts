@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
 import { ChapterFormData } from "../types/admin.types";
 import { apiClient } from "@/lib/apiClient";
+import { reportError } from "@/shared/services/error-reporting";
 
 export const useChapterManagement = (onDataRefresh: () => void) => {
   const [showAddForm, setShowAddForm] = useState(false);
@@ -43,10 +44,10 @@ export const useChapterManagement = (onDataRefresh: () => void) => {
         );
         onDataRefresh();
       } catch (error) {
-        console.error(
-          `Failed to ${editingChapterId ? "update" : "add"} chapter:`,
-          error,
-        );
+        reportError(error instanceof Error ? error : new Error(`Failed to ${editingChapterId ? "update" : "add"} chapter`), {
+          action: editingChapterId ? "updateChapter" : "addChapter",
+          additionalData: { chapterName: formData.name },
+        });
       } finally {
         setIsSubmitting(false);
       }
@@ -67,7 +68,10 @@ export const useChapterManagement = (onDataRefresh: () => void) => {
         await apiClient.delete(`/api/chapters/${chapterId}/`);
         onDataRefresh();
       } catch (error) {
-        console.error("Failed to delete chapter:", error);
+        reportError(error instanceof Error ? error : new Error("Failed to delete chapter"), {
+          action: "deleteChapter",
+          chapterId,
+        });
         alert("Failed to delete chapter. Please try again.");
       }
     },

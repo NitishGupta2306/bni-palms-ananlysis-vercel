@@ -5,8 +5,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import ChapterCard from './chapter-card';
 import ChapterErrorBoundary from './chapter-error-boundary';
 import ChapterCardSkeleton from '@/components/skeletons/ChapterCardSkeleton';
-import { ChapterMemberData, generateMockPerformanceMetrics } from '../../../shared/services/ChapterDataLoader';
-import { useNavigationStats } from '../../../shared/contexts/NavigationContext';
+import { ChapterMemberData, generateMockPerformanceMetrics } from "@/shared/services/chapter-data-loader";
+import { useNavigationStats } from "@/shared/contexts/navigation-context";
 
 interface ChapterDashboardProps {
   chapterData: ChapterMemberData[];

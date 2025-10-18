@@ -96,26 +96,70 @@ class ErrorReportingService {
   }
 
   /**
-   * Send error to external tracking service
-   * TODO: Implement actual service integration (Sentry, LogRocket, etc.)
+   * Send error to external tracking service (Sentry)
+   *
+   * Sentry integration is configured via environment variables:
+   * - REACT_APP_SENTRY_DSN: Sentry Data Source Name
+   * - REACT_APP_SENTRY_ENVIRONMENT: Environment (development/production)
    */
   private sendToErrorTrackingService(report: ErrorReport): void {
-    // Placeholder for external service integration
-    // Example with Sentry:
-    // Sentry.captureException(report.error, {
-    //   contexts: {
-    //     react: {
-    //       componentStack: report.errorInfo?.componentStack,
-    //     },
-    //     custom: report.context,
-    //   },
-    //   tags: {
-    //     level: report.context?.level,
-    //     chapterId: report.context?.chapterId,
-    //   },
-    // });
+    // Check if Sentry is available (loaded via script or npm package)
+    if (typeof window !== 'undefined' && (window as any).Sentry) {
+      const Sentry = (window as any).Sentry;
 
-    console.warn('Error tracking service not configured');
+      Sentry.captureException(report.error, {
+        contexts: {
+          react: {
+            componentStack: report.errorInfo?.componentStack,
+          },
+          custom: report.context,
+        },
+        tags: {
+          level: report.context?.level || 'unknown',
+          chapterId: report.context?.chapterId,
+          action: report.context?.action,
+        },
+        extra: {
+          ...report.context?.additionalData,
+          url: report.url,
+          userAgent: report.userAgent,
+        },
+        user: report.context?.userId ? {
+          id: report.context.userId,
+        } : undefined,
+      });
+    } else {
+      // Fallback: send to custom backend endpoint for logging
+      this.sendToBackendLogger(report);
+    }
+  }
+
+  /**
+   * Fallback: Send error to backend logging endpoint
+   */
+  private async sendToBackendLogger(report: ErrorReport): Promise<void> {
+    try {
+      await fetch('/api/errors/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: report.error.message,
+          stack: report.error.stack,
+          name: report.error.name,
+          context: report.context,
+          timestamp: report.timestamp.toISOString(),
+          url: report.url,
+          userAgent: report.userAgent,
+        }),
+      });
+    } catch (e) {
+      // Silently fail - don't want error reporting to cause more errors
+      if (!this.isProduction) {
+        console.warn('Failed to send error to backend logger:', e);
+      }
+    }
   }
 
   /**

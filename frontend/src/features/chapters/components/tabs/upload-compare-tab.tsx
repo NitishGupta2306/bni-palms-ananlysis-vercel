@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CloudUpload, GitCompare } from 'lucide-react';
-import { ChapterMemberData } from '../../../../shared/services/ChapterDataLoader';
+import { ChapterMemberData } from "@/shared/services/chapter-data-loader";
 import FileUploadComponent from '../../../file-upload/components/file-upload-component';
 import FileUploadErrorBoundary from '../../../file-upload/components/file-upload-error-boundary';
 import ComparisonTab from '../../../analytics/components/comparison-tab';
