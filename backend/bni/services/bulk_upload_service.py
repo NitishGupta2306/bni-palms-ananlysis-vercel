@@ -207,7 +207,13 @@ class BulkUploadService:
             }
 
     def _process_row(self, row) -> None:
-        """Process a single row from the region summary."""
+        """
+        Process a single row from the region summary.
+
+        DEPRECATED: This method is no longer used. The process_region_summary method
+        now uses vectorized bulk operations with transaction.atomic() wrapping (line 86)
+        for better performance and data integrity.
+        """
         import pandas as pd
 
         # Extract chapter name

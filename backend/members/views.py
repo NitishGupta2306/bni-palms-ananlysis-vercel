@@ -7,7 +7,7 @@ Authentication:
 - Admins can access all members
 """
 from urllib.parse import unquote
-from django.db import models
+from django.db import models, transaction
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny
@@ -49,8 +49,15 @@ class MemberViewSet(viewsets.ModelViewSet):
             return MemberUpdateSerializer
         return MemberSerializer
 
+    @transaction.atomic
     def create(self, request, chapter_pk=None):
-        """Create a new member in the specified chapter."""
+        """
+        Create a new member in the specified chapter.
+
+        Uses @transaction.atomic to ensure member creation and normalization
+        complete successfully or rollback entirely. This prevents partial
+        member records if any step fails.
+        """
         try:
             chapter = Chapter.objects.get(id=chapter_pk)
         except Chapter.DoesNotExist:
@@ -89,8 +96,15 @@ class MemberViewSet(viewsets.ModelViewSet):
             status=status.HTTP_201_CREATED if created else status.HTTP_200_OK
         )
 
+    @transaction.atomic
     def update(self, request, pk=None, chapter_pk=None):
-        """Update member information."""
+        """
+        Update member information.
+
+        Uses @transaction.atomic to ensure all member field updates and
+        normalized name recalculation complete successfully or rollback entirely.
+        This prevents partial updates if any step fails.
+        """
         try:
             member = Member.objects.get(id=pk, chapter_id=chapter_pk)
         except Member.DoesNotExist:
@@ -110,8 +124,16 @@ class MemberViewSet(viewsets.ModelViewSet):
         """Partially update member information."""
         return self.update(request, pk, chapter_pk)
 
+    @transaction.atomic
     def destroy(self, request, pk=None, chapter_pk=None):
-        """Delete a member and all associated data."""
+        """
+        Delete a member and all associated data.
+
+        Uses @transaction.atomic to ensure member deletion and all cascade
+        deletions (referrals, one-to-ones, TYFCBs) complete successfully or
+        rollback entirely. This prevents orphaned records if deletion fails
+        partway through.
+        """
         try:
             member = Member.objects.get(id=pk, chapter_id=chapter_pk)
         except Member.DoesNotExist:
