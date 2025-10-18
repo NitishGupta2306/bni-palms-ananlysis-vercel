@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Download, Loader2 } from "lucide-react";
 import { API_BASE_URL } from "@/config/api";
 import { useToast } from "@/hooks/use-toast";
-import { fetchWithAuth } from "@/lib/apiClient";
+import { fetchWithAuth } from "@/lib/api-client";
 
 interface MatrixExportButtonProps {
   chapterId: string;

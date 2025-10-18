@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { MatrixData, TYFCBData } from '../types/matrix.types';
 import { MonthlyReport, loadMonthlyReports, loadMatrixData } from "@/shared/services/chapter-data-loader";
-import { apiClient } from '@/lib/apiClient';
+import { apiClient } from '@/lib/api-client';
 
 interface UseMatrixDataReturn {
   monthlyReports: MonthlyReport[];

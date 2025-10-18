@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
 import { ChapterFormData } from "../types/admin.types";
-import { apiClient } from "@/lib/apiClient";
+import { apiClient } from "@/lib/api-client";
 import { reportError } from "@/shared/services/error-reporting";
 
 export const useChapterManagement = (onDataRefresh: () => void) => {

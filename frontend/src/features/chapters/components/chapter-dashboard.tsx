@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { Card, CardContent } from '@/components/ui/card';
 import ChapterCard from './chapter-card';
 import ChapterErrorBoundary from './chapter-error-boundary';
-import ChapterCardSkeleton from '@/components/skeletons/ChapterCardSkeleton';
+import ChapterCardSkeleton from '@/components/skeletons/chapter-card-skeleton';
 import { ChapterMemberData, generateMockPerformanceMetrics } from "@/shared/services/chapter-data-loader";
 import { useNavigationStats } from "@/shared/contexts/navigation-context";
 

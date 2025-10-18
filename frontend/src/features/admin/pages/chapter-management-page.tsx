@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { ChapterManagementTab } from '../components/chapter-management-tab';
-import { useAdminData } from '../hooks/useAdminData';
+import { useAdminData } from '../hooks/use-admin-data';
 
 const ChapterManagementPage: React.FC = () => {
   const { chapterData, handleDataRefresh } = useAdminData();

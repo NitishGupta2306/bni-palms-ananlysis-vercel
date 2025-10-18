@@ -7,6 +7,7 @@ and member completeness analysis.
 
 import pandas as pd
 from typing import Dict, Set
+from django.conf import settings
 from members.models import Member
 from reports.models import MonthlyReport
 
@@ -14,16 +15,17 @@ from reports.models import MonthlyReport
 class PerformanceCalculator:
     """Handles performance statistics and tier calculations."""
 
-    # Performance thresholds (as per specification.md)
-    THRESHOLD_GREEN = 1.75  # >= 1.75x average
-    THRESHOLD_ORANGE_HIGH = 1.75  # < 1.75x average
-    THRESHOLD_ORANGE_LOW = 0.75  # >= 0.75x average
-    THRESHOLD_RED = 0.5  # < 0.5x average
+    # Import configuration from settings
+    # Performance thresholds (multipliers of chapter average)
+    THRESHOLD_GREEN = settings.BNI_CONFIG['PERFORMANCE_THRESHOLDS']['EXCELLENT']
+    THRESHOLD_ORANGE_HIGH = settings.BNI_CONFIG['PERFORMANCE_THRESHOLDS']['GOOD_HIGH']
+    THRESHOLD_ORANGE_LOW = settings.BNI_CONFIG['PERFORMANCE_THRESHOLDS']['GOOD_LOW']
+    THRESHOLD_RED = settings.BNI_CONFIG['PERFORMANCE_THRESHOLDS']['ATTENTION']
 
-    # Color definitions (as per specification.md)
-    COLOR_GREEN = "B6FFB6"  # Excellent performance
-    COLOR_ORANGE = "FFD699"  # Good/Average performance
-    COLOR_RED = "FFB6B6"  # Needs attention
+    # Excel highlighting colors (from settings)
+    COLOR_GREEN = settings.BNI_CONFIG['COLORS']['GREEN']
+    COLOR_ORANGE = settings.BNI_CONFIG['COLORS']['ORANGE']
+    COLOR_RED = settings.BNI_CONFIG['COLORS']['RED']
 
     @classmethod
     def calculate_chapter_statistics(cls, aggregated_data: Dict) -> Dict:

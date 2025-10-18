@@ -7,6 +7,7 @@ Authentication:
 - Admins can access all members
 """
 from urllib.parse import unquote
+from django.conf import settings
 from django.db import models, transaction
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
@@ -270,7 +271,8 @@ class MemberViewSet(viewsets.ModelViewSet):
                 'priority': 'high'
             })
 
-        if referrals_given < total_members * 0.5:
+        activity_threshold = settings.BNI_CONFIG['MEMBER_ACTIVITY_THRESHOLD']
+        if referrals_given < total_members * activity_threshold:
             recommendations.append({
                 'type': 'warning',
                 'category': 'referrals',

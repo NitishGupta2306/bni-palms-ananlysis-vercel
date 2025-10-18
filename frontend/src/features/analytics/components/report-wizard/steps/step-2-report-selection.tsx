@@ -9,7 +9,7 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Info, Loader2 } from "lucide-react";
-import { ReportCard } from "../components/ReportCard";
+import { ReportCard } from "../components/report-card";
 import { MonthlyReportListItem } from "../types";
 
 interface Step2Props {

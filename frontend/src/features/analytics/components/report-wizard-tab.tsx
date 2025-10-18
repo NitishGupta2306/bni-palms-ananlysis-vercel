@@ -25,14 +25,14 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { formatMonthYearShort } from "@/lib/utils";
-import { apiClient, fetchWithAuth } from "@/lib/apiClient";
+import { apiClient, fetchWithAuth } from "@/lib/api-client";
 import { API_BASE_URL } from "@/config/api";
 import { reportError } from "@/shared/services/error-reporting";
 
 // Import existing components we'll reuse
 import { MatrixDisplay } from "./matrix-display";
 import { TYFCBReport } from "./tyfcb-report";
-import { useMatrixData } from "../hooks/useMatrixData";
+import { useMatrixData } from "../hooks/use-matrix-data";
 import { ChapterMemberData } from "@/shared/services/chapter-data-loader";
 
 interface MonthlyReportListItem {

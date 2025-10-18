@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ChapterMemberData } from "@/shared/services/chapter-data-loader";
-import { useMemberManagement } from '../hooks/useMemberManagement';
+import { useMemberManagement } from '../hooks/use-member-management';
 import { MemberEditDialog } from './member-edit-dialog';
 import { MemberAddDialog } from './member-add-dialog';
 

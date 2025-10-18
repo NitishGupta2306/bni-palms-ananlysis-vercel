@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { BulkUploadTab } from '../components/bulk-upload-tab';
-import { useAdminData } from '../hooks/useAdminData';
+import { useAdminData } from '../hooks/use-admin-data';
 
 const BulkOperationsPage: React.FC = () => {
   const { handleDataRefresh } = useAdminData();

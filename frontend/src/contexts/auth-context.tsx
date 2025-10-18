@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { API_BASE_URL } from '@/config/api';
-import { apiClient } from '@/lib/apiClient';
+import { apiClient } from '@/lib/api-client';
 import { reportError } from '@/shared/services/error-reporting';
 
 interface ChapterAuth {

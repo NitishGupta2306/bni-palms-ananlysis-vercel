@@ -3,7 +3,7 @@ import {
   sanitizeSheetData,
   ExcelSecurityError,
   DEFAULT_VALIDATION_OPTIONS
-} from '../../features/file-upload/utils/excelSecurity';
+} from '../../features/file-upload/utils/excel-security';
 
 describe('Excel Security Utils', () => {
   describe('validateExcelFile', () => {

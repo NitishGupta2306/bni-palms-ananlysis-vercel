@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { MemberAnalytics } from "../types/member.types";
-import { apiClient } from "@/lib/apiClient";
+import { apiClient } from "@/lib/api-client";
 import { reportError } from "@/shared/services/error-reporting";
 
 interface UseMemberDetailProps {

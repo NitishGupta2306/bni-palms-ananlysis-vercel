@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { SystemStatusTab } from '../components/system-status-tab';
-import { useAdminData } from '../hooks/useAdminData';
+import { useAdminData } from '../hooks/use-admin-data';
 
 const SystemStatusPage: React.FC = () => {
   const { systemStats } = useAdminData();

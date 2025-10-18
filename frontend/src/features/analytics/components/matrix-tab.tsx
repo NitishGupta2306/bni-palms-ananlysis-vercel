@@ -22,14 +22,15 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ChapterMemberData } from "@/shared/services/chapter-data-loader";
-import { useMatrixData } from "../hooks/useMatrixData";
+import { useMatrixData } from "../hooks/use-matrix-data";
 import { MatrixSelector } from "./matrix-selector";
 import { MatrixDisplay } from "./matrix-display";
 import { TYFCBReport } from "./tyfcb-report";
+import { MatrixErrorBoundary } from "./matrix/matrix-error-boundary";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { formatMonthYearLong } from "@/lib/utils";
-import { fetchWithAuth } from "@/lib/apiClient";
+import { fetchWithAuth } from "@/lib/api-client";
 import { API_BASE_URL } from "@/config/api";
 
 interface MatrixTabProps {
@@ -411,34 +412,42 @@ const MatrixTab: React.FC<MatrixTabProps> = ({ chapterData }) => {
                 transition={{ duration: 0.3 }}
               >
                 {activeMatrixTab === "referral" && (
-                  <MatrixDisplay
-                    matrixData={referralMatrix}
-                    title="Referral Matrix"
-                    description="Shows who has given referrals to whom. Numbers represent the count of referrals given."
-                    matrixType="referral"
-                  />
+                  <MatrixErrorBoundary>
+                    <MatrixDisplay
+                      matrixData={referralMatrix}
+                      title="Referral Matrix"
+                      description="Shows who has given referrals to whom. Numbers represent the count of referrals given."
+                      matrixType="referral"
+                    />
+                  </MatrixErrorBoundary>
                 )}
 
                 {activeMatrixTab === "oto" && (
-                  <MatrixDisplay
-                    matrixData={oneToOneMatrix}
-                    title="One-to-One Matrix"
-                    description="Tracks one-to-one meetings between members. Numbers represent the count of meetings."
-                    matrixType="oto"
-                  />
+                  <MatrixErrorBoundary>
+                    <MatrixDisplay
+                      matrixData={oneToOneMatrix}
+                      title="One-to-One Matrix"
+                      description="Tracks one-to-one meetings between members. Numbers represent the count of meetings."
+                      matrixType="oto"
+                    />
+                  </MatrixErrorBoundary>
                 )}
 
                 {activeMatrixTab === "combination" && (
-                  <MatrixDisplay
-                    matrixData={combinationMatrix}
-                    title="Combination Matrix"
-                    description="Combined view showing both referrals and one-to-ones using coded values."
-                    matrixType="combination"
-                  />
+                  <MatrixErrorBoundary>
+                    <MatrixDisplay
+                      matrixData={combinationMatrix}
+                      title="Combination Matrix"
+                      description="Combined view showing both referrals and one-to-ones using coded values."
+                      matrixType="combination"
+                    />
+                  </MatrixErrorBoundary>
                 )}
 
                 {activeMatrixTab === "tyfcb" && (
-                  <TYFCBReport tyfcbData={tyfcbData} />
+                  <MatrixErrorBoundary>
+                    <TYFCBReport tyfcbData={tyfcbData} />
+                  </MatrixErrorBoundary>
                 )}
               </motion.div>
             </CardContent>

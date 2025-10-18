@@ -1,6 +1,6 @@
-import { useApiError } from '../../../shared/hooks/useApiError';
+import { useApiError } from '../../../shared/hooks/use-api-error';
 import { API_BASE_URL } from '@/config/api';
-import { getAuthToken } from '@/lib/apiClient';
+import { getAuthToken } from '@/lib/api-client';
 import { format } from 'date-fns';
 import { UploadFile, UploadType, UploadResult } from './use-file-upload-state';
 

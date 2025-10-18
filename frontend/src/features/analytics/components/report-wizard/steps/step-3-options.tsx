@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { FileSpreadsheet, FileArchive } from "lucide-react";
-import { DownloadButton } from "../components/DownloadButton";
+import { DownloadButton } from "../components/download-button";
 import { MatrixType } from "../types";
 
 interface Step3Props {
