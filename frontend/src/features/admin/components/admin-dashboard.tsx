@@ -26,6 +26,7 @@ import { BulkUploadTab } from "./bulk-upload-tab";
 import { DataUploadTab } from "./data-upload-tab";
 import { SystemStatusTab } from "./system-status-tab";
 import { SecuritySettingsTab } from "./security-settings-tab";
+import { AdminErrorBoundary } from "./admin-error-boundary";
 import { useAdminData } from "../hooks/use-admin-data";
 
 const AdminDashboard: React.FC = () => {
@@ -136,43 +137,55 @@ const AdminDashboard: React.FC = () => {
 
         {/* Data Upload Tab */}
         <TabsContent value="upload" className="space-y-6">
-          <DataUploadTab
-            selectedChapter={selectedChapter}
-            chapterData={chapterData}
-            onChapterSelect={handleChapterSelect}
-            onUploadSuccess={handleDataRefresh}
-          />
+          <AdminErrorBoundary>
+            <DataUploadTab
+              selectedChapter={selectedChapter}
+              chapterData={chapterData}
+              onChapterSelect={handleChapterSelect}
+              onUploadSuccess={handleDataRefresh}
+            />
+          </AdminErrorBoundary>
         </TabsContent>
 
         {/* Chapter Management Tab */}
         <TabsContent value="chapters" className="space-y-6">
-          <ChapterManagementTab
-            chapterData={chapterData}
-            onDataRefresh={handleDataRefresh}
-          />
+          <AdminErrorBoundary>
+            <ChapterManagementTab
+              chapterData={chapterData}
+              onDataRefresh={handleDataRefresh}
+            />
+          </AdminErrorBoundary>
         </TabsContent>
 
         {/* Member Management Tab */}
         <TabsContent value="members" className="space-y-6">
-          <MemberManagementTab
-            chapterData={chapterData}
-            onDataRefresh={handleDataRefresh}
-          />
+          <AdminErrorBoundary>
+            <MemberManagementTab
+              chapterData={chapterData}
+              onDataRefresh={handleDataRefresh}
+            />
+          </AdminErrorBoundary>
         </TabsContent>
 
         {/* Bulk Operations Tab */}
         <TabsContent value="bulk" className="space-y-6">
-          <BulkUploadTab onDataRefresh={handleDataRefresh} />
+          <AdminErrorBoundary>
+            <BulkUploadTab onDataRefresh={handleDataRefresh} />
+          </AdminErrorBoundary>
         </TabsContent>
 
         {/* Security Settings Tab */}
         <TabsContent value="security" className="space-y-6">
-          <SecuritySettingsTab />
+          <AdminErrorBoundary>
+            <SecuritySettingsTab />
+          </AdminErrorBoundary>
         </TabsContent>
 
         {/* System Status Tab */}
         <TabsContent value="system" className="space-y-6">
-          <SystemStatusTab systemStats={systemStats} />
+          <AdminErrorBoundary>
+            <SystemStatusTab systemStats={systemStats} />
+          </AdminErrorBoundary>
         </TabsContent>
       </Tabs>
     </motion.div>
