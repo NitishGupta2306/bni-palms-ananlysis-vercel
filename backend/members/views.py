@@ -6,13 +6,17 @@ Authentication:
 - Chapters can only access their own members
 - Admins can access all members
 """
+from typing import Type
 from urllib.parse import unquote
 from django.conf import settings
 from django.db import models, transaction
+from django.db.models import QuerySet
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
+from rest_framework.request import Request
+from rest_framework.serializers import Serializer
 
 from chapters.models import Chapter
 from chapters.permissions import IsChapterOrAdmin
@@ -35,14 +39,14 @@ class MemberViewSet(viewsets.ModelViewSet):
     serializer_class = MemberSerializer
     permission_classes = [IsChapterOrAdmin]
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet:
         """Filter members by chapter from URL."""
         chapter_id = self.kwargs.get('chapter_pk')
         if chapter_id:
             return Member.objects.filter(chapter_id=chapter_id, is_active=True)
         return Member.objects.filter(is_active=True)
 
-    def get_serializer_class(self):
+    def get_serializer_class(self) -> Type[Serializer]:
         """Use different serializers for create/update."""
         if self.action == 'create':
             return MemberCreateSerializer
@@ -51,7 +55,7 @@ class MemberViewSet(viewsets.ModelViewSet):
         return MemberSerializer
 
     @transaction.atomic
-    def create(self, request, chapter_pk=None):
+    def create(self, request: Request, chapter_pk=None) -> Response:
         """
         Create a new member in the specified chapter.
 
@@ -98,7 +102,7 @@ class MemberViewSet(viewsets.ModelViewSet):
         )
 
     @transaction.atomic
-    def update(self, request, pk=None, chapter_pk=None):
+    def update(self, request: Request, pk=None, chapter_pk=None) -> Response:
         """
         Update member information.
 
@@ -121,12 +125,12 @@ class MemberViewSet(viewsets.ModelViewSet):
         serializer = MemberSerializer(updated_member)
         return Response(serializer.data)
 
-    def partial_update(self, request, pk=None, chapter_pk=None):
+    def partial_update(self, request: Request, pk=None, chapter_pk=None) -> Response:
         """Partially update member information."""
         return self.update(request, pk, chapter_pk)
 
     @transaction.atomic
-    def destroy(self, request, pk=None, chapter_pk=None):
+    def destroy(self, request: Request, pk=None, chapter_pk=None) -> Response:
         """
         Delete a member and all associated data.
 
@@ -155,7 +159,7 @@ class MemberViewSet(viewsets.ModelViewSet):
         })
 
     @action(detail=False, methods=['get'], url_path='(?P<member_name>[^/.]+)/analytics')
-    def analytics(self, request, chapter_pk=None, member_name=None):
+    def analytics(self, request: Request, chapter_pk=None, member_name=None) -> Response:
         """
         Get comprehensive analytics for a member.
 

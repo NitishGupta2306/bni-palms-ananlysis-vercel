@@ -6,11 +6,13 @@ Authentication:
 - Chapters can only access their own analytics data
 - Admins can access all analytics data
 """
+from typing import Union
 from django.http import HttpResponse
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
+from rest_framework.request import Request
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from io import BytesIO
@@ -43,7 +45,7 @@ class MatrixViewSet(viewsets.ViewSet):
     permission_classes = [IsChapterOrAdmin]
 
     @action(detail=False, methods=['get'], url_path='referral')
-    def referral_matrix(self, request, chapter_id=None, report_id=None):
+    def referral_matrix(self, request: Request, chapter_id=None, report_id=None) -> Response:
         """
         Return referral matrix for a specific monthly report.
 
@@ -116,7 +118,7 @@ class MatrixViewSet(viewsets.ViewSet):
             )
 
     @action(detail=False, methods=['get'], url_path='one-to-one')
-    def one_to_one_matrix(self, request, chapter_id=None, report_id=None):
+    def one_to_one_matrix(self, request: Request, chapter_id=None, report_id=None) -> Response:
         """
         Return one-to-one matrix for a specific monthly report.
 
@@ -189,7 +191,7 @@ class MatrixViewSet(viewsets.ViewSet):
             )
 
     @action(detail=False, methods=['get'], url_path='combination')
-    def combination_matrix(self, request, chapter_id=None, report_id=None):
+    def combination_matrix(self, request: Request, chapter_id=None, report_id=None) -> Response:
         """
         Return combination matrix for a specific monthly report.
 
@@ -298,7 +300,7 @@ class ComparisonViewSet(viewsets.ViewSet):
     permission_classes = [IsChapterOrAdmin]
 
     @action(detail=False, methods=['get'], url_path='referral')
-    def compare_referral(self, request, chapter_id=None, report_id=None, previous_report_id=None):
+    def compare_referral(self, request: Request, chapter_id=None, report_id=None, previous_report_id=None) -> Response:
         """
         Compare referral matrices between two monthly reports.
 
@@ -339,7 +341,7 @@ class ComparisonViewSet(viewsets.ViewSet):
             )
 
     @action(detail=False, methods=['get'], url_path='one-to-one')
-    def compare_oto(self, request, chapter_id=None, report_id=None, previous_report_id=None):
+    def compare_oto(self, request: Request, chapter_id=None, report_id=None, previous_report_id=None) -> Response:
         """
         Compare one-to-one matrices between two monthly reports.
 
@@ -380,7 +382,7 @@ class ComparisonViewSet(viewsets.ViewSet):
             )
 
     @action(detail=False, methods=['get'], url_path='combination')
-    def compare_combination(self, request, chapter_id=None, report_id=None, previous_report_id=None):
+    def compare_combination(self, request: Request, chapter_id=None, report_id=None, previous_report_id=None) -> Response:
         """
         Compare combination matrices between two monthly reports.
 
@@ -421,7 +423,7 @@ class ComparisonViewSet(viewsets.ViewSet):
             )
 
     @action(detail=False, methods=['get'], url_path='comprehensive')
-    def compare_comprehensive(self, request, chapter_id=None, report_id=None, previous_report_id=None):
+    def compare_comprehensive(self, request: Request, chapter_id=None, report_id=None, previous_report_id=None) -> Response:
         """
         Get comprehensive comparison between two monthly reports.
 
@@ -457,7 +459,7 @@ class ComparisonViewSet(viewsets.ViewSet):
             )
 
     @action(detail=False, methods=['get'], url_path='download-excel')
-    def download_comparison_excel(self, request, chapter_id=None, report_id=None, previous_report_id=None):
+    def download_comparison_excel(self, request: Request, chapter_id=None, report_id=None, previous_report_id=None) -> HttpResponse:
         """
         Download Excel comparison showing combination matrix with aggregate columns.
 
