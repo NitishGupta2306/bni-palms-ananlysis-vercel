@@ -378,6 +378,18 @@ def write_combination_matrix(worksheet, aggregated_matrix, period_str: str, stat
     # COLUMN WIDTHS
     # =========================================================================
 
-    worksheet.column_dimensions["A"].width = 20  # Member name column
-    for col in range(2, total_columns + 1):
-        worksheet.column_dimensions[get_column_letter(col)].width = 12
+    # Member name column (first column)
+    worksheet.column_dimensions["A"].width = 20
+
+    # Member name columns (matrix columns - narrower for rotated text)
+    for col in range(2, 2 + num_members):
+        worksheet.column_dimensions[get_column_letter(col)].width = 4
+
+    # Aggregate columns (Neither, OTO only, etc.)
+    for col in range(agg_start_col, agg_end_col + 1):
+        worksheet.column_dimensions[get_column_letter(col)].width = 15
+
+    # Monthly columns
+    if show_monthly_breakdown:
+        for col in range(agg_end_col + 1, total_columns + 1):
+            worksheet.column_dimensions[get_column_letter(col)].width = 10

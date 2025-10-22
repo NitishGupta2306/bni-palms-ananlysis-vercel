@@ -17,7 +17,6 @@ from bni.services.excel_formatters import (
     write_tyfcb_report,
     write_summary_page,
     write_inactive_members,
-    write_charts_page,
 )
 
 # Import refactored helper modules
@@ -147,17 +146,6 @@ class AggregationService:
         if differences:
             ws_diff = wb.create_sheet("Inactive Members")
             write_inactive_members(ws_diff, differences, period_str)
-
-        # 7. Charts (Visual Analytics - last sheet)
-        ws_charts = wb.create_sheet("Charts")
-        write_charts_page(
-            ws_charts,
-            self.chapter.name if self.chapter else "BNI",
-            period_str,
-            aggregated,
-            stats,
-            self.reports,
-        )
 
         excel_buffer = BytesIO()
         wb.save(excel_buffer)

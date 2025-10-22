@@ -116,7 +116,7 @@ class MemberViewSet(viewsets.ModelViewSet):
 
         # Use MemberService to update
         service = MemberService()
-        updated_member = service.update_member(member.id, request.data)
+        updated_member, _ = service.update_member(member.id, **request.data)
 
         serializer = MemberSerializer(updated_member)
         return Response(serializer.data)

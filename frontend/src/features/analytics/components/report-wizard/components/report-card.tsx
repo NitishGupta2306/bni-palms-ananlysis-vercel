@@ -25,7 +25,9 @@ export const ReportCard: React.FC<ReportCardProps> = ({
 }) => {
   const formatDate = (dateStr: string) => {
     try {
-      return formatMonthYearShort(dateStr);
+      // Parse "YYYY-MM" format
+      const [year, month] = dateStr.split('-').map(Number);
+      return formatMonthYearShort(year, month);
     } catch {
       return dateStr;
     }

@@ -56,23 +56,33 @@ class DataAggregator:
 
         Args:
             target_matrix: pandas DataFrame to add data to (modified in place)
-            source_data: Dict containing matrix data
+            source_data: Dict containing matrix data in format {'members': [...], 'matrix': [[...]]}
         """
         if not source_data:
             return
 
-        # Modern format: {'matrix': {'index': [...], 'columns': [...], 'data': {...}}}
-        if "matrix" in source_data:
-            matrix_dict = source_data["matrix"]
-            if "data" in matrix_dict:
-                for from_member, to_members in matrix_dict["data"].items():
-                    if from_member not in target_matrix.index:
+        # Format: {'members': [...], 'matrix': [[...]]}
+        if "members" in source_data and "matrix" in source_data:
+            members = source_data["members"]
+            matrix = source_data["matrix"]
+
+            # Iterate through the matrix by position
+            for from_idx, from_member in enumerate(members):
+                if from_member not in target_matrix.index:
+                    continue
+                if from_idx >= len(matrix):
+                    continue
+
+                row = matrix[from_idx]
+                for to_idx, to_member in enumerate(members):
+                    if to_member not in target_matrix.columns:
                         continue
-                    for to_member, value in to_members.items():
-                        if to_member not in target_matrix.columns:
-                            continue
-                        if isinstance(value, (int, float)):
-                            target_matrix.loc[from_member, to_member] += value
+                    if to_idx >= len(row):
+                        continue
+
+                    value = row[to_idx]
+                    if isinstance(value, (int, float)) and value > 0:
+                        target_matrix.loc[from_member, to_member] += value
 
     @staticmethod
     def add_tyfcb_data(target_dict: Dict, source_data: Dict):

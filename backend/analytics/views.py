@@ -500,6 +500,7 @@ class ComparisonViewSet(viewsets.ViewSet):
             header_font = Font(bold=True, size=11)
             header_fill = PatternFill(start_color='D3D3D3', end_color='D3D3D3', fill_type='solid')
             center_align = Alignment(horizontal='center', vertical='center')
+            vertical_align = Alignment(horizontal='center', vertical='center', text_rotation=90)
             border = Border(
                 left=Side(style='thin'),
                 right=Side(style='thin'),
@@ -513,15 +514,19 @@ class ComparisonViewSet(viewsets.ViewSet):
 
             # Headers
             # Row 1: Member names + aggregate column headers
-            ws.cell(1, 1, 'Giver \\ Receiver').font = header_font
-            ws.cell(1, 1).fill = header_fill
-            ws.cell(1, 1).alignment = center_align
+            cell = ws.cell(1, 1, 'Giver \\ Receiver')
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.alignment = center_align
+            cell.border = border
 
-            # Member name columns
+            # Member name columns (with vertical rotation)
             for i, name in enumerate(member_names, start=2):
-                ws.cell(1, i, name).font = header_font
-                ws.cell(1, i).fill = header_fill
-                ws.cell(1, i).alignment = center_align
+                cell = ws.cell(1, i, name)
+                cell.font = header_font
+                cell.fill = header_fill
+                cell.alignment = vertical_align
+                cell.border = border
 
             # Aggregate columns
             agg_start_col = len(member_names) + 2
@@ -532,20 +537,27 @@ class ComparisonViewSet(viewsets.ViewSet):
             ]
             for i, header in enumerate(aggregate_headers):
                 col = agg_start_col + i
-                ws.cell(1, col, header).font = header_font
-                ws.cell(1, col).fill = header_fill
-                ws.cell(1, col).alignment = center_align
+                cell = ws.cell(1, col, header)
+                cell.font = header_font
+                cell.fill = header_fill
+                cell.alignment = center_align
+                cell.border = border
 
             # Data rows
             for row_idx, giver_name in enumerate(member_names, start=2):
                 # Giver name in column 1
-                ws.cell(row_idx, 1, giver_name).font = Font(bold=True)
-                ws.cell(row_idx, 1).alignment = center_align
+                cell = ws.cell(row_idx, 1, giver_name)
+                cell.font = Font(bold=True)
+                cell.fill = header_fill
+                cell.alignment = center_align
+                cell.border = border
 
                 # Matrix values
                 matrix_row = current_matrix[row_idx - 2]
                 for col_idx, value in enumerate(matrix_row, start=2):
-                    ws.cell(row_idx, col_idx, value).alignment = center_align
+                    cell = ws.cell(row_idx, col_idx, value)
+                    cell.alignment = center_align
+                    cell.border = border
 
                 # Calculate aggregates
                 neither_count = sum(1 for v in matrix_row if v == 0)
@@ -556,10 +568,16 @@ class ComparisonViewSet(viewsets.ViewSet):
                 # Current referrals (values 2 or 3 in current matrix)
                 current_referrals = sum(1 for v in matrix_row if v in [2, 3])
 
-                # Previous referrals and neither
-                prev_matrix_row = previous_matrix[row_idx - 2]
-                previous_referrals = sum(1 for v in prev_matrix_row if v in [2, 3])
-                previous_neither = sum(1 for v in prev_matrix_row if v == 0)
+                # Previous referrals and neither (with bounds checking)
+                prev_idx = row_idx - 2
+                if prev_idx < len(previous_matrix):
+                    prev_matrix_row = previous_matrix[prev_idx]
+                    previous_referrals = sum(1 for v in prev_matrix_row if v in [2, 3])
+                    previous_neither = sum(1 for v in prev_matrix_row if v == 0)
+                else:
+                    # Member not present in previous report
+                    previous_referrals = 0
+                    previous_neither = 0
 
                 # Changes
                 change_in_referrals = current_referrals - previous_referrals
@@ -587,23 +605,45 @@ class ComparisonViewSet(viewsets.ViewSet):
                     neither_change_fill = None
 
                 # Write aggregate data
-                ws.cell(row_idx, agg_start_col, neither_count).alignment = center_align
-                ws.cell(row_idx, agg_start_col + 1, oto_only_count).alignment = center_align
-                ws.cell(row_idx, agg_start_col + 2, ref_only_count).alignment = center_align
-                ws.cell(row_idx, agg_start_col + 3, both_count).alignment = center_align
-                ws.cell(row_idx, agg_start_col + 4, current_referrals).alignment = center_align
-                ws.cell(row_idx, agg_start_col + 5, previous_referrals).alignment = center_align
+                cell = ws.cell(row_idx, agg_start_col, neither_count)
+                cell.alignment = center_align
+                cell.border = border
+
+                cell = ws.cell(row_idx, agg_start_col + 1, oto_only_count)
+                cell.alignment = center_align
+                cell.border = border
+
+                cell = ws.cell(row_idx, agg_start_col + 2, ref_only_count)
+                cell.alignment = center_align
+                cell.border = border
+
+                cell = ws.cell(row_idx, agg_start_col + 3, both_count)
+                cell.alignment = center_align
+                cell.border = border
+
+                cell = ws.cell(row_idx, agg_start_col + 4, current_referrals)
+                cell.alignment = center_align
+                cell.border = border
+
+                cell = ws.cell(row_idx, agg_start_col + 5, previous_referrals)
+                cell.alignment = center_align
+                cell.border = border
 
                 # Change in referrals with color
                 cell = ws.cell(row_idx, agg_start_col + 6, ref_change_text)
                 cell.alignment = center_align
+                cell.border = border
                 if ref_change_fill:
                     cell.fill = ref_change_fill
 
                 # Previous neither and change in neither
-                ws.cell(row_idx, agg_start_col + 7, previous_neither).alignment = center_align
+                cell = ws.cell(row_idx, agg_start_col + 7, previous_neither)
+                cell.alignment = center_align
+                cell.border = border
+
                 cell = ws.cell(row_idx, agg_start_col + 8, neither_change_text)
                 cell.alignment = center_align
+                cell.border = border
                 if neither_change_fill:
                     cell.fill = neither_change_fill
 

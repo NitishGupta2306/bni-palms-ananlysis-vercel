@@ -163,10 +163,10 @@ class PerformanceCalculator:
                 # Check if member appears in this month's data
                 if hasattr(report, "referral_matrix"):
                     matrix_data = report.referral_matrix
-                    if member.name in matrix_data.get("matrix", {}).get("index", []):
+                    if member.full_name in matrix_data.get("matrix", {}).get("index", []):
                         months_present += 1
 
-            member_completeness[member.name] = {
+            member_completeness[member.full_name] = {
                 "months_present": months_present,
                 "total_months": total_months,
                 "completeness_pct": (months_present / total_months * 100)

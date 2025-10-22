@@ -45,6 +45,7 @@ if os.environ.get("VERCEL"):
 INSTALLED_APPS = [
     # Third party apps
     "rest_framework",
+    "drf_spectacular",  # OpenAPI 3.0 schema generation
     "corsheaders",
     "csp",  # Content Security Policy
     # Our apps
@@ -153,7 +154,36 @@ REST_FRAMEWORK = {
     "PAGE_SIZE": 100,
     # Custom exception handler for standardized error responses
     "EXCEPTION_HANDLER": "bni.exceptions.custom_exception_handler",
+    # OpenAPI schema generation
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
+
+# ==============================================================================
+# DRF-SPECTACULAR CONFIGURATION (OpenAPI 3.0 Schema)
+# ==============================================================================
+SPECTACULAR_SETTINGS = {
+    "TITLE": "BNI PALMS API",
+    "DESCRIPTION": "Performance Analysis & Leadership Management System for BNI Chapters",
+    "VERSION": "1.0.0",
+    "SERVE_INCLUDE_SCHEMA": False,
+    # Security schemes
+    "SECURITY": [{"jwtAuth": []}],
+    "COMPONENT_SPLIT_REQUEST": True,
+    # Custom authentication scheme
+    "APPEND_COMPONENTS": {
+        "securitySchemes": {
+            "jwtAuth": {
+                "type": "http",
+                "scheme": "bearer",
+                "bearerFormat": "JWT",
+                "description": "JWT token obtained from /api/chapters/{id}/authenticate/ or /api/admin/authenticate/",
+            }
+        }
+    },
+}
+# ==============================================================================
+# END DRF-SPECTACULAR CONFIGURATION
+# ==============================================================================
 
 # CORS settings
 CORS_ALLOWED_ORIGINS = os.environ.get(
@@ -329,6 +359,19 @@ CACHE_TTL = {
 }
 # ==============================================================================
 # END CACHING CONFIGURATION
+# ==============================================================================
+
+# ==============================================================================
+# RATE LIMITING CONFIGURATION
+# ==============================================================================
+# Configure django-ratelimit to use cache backend
+RATELIMIT_USE_CACHE = 'default'  # Use the default cache backend
+RATELIMIT_VIEW = 'bni.utils.ratelimit.ratelimited_error'  # Custom 429 handler
+
+# Rate limit configurations
+RATELIMIT_ENABLE = True  # Can be disabled for development
+# ==============================================================================
+# END RATE LIMITING CONFIGURATION
 # ==============================================================================
 
 # ==============================================================================

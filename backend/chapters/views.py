@@ -15,6 +15,7 @@ from analytics.models import Referral, OneToOne, TYFCB
 from reports.models import MonthlyReport
 from bni.serializers import ChapterSerializer
 from bni.services.chapter_service import ChapterService
+from bni.utils.ratelimit import ratelimit_action
 
 
 class ChapterViewSet(viewsets.ModelViewSet):
@@ -59,11 +60,21 @@ class ChapterViewSet(viewsets.ModelViewSet):
 
         OPTIMIZED for Supabase/Vercel serverless with minimal queries.
         Uses aggregation and prefetch_related to avoid N+1 queries.
+        Cached for 15 minutes to reduce database load.
         """
         from django.db.models import Count, Sum
+        from django.core.cache import cache
+        from django.conf import settings
         import logging
 
         logger = logging.getLogger(__name__)
+
+        # Try to get cached data
+        cache_key = 'chapter_list_dashboard'
+        cached_data = cache.get(cache_key)
+        if cached_data is not None:
+            logger.debug(f"Returning cached dashboard data")
+            return Response(cached_data)
 
         try:
             # Get chapter IDs first to avoid forcing queryset evaluation with prefetch
@@ -211,6 +222,10 @@ class ChapterViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
+        # Cache for 15 minutes (from settings.CACHE_TTL['chapter_list'])
+        cache.set(cache_key, chapter_data, settings.CACHE_TTL['chapter_list'])
+        logger.debug(f"Cached dashboard data for {settings.CACHE_TTL['chapter_list']} seconds")
+
         return Response(chapter_data)
 
     def retrieve(self, request, pk=None):
@@ -219,7 +234,16 @@ class ChapterViewSet(viewsets.ModelViewSet):
 
         Returns chapter details with all active members and their full information.
         Chapters can only see their own data, admins can see all.
+
+        OPTIMIZED: Uses bulk aggregation to avoid N+1 queries.
         """
+        from django.db.models import Count, Sum, Q, Case, When, IntegerField
+        from django.core.cache import cache
+        from django.conf import settings
+        import logging
+
+        logger = logging.getLogger(__name__)
+
         try:
             chapter = self.get_object()
         except Chapter.DoesNotExist:
@@ -236,10 +260,25 @@ class ChapterViewSet(viewsets.ModelViewSet):
                         status=status.HTTP_403_FORBIDDEN,
                     )
 
-        # Get all members (frontend will filter by status)
-        members = Member.objects.filter(chapter=chapter)
+        # Try cache first
+        cache_key = f'chapter_detail_{chapter.id}'
+        cached_data = cache.get(cache_key)
+        if cached_data is not None:
+            logger.debug(f"Returning cached data for chapter {chapter.id}")
+            return Response(cached_data)
 
-        # Calculate performance metrics
+        # OPTIMIZED: Get members with aggregated stats in one query
+        members = Member.objects.filter(chapter=chapter).annotate(
+            referrals_given_count=Count('referrals_given', distinct=True),
+            referrals_received_count=Count('referrals_received', distinct=True),
+            one_to_ones_count=Count('one_to_ones_as_member1', distinct=True) + Count('one_to_ones_as_member2', distinct=True),
+            tyfcb_amount=Sum('tyfcbs_received__amount')
+        ).only(
+            'id', 'first_name', 'last_name', 'business_name',
+            'classification', 'email', 'phone', 'is_active', 'joined_date'
+        )
+
+        # Calculate chapter-level performance metrics
         total_referrals = Referral.objects.filter(giver__chapter=chapter).count()
         total_one_to_ones = OneToOne.objects.filter(member1__chapter=chapter).count()
         total_tyfcb = float(
@@ -249,22 +288,9 @@ class ChapterViewSet(viewsets.ModelViewSet):
             or 0
         )
 
-        # Prepare member details
+        # Prepare member details from annotated queryset
         member_details = []
         for member in members:
-            # Get individual member stats
-            referrals_given = Referral.objects.filter(giver=member).count()
-            referrals_received = Referral.objects.filter(receiver=member).count()
-            otos = OneToOne.objects.filter(
-                models.Q(member1=member) | models.Q(member2=member)
-            ).count()
-            tyfcb_received = float(
-                TYFCB.objects.filter(receiver=member).aggregate(
-                    total=models.Sum("amount")
-                )["total"]
-                or 0
-            )
-
             member_details.append(
                 {
                     "id": member.id,
@@ -277,10 +303,10 @@ class ChapterViewSet(viewsets.ModelViewSet):
                     "phone": member.phone,
                     "is_active": member.is_active,
                     "joined_date": member.joined_date,
-                    "referrals_given": referrals_given,
-                    "referrals_received": referrals_received,
-                    "one_to_ones": otos,
-                    "tyfcb_received": tyfcb_received,
+                    "referrals_given": member.referrals_given_count or 0,
+                    "referrals_received": member.referrals_received_count or 0,
+                    "one_to_ones": member.one_to_ones_count or 0,
+                    "tyfcb_received": float(member.tyfcb_amount or 0),
                 }
             )
 
@@ -298,6 +324,10 @@ class ChapterViewSet(viewsets.ModelViewSet):
             "total_tyfcb": total_tyfcb,
             "members": member_details,
         }
+
+        # Cache for 5 minutes (from settings.CACHE_TTL['chapter_detail'])
+        cache.set(cache_key, chapter_data, settings.CACHE_TTL['chapter_detail'])
+        logger.debug(f"Cached chapter {chapter.id} detail for {settings.CACHE_TTL['chapter_detail']} seconds")
 
         return Response(chapter_data)
 
@@ -356,9 +386,12 @@ class ChapterViewSet(viewsets.ModelViewSet):
         )
 
     @action(detail=True, methods=["post"], permission_classes=[AllowAny])
+    @ratelimit_action(key='ip', rate='5/m', method='POST')
     def authenticate(self, request, pk=None):
         """
         Authenticate a user to access a specific chapter.
+
+        Rate limited to 5 attempts per minute per IP.
 
         Request body: {"password": "chapter_password"}
         Response: {"token": "jwt_token", "chapter": {...}} or error with attempts_remaining
@@ -412,9 +445,12 @@ class ChapterViewSet(viewsets.ModelViewSet):
             )
 
     @action(detail=True, methods=["post"])
+    @ratelimit_action(key='ip', rate='3/h', method='POST')
     def update_password(self, request, pk=None):
         """
         Update a chapter's password (admin only).
+
+        Rate limited to 3 attempts per hour per IP.
 
         Request body: {"new_password": "new_password"}
         Requires admin authentication token.
@@ -463,9 +499,12 @@ class AdminAuthViewSet(viewsets.ViewSet):
         return super().get_permissions()
 
     @action(detail=False, methods=["post"])
+    @ratelimit_action(key='ip', rate='5/m', method='POST')
     def authenticate(self, request):
         """
         Authenticate admin user.
+
+        Rate limited to 5 attempts per minute per IP.
 
         Request body: {"password": "admin_password"}
         Response: {"token": "jwt_token"} or error with attempts_remaining
@@ -515,9 +554,12 @@ class AdminAuthViewSet(viewsets.ViewSet):
             )
 
     @action(detail=False, methods=["post"])
+    @ratelimit_action(key='ip', rate='3/h', method='POST')
     def update_password(self, request):
         """
         Update admin password (admin only).
+
+        Rate limited to 3 attempts per hour per IP.
 
         Request body: {"new_password": "new_password"}
         Requires admin authentication token.

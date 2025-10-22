@@ -139,6 +139,11 @@ export const formatMonthYear = (year: number, month: number): string => {
 };
 
 /**
+ * Alias for formatMonthYear (short format)
+ */
+export const formatMonthYearShort = formatMonthYear;
+
+/**
  * Gets an array of months between two dates
  * @param startDate - Start date
  * @param endDate - End date

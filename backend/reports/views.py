@@ -8,12 +8,21 @@ Additional functionality is split into focused ViewSets:
 - views_aggregation.py: Multi-month report aggregation
 """
 
-from rest_framework import viewsets, status
+import logging
+import re
+
+from django.db import transaction
+from rest_framework import viewsets, status, serializers
+from rest_framework.decorators import action
+from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.response import Response
 
 from chapters.models import Chapter
 from chapters.permissions import IsChapterOrAdmin, IsAdmin
 from reports.models import MonthlyReport
+from bni.utils.ratelimit import ratelimit_action
+
+logger = logging.getLogger(__name__)
 
 
 class MonthlyReportViewSet(viewsets.GenericViewSet):
@@ -270,9 +279,12 @@ class FileUploadViewSet(viewsets.ViewSet):
         return None
 
     @action(detail=False, methods=["post"], url_path="excel")
+    @ratelimit_action(key='ip', rate='10/h', method='POST')
     def upload_excel(self, request):
         """
         Handle Excel file upload and processing.
+
+        Rate limited to 10 uploads per hour per IP.
 
         Accepts:
         - slip_audit_file: Required Excel file (.xls/.xlsx)
@@ -446,9 +458,12 @@ class FileUploadViewSet(viewsets.ViewSet):
             )
 
     @action(detail=False, methods=["post"], url_path="bulk")
+    @ratelimit_action(key='ip', rate='10/h', method='POST')
     def bulk_upload(self, request):
         """
         Handle Regional PALMS Summary bulk upload.
+
+        Rate limited to 10 uploads per hour per IP.
 
         Accepts:
         - file: Excel file containing regional summary data

@@ -5,12 +5,14 @@
 export interface MonthlyReportListItem {
   id: number;
   month_year: string;
-  uploaded_at: string | null;
-  processed_at: string | null;
-  has_referral_matrix: boolean;
-  has_oto_matrix: boolean;
-  has_combination_matrix: boolean;
-  require_palms_sheets: boolean;
+  status: string;
+  created_at: string;
+  uploaded_at?: string | null;
+  processed_at?: string | null;
+  has_referral_matrix?: boolean;
+  has_oto_matrix?: boolean;
+  has_combination_matrix?: boolean;
+  require_palms_sheets?: boolean;
   uploaded_file_names?: Array<{
     original_filename: string;
     file_type: string;

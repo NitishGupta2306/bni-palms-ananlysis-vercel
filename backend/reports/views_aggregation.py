@@ -135,7 +135,7 @@ class MonthlyReportAggregationViewSet(viewsets.GenericViewSet):
             excel_buffer = aggregation_service.generate_download_package()
 
             # Create HTTP response with Excel file
-            month_range = aggregation_service._get_month_range()
+            month_range = aggregation_service._get_period_display()
             filename = (
                 f"{chapter.name.replace(' ', '_')}_Aggregated_Report_{month_range}.xlsx"
             )

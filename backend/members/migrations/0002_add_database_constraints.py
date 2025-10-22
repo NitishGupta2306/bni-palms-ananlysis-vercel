@@ -19,14 +19,14 @@ class Migration(migrations.Migration):
         migrations.AddConstraint(
             model_name='member',
             constraint=models.CheckConstraint(
-                check=models.Q(first_name__length__gte=1),
+                check=~models.Q(first_name=''),
                 name='member_first_name_not_empty',
             ),
         ),
         migrations.AddConstraint(
             model_name='member',
             constraint=models.CheckConstraint(
-                check=models.Q(last_name__length__gte=1),
+                check=~models.Q(last_name=''),
                 name='member_last_name_not_empty',
             ),
         ),

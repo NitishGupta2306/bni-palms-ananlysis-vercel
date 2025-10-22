@@ -60,11 +60,11 @@ def write_charts_page(worksheet, chapter_name: str, period_str: str, aggregated_
     worksheet['B5'].font = Font(bold=True)
 
     worksheet['A6'] = 'Excellent (Green)'
-    worksheet['B6'] = ref_tiers['green_count']
+    worksheet['B6'] = ref_tiers.get('green', 0)
     worksheet['A7'] = 'Good/Average (Orange)'
-    worksheet['B7'] = ref_tiers['orange_count']
+    worksheet['B7'] = ref_tiers.get('orange', 0)
     worksheet['A8'] = 'Needs Attention (Red)'
-    worksheet['B8'] = ref_tiers['red_count']
+    worksheet['B8'] = ref_tiers.get('red', 0)
 
     # Create pie chart
     pie = PieChart()

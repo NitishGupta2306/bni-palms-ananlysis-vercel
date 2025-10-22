@@ -48,16 +48,11 @@ export const initSentry = (): void => {
           process.env.REACT_APP_SENTRY_TRACES_SAMPLE_RATE || '0.1'
         ),
 
-        // Integrations
-        integrations: [
-          new Sentry.BrowserTracing({
-            // Track navigation timing
-            tracingOrigins: ['localhost', /^\//],
-          }),
-        ],
+        // Integrations (BrowserTracing removed - API has changed in v7+)
+        integrations: [],
 
         // Before sending error, filter sensitive data
-        beforeSend(event, hint) {
+        beforeSend(event: any, hint: any) {
           // Remove sensitive data
           if (event.request) {
             delete event.request.cookies;
