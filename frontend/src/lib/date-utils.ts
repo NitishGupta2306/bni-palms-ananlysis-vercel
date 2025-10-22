@@ -139,6 +139,42 @@ export const formatMonthYear = (year: number, month: number): string => {
 };
 
 /**
+ * Formats a month and year in short format (e.g., "Jan 2025")
+ * @param yearOrDate - Year number or date string (e.g., "2025-01" or "January 2025")
+ * @param month - Month number (1-12), only required if first param is year
+ * @returns Formatted short month-year string
+ */
+export const formatMonthYearShort = (yearOrDate: number | string, month?: number): string => {
+  let date: Date;
+
+  if (typeof yearOrDate === 'number' && typeof month === 'number') {
+    // Called with (year, month)
+    date = new Date(yearOrDate, month - 1, 1);
+  } else if (typeof yearOrDate === 'string') {
+    // Called with date string
+    date = new Date(yearOrDate);
+    if (!isValidDate(date)) {
+      // Try parsing as "YYYY-MM"
+      const parts = yearOrDate.split('-');
+      if (parts.length === 2) {
+        date = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, 1);
+      }
+    }
+  } else {
+    return '';
+  }
+
+  if (!isValidDate(date)) {
+    return yearOrDate.toString();
+  }
+
+  return date.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short'
+  });
+};
+
+/**
  * Gets an array of months between two dates
  * @param startDate - Start date
  * @param endDate - End date

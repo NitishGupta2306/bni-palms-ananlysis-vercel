@@ -1,14 +1,6 @@
 import React, { createContext, useContext, ReactNode } from "react";
 import { ChapterData } from "@/types/chapter.types";
-
-export type ReportType = "single" | "multi" | "compare";
-
-export interface MonthlyReportListItem {
-  id: number;
-  month_year: string;
-  status: string;
-  created_at: string;
-}
+import { MonthlyReportListItem, ReportType } from "../types";
 
 interface ReportWizardContextType {
   chapterData: ChapterData;

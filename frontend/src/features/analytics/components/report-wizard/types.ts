@@ -5,7 +5,9 @@
 export interface MonthlyReportListItem {
   id: number;
   month_year: string;
+  status?: string;
   uploaded_at: string | null;
+  created_at?: string;
   processed_at: string | null;
   has_referral_matrix: boolean;
   has_oto_matrix: boolean;

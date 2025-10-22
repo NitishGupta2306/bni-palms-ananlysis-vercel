@@ -2,21 +2,25 @@
  * Type definitions for matrix analytics
  */
 
+export interface MatrixTotals {
+  given?: Record<string, number>;
+  received?: Record<string, number>;
+  unique_given?: Record<string, number>;
+  unique_received?: Record<string, number>;
+}
+
+export interface MatrixSummaries {
+  neither?: Record<string, number>;
+  oto_only?: Record<string, number>;
+  referral_only?: Record<string, number>;
+  both?: Record<string, number>;
+}
+
 export interface MatrixData {
   members: string[];
   matrix: number[][];
-  totals?: {
-    given?: Record<string, number>;
-    received?: Record<string, number>;
-    unique_given?: Record<string, number>;
-    unique_received?: Record<string, number>;
-  };
-  summaries?: {
-    neither?: Record<string, number>;
-    oto_only?: Record<string, number>;
-    referral_only?: Record<string, number>;
-    both?: Record<string, number>;
-  };
+  totals?: MatrixTotals;
+  summaries?: MatrixSummaries;
   legend?: Record<string, string>;
 }
 

@@ -50,10 +50,7 @@ export const initSentry = (): void => {
 
         // Integrations
         integrations: [
-          new Sentry.BrowserTracing({
-            // Track navigation timing
-            tracingOrigins: ['localhost', /^\//],
-          }),
+          Sentry.browserTracingIntegration(),
         ],
 
         // Before sending error, filter sensitive data

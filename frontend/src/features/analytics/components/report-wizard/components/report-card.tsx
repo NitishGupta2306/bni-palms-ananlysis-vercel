@@ -3,7 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, CheckCircle2 } from "lucide-react";
-import { MonthlyReportListItem } from "../context/report-wizard-context";
+import { MonthlyReportListItem } from "../types";
 import { formatMonthYearShort } from "@/lib/date-utils";
 
 type ReportCardVariant = "single" | "multi" | "compare";
