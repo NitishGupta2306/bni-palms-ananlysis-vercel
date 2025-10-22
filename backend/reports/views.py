@@ -10,11 +10,15 @@ Additional functionality is split into focused ViewSets:
 
 import re
 import logging
+from typing import List
 from django.db import transaction
+from django.db.models import QuerySet
 from rest_framework import viewsets, status, serializers
 from rest_framework.response import Response
+from rest_framework.request import Request
 from rest_framework.decorators import action
 from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.permissions import BasePermission
 
 from chapters.models import Chapter
 from chapters.permissions import IsChapterOrAdmin, IsAdmin
@@ -48,14 +52,14 @@ class MonthlyReportViewSet(viewsets.GenericViewSet):
     queryset = MonthlyReport.objects.all()
     permission_classes = [IsChapterOrAdmin]
 
-    def get_permissions(self):
+    def get_permissions(self) -> List[BasePermission]:
         """Override permissions based on action."""
         if self.action == "destroy":
             # Only admins can delete reports
             return [IsAdmin()]
         return [IsChapterOrAdmin()]
 
-    def list(self, request, chapter_id=None):
+    def list(self, request: Request, chapter_id=None) -> Response:
         """
         Get all monthly reports for a specific chapter.
 
@@ -131,7 +135,7 @@ class MonthlyReportViewSet(viewsets.GenericViewSet):
             )
 
     @transaction.atomic
-    def destroy(self, request, pk=None, chapter_id=None):
+    def destroy(self, request: Request, pk=None, chapter_id=None) -> Response:
         """
         Delete a monthly report atomically.
 
@@ -213,7 +217,7 @@ class FileUploadViewSet(viewsets.ViewSet):
     parser_classes = (MultiPartParser, FormParser)
     permission_classes = [IsChapterOrAdmin]
 
-    def get_permissions(self):
+    def get_permissions(self) -> List[BasePermission]:
         """Override permissions based on action."""
         if self.action in ['bulk_upload', 'reset_all_data']:
             return [IsAdmin()]  # Admin-only operations
@@ -281,7 +285,7 @@ class FileUploadViewSet(viewsets.ViewSet):
 
     @action(detail=False, methods=["post"], url_path="excel")
     @validate_required_fields('chapter_id')
-    def upload_excel(self, request):
+    def upload_excel(self, request: Request) -> Response:
         """
         Handle Excel file upload and processing.
 
@@ -457,7 +461,7 @@ class FileUploadViewSet(viewsets.ViewSet):
             )
 
     @action(detail=False, methods=["post"], url_path="bulk")
-    def bulk_upload(self, request):
+    def bulk_upload(self, request: Request) -> Response:
         """
         Handle Regional PALMS Summary bulk upload.
 
@@ -523,7 +527,7 @@ class FileUploadViewSet(viewsets.ViewSet):
             )
 
     @action(detail=False, methods=["post"], url_path="reset-all")
-    def reset_all_data(self, request):
+    def reset_all_data(self, request: Request) -> Response:
         """
         Reset all data in the database atomically.
 
