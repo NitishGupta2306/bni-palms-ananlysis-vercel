@@ -2,11 +2,13 @@
 Chapter ViewSet - RESTful API for Chapter management
 """
 
+from typing import List
 from django.db import models
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, BasePermission
 from rest_framework.response import Response
+from rest_framework.request import Request
 
 from chapters.models import Chapter
 from chapters.permissions import IsAdmin, IsChapterOrAdmin
@@ -32,7 +34,7 @@ class ChapterViewSet(viewsets.ModelViewSet):
     serializer_class = ChapterSerializer
     permission_classes = [IsChapterOrAdmin]  # Default: authenticated users
 
-    def get_permissions(self):
+    def get_permissions(self) -> List[BasePermission]:
         """
         Override permissions based on action.
         """
@@ -53,7 +55,7 @@ class ChapterViewSet(viewsets.ModelViewSet):
             return [IsAdmin()]
         return super().get_permissions()
 
-    def list(self, request):
+    def list(self, request: Request) -> Response:
         """
         Get dashboard data for all chapters.
 
@@ -213,7 +215,7 @@ class ChapterViewSet(viewsets.ModelViewSet):
 
         return Response(chapter_data)
 
-    def retrieve(self, request, pk=None):
+    def retrieve(self, request: Request, pk=None) -> Response:
         """
         Get detailed information for a specific chapter.
 
@@ -301,7 +303,7 @@ class ChapterViewSet(viewsets.ModelViewSet):
 
         return Response(chapter_data)
 
-    def create(self, request):
+    def create(self, request: Request) -> Response:
         """
         Create a new chapter.
 
@@ -332,7 +334,7 @@ class ChapterViewSet(viewsets.ModelViewSet):
             status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
         )
 
-    def destroy(self, request, pk=None):
+    def destroy(self, request: Request, pk=None) -> Response:
         """
         Delete a chapter and all associated members.
 
@@ -356,7 +358,7 @@ class ChapterViewSet(viewsets.ModelViewSet):
         )
 
     @action(detail=True, methods=["post"], permission_classes=[AllowAny])
-    def authenticate(self, request, pk=None):
+    def authenticate(self, request: Request, pk=None) -> Response:
         """
         Authenticate a user to access a specific chapter.
 
@@ -412,7 +414,7 @@ class ChapterViewSet(viewsets.ModelViewSet):
             )
 
     @action(detail=True, methods=["post"])
-    def update_password(self, request, pk=None):
+    def update_password(self, request: Request, pk=None) -> Response:
         """
         Update a chapter's password (admin only).
 
@@ -454,7 +456,7 @@ class AdminAuthViewSet(viewsets.ViewSet):
 
     permission_classes = [AllowAny]  # Default for authenticate action
 
-    def get_permissions(self):
+    def get_permissions(self) -> List[BasePermission]:
         """Override permissions based on action."""
         if self.action == "authenticate":
             return [AllowAny()]
@@ -463,7 +465,7 @@ class AdminAuthViewSet(viewsets.ViewSet):
         return super().get_permissions()
 
     @action(detail=False, methods=["post"])
-    def authenticate(self, request):
+    def authenticate(self, request: Request) -> Response:
         """
         Authenticate admin user.
 
@@ -474,48 +476,60 @@ class AdminAuthViewSet(viewsets.ViewSet):
         from chapters.utils import generate_admin_token
         from bni.serializers import AdminAuthSerializer
         from django.utils import timezone
+        import logging
 
-        admin_settings = AdminSettings.load()
-        serializer = AdminAuthSerializer(data=request.data)
+        logger = logging.getLogger(__name__)
 
-        if not serializer.is_valid():
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            admin_settings = AdminSettings.load()
+            serializer = AdminAuthSerializer(data=request.data)
 
-        # Check if locked out
-        if admin_settings.is_locked_out():
-            lockout_remaining = (
-                admin_settings.admin_lockout_until - timezone.now()
-            ).total_seconds()
-            minutes_remaining = int(lockout_remaining / 60) + 1
+            if not serializer.is_valid():
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+            # Check if locked out
+            if admin_settings.is_locked_out():
+                lockout_remaining = (
+                    admin_settings.admin_lockout_until - timezone.now()
+                ).total_seconds()
+                minutes_remaining = int(lockout_remaining / 60) + 1
+                return Response(
+                    {
+                        "error": f"Too many failed attempts. Please try again in {minutes_remaining} minutes.",
+                        "locked_out": True,
+                        "retry_after_minutes": minutes_remaining,
+                    },
+                    status=status.HTTP_429_TOO_MANY_REQUESTS,
+                )
+
+            # Verify password using secure comparison
+            password = serializer.validated_data["password"]
+            if admin_settings.check_password(password):
+                # Success - generate token and reset attempts
+                token = generate_admin_token()
+                admin_settings.reset_failed_attempts()
+                logger.info("Admin authentication successful")
+
+                return Response({"token": token, "expires_in_hours": 24})
+            else:
+                # Failed attempt
+                admin_settings.increment_failed_attempts()
+                attempts_remaining = max(0, 5 - admin_settings.failed_admin_attempts)
+                logger.warning(f"Failed admin authentication attempt, {attempts_remaining} remaining")
+
+                return Response(
+                    {"error": "Invalid password", "attempts_remaining": attempts_remaining},
+                    status=status.HTTP_401_UNAUTHORIZED,
+                )
+        except Exception as e:
+            logger.error(f"Error during admin authentication: {str(e)}")
             return Response(
-                {
-                    "error": f"Too many failed attempts. Please try again in {minutes_remaining} minutes.",
-                    "locked_out": True,
-                    "retry_after_minutes": minutes_remaining,
-                },
-                status=status.HTTP_429_TOO_MANY_REQUESTS,
-            )
-
-        # Verify password using secure comparison
-        password = serializer.validated_data["password"]
-        if admin_settings.check_password(password):
-            # Success - generate token and reset attempts
-            token = generate_admin_token()
-            admin_settings.reset_failed_attempts()
-
-            return Response({"token": token, "expires_in_hours": 24})
-        else:
-            # Failed attempt
-            admin_settings.increment_failed_attempts()
-            attempts_remaining = max(0, 5 - admin_settings.failed_admin_attempts)
-
-            return Response(
-                {"error": "Invalid password", "attempts_remaining": attempts_remaining},
-                status=status.HTTP_401_UNAUTHORIZED,
+                {"error": "Authentication failed. Please try again."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
     @action(detail=False, methods=["post"])
-    def update_password(self, request):
+    def update_password(self, request: Request) -> Response:
         """
         Update admin password (admin only).
 
@@ -524,26 +538,38 @@ class AdminAuthViewSet(viewsets.ViewSet):
         """
         from chapters.models import AdminSettings
         from bni.serializers import UpdatePasswordSerializer
+        import logging
+
+        logger = logging.getLogger(__name__)
 
         # Permission check handled by get_permissions() - IsAdmin only
 
-        admin_settings = AdminSettings.load()
-        serializer = UpdatePasswordSerializer(data=request.data)
+        try:
+            admin_settings = AdminSettings.load()
+            serializer = UpdatePasswordSerializer(data=request.data)
 
-        if not serializer.is_valid():
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            if not serializer.is_valid():
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        new_password = serializer.validated_data["new_password"]
-        admin_settings.set_password(new_password)  # Use set_password for hashing
-        admin_settings.reset_failed_attempts()
-        admin_settings.save()
+            new_password = serializer.validated_data["new_password"]
+            admin_settings.set_password(new_password)  # Use set_password for hashing
+            admin_settings.reset_failed_attempts()
+            admin_settings.save()
 
-        return Response(
-            {"success": True, "message": "Admin password updated successfully"}
-        )
+            logger.info("Admin password updated successfully")
+
+            return Response(
+                {"success": True, "message": "Admin password updated successfully"}
+            )
+        except Exception as e:
+            logger.error(f"Error updating admin password: {str(e)}")
+            return Response(
+                {"error": "Failed to update password. Please try again."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
     @action(detail=False, methods=["get"], url_path="get-settings")
-    def get_settings(self, request):
+    def get_settings(self, request: Request) -> Response:
         """
         Get all security settings including admin password and all chapter passwords.
 

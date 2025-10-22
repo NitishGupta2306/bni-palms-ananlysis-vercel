@@ -29,6 +29,16 @@ class Referral(models.Model):
         return f"{self.giver} -> {self.receiver} ({self.date_given})"
 
     def clean(self):
+        """
+        Validate referral data before saving.
+
+        Ensures that:
+        - A member cannot refer to themselves
+        - Referrals are within the same chapter
+
+        Raises:
+            ValidationError: If validation rules are violated
+        """
         if self.giver == self.receiver:
             raise ValidationError("A member cannot refer to themselves")
         if self.giver and self.receiver and self.giver.chapter != self.receiver.chapter:
@@ -62,6 +72,16 @@ class OneToOne(models.Model):
         return f"{self.member1} <-> {self.member2} ({self.meeting_date})"
 
     def clean(self):
+        """
+        Validate one-to-one meeting data before saving.
+
+        Ensures that:
+        - A member cannot meet with themselves
+        - Meetings are within the same chapter
+
+        Raises:
+            ValidationError: If validation rules are violated
+        """
         if self.member1 == self.member2:
             raise ValidationError("A member cannot have a one-to-one meeting with themselves")
         if self.member1 and self.member2 and self.member1.chapter != self.member2.chapter:
@@ -102,6 +122,17 @@ class TYFCB(models.Model):
         return f"{giver_name} -> {self.receiver} (AED {self.amount})"
 
     def clean(self):
+        """
+        Validate TYFCB data before saving.
+
+        Ensures that:
+        - A member cannot give TYFCB to themselves
+        - Amount is non-negative
+        - TYFCBs are within the same chapter
+
+        Raises:
+            ValidationError: If validation rules are violated
+        """
         if self.giver and self.giver == self.receiver:
             raise ValidationError("A member cannot give TYFCB to themselves")
         if self.amount < 0:

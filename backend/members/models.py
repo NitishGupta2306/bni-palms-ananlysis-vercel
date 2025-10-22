@@ -38,9 +38,16 @@ class Member(models.Model):
 
     @property
     def full_name(self):
+        """Return member's full name."""
         return f"{self.first_name} {self.last_name}"
 
     def save(self, *args, **kwargs):
+        """
+        Save the member, auto-generating normalized_name if not set.
+
+        Normalized name is used for consistent member identification
+        across data imports and matching.
+        """
         if not self.normalized_name:
             self.normalized_name = self.normalize_name(f"{self.first_name} {self.last_name}")
         super().save(*args, **kwargs)
