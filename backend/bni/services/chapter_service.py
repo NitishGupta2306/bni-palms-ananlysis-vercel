@@ -65,9 +65,13 @@ class ChapterService:
             raise
 
     @staticmethod
+    @transaction.atomic
     def update_chapter(chapter_id: int, **kwargs) -> Chapter:
         """
         Update an existing chapter.
+
+        Uses @transaction.atomic to ensure all updates and validation complete
+        successfully or rollback entirely.
 
         Args:
             chapter_id: Chapter ID

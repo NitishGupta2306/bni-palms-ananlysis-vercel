@@ -20,6 +20,7 @@ class MemberService:
     """Centralized service for member operations."""
 
     @staticmethod
+    @transaction.atomic
     def get_or_create_member(
         chapter: Chapter,
         first_name: str,
@@ -33,6 +34,9 @@ class MemberService:
     ) -> Tuple[Member, bool]:
         """
         Get an existing member or create a new one with automatic name normalization.
+
+        Uses @transaction.atomic to ensure member creation and name normalization
+        complete successfully or rollback entirely.
 
         Args:
             chapter: Chapter instance the member belongs to
@@ -90,11 +94,14 @@ class MemberService:
             raise
 
     @staticmethod
+    @transaction.atomic
     def update_member(member_id: int, **kwargs) -> Tuple[Member, bool]:
         """
         Update an existing member.
 
         Automatically updates normalized_name if first_name or last_name changed.
+        Uses @transaction.atomic to ensure all updates and validation complete
+        successfully or rollback entirely.
 
         Args:
             member_id: Member ID
