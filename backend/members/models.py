@@ -26,6 +26,10 @@ class Member(models.Model):
         indexes = [
             # Note: member_chapter_active_idx already exists from migration 0002
             models.Index(fields=['chapter', 'normalized_name'], name='member_chapter_name_idx'),
+            # Composite index for common filtering pattern (chapter + active status)
+            models.Index(fields=['chapter', 'is_active'], name='member_chapter_active_idx2'),
+            # Index for classification filtering (analytics by business type)
+            models.Index(fields=['classification'], name='member_classification_idx'),
         ]
         db_table = 'chapters_member'
 

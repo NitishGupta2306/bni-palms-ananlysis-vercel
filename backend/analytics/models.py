@@ -17,6 +17,12 @@ class Referral(models.Model):
 
     class Meta:
         ordering = ['-date_given']
+        indexes = [
+            # Composite index for giver queries filtered by date
+            models.Index(fields=['giver', 'date_given'], name='referral_giver_date_idx'),
+            # Composite index for receiver queries filtered by date
+            models.Index(fields=['receiver', 'date_given'], name='referral_receiver_date_idx'),
+        ]
         db_table = 'analytics_referral'
 
     def __str__(self):
@@ -44,6 +50,12 @@ class OneToOne(models.Model):
         ordering = ['-meeting_date']
         verbose_name = "One-to-One Meeting"
         verbose_name_plural = "One-to-One Meetings"
+        indexes = [
+            # Composite index for member1 queries filtered by date
+            models.Index(fields=['member1', 'meeting_date'], name='oto_member1_date_idx'),
+            # Composite index for member2 queries filtered by date
+            models.Index(fields=['member2', 'meeting_date'], name='oto_member2_date_idx'),
+        ]
         db_table = 'analytics_onetoone'
 
     def __str__(self):
@@ -77,6 +89,12 @@ class TYFCB(models.Model):
         ordering = ['-date_closed']
         verbose_name = "TYFCB"
         verbose_name_plural = "TYFCBs"
+        indexes = [
+            # Composite index for receiver queries filtered by chapter status
+            models.Index(fields=['receiver', 'within_chapter'], name='tyfcb_receiver_chapter_idx'),
+            # Composite index for receiver queries filtered by date
+            models.Index(fields=['receiver', 'date_closed'], name='tyfcb_receiver_date_idx'),
+        ]
         db_table = 'analytics_tyfcb'
 
     def __str__(self):
