@@ -397,11 +397,22 @@ class AdminAuthSerializer(serializers.Serializer):
 
 
 class UpdatePasswordSerializer(serializers.Serializer):
-    """Serializer for updating password."""
+    """Serializer for updating password with strength validation."""
 
     new_password = serializers.CharField(
-        write_only=True, required=True, min_length=1, max_length=100
+        write_only=True, required=True, min_length=8, max_length=100
     )
+
+    def validate_new_password(self, value):
+        """Validate password strength."""
+        from bni.validators import validate_password_strength
+        from django.core.exceptions import ValidationError
+
+        try:
+            validate_password_strength(value)
+        except ValidationError as e:
+            raise serializers.ValidationError(str(e))
+        return value
 
 
 class ChapterPublicSerializer(serializers.ModelSerializer):

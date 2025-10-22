@@ -8,12 +8,22 @@ Additional functionality is split into focused ViewSets:
 - views_aggregation.py: Multi-month report aggregation
 """
 
-from rest_framework import viewsets, status
+import re
+import logging
+from django.db import transaction
+from rest_framework import viewsets, status, serializers
 from rest_framework.response import Response
+from rest_framework.decorators import action
+from rest_framework.parsers import MultiPartParser, FormParser
 
 from chapters.models import Chapter
 from chapters.permissions import IsChapterOrAdmin, IsAdmin
 from reports.models import MonthlyReport
+from bni.services.excel_processor import ExcelProcessorService
+from bni.services.bulk_upload_service import BulkUploadService
+from bni.validation_mixins import validate_required_fields, validate_multiple_files
+
+logger = logging.getLogger(__name__)
 
 
 class MonthlyReportViewSet(viewsets.GenericViewSet):
@@ -270,12 +280,13 @@ class FileUploadViewSet(viewsets.ViewSet):
         return None
 
     @action(detail=False, methods=["post"], url_path="excel")
+    @validate_required_fields('chapter_id')
     def upload_excel(self, request):
         """
         Handle Excel file upload and processing.
 
         Accepts:
-        - slip_audit_file: Required Excel file (.xls/.xlsx)
+        - slip_audit_files: Required Excel file(s) (.xls/.xlsx)
         - member_names_file: Optional Excel file for member names
         - chapter_id: Chapter to associate with
         - month_year: Optional report month in format 'YYYY-MM' (defaults to current month)
